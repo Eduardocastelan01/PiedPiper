@@ -731,7 +731,12 @@ private fun resolveTimestampBucket(
             .withNano(0)
         return TimestampBucket(
             key = hourStart.toInstant().toEpochMilli().toString(),
-            label = hourStart.format(DateTimeFormatter.ofPattern("h a", Locale.getDefault())),
+            label = hourStart.format(
+                DateTimeFormatter.ofPattern(
+                    if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h a",
+                    Locale.getDefault()
+                )
+            ),
             isHourBucket = true
         )
     }

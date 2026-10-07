@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">إظهار اللتنّة (Romanization)</string>
     <string name="lyrics_more_show_translations">إظهار الترجمات</string>
     <string name="multi_selection_playlists_count_upper">%1$d قائمة تشغيل</string>
+    <string name="multi_selection_genres_count_upper">%1$d أنواع</string>
+    <string name="multi_selection_genres_queue_hint">نفّذ عمليات جماعية على كل الأغاني ضمن هذه الأنواع.</string>
     <string name="multi_selection_selected">تم تحديدها</string>
     <string name="multi_selection_songs_count_upper">%1$d أغنية</string>
     <string name="no_internet_dialog_message">يتطلب هذا المحتوى اتصالاً بالإنترنت. يرجى التحقق من إعدادات الشبكة والمحاولة مرة أخرى.</string>

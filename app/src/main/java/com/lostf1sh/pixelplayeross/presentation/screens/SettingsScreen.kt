@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.presentation.screens
 
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -220,6 +222,13 @@ fun SettingsScreen(
         }
     }
 
+    // The search overlay is a state of this screen, not a destination, so the system Back
+    // gesture has to dismiss it first instead of popping Settings entirely.
+    BackHandler(enabled = isSearchActive) {
+        isSearchActive = false
+        searchQuery = ""
+    }
+
     val searchResults = remember(searchQuery) {
         if (searchQuery.isNotBlank()) {
             SettingsFuzzySearchEngine.search(context, searchQuery, SettingsRegistry.allSettings)
@@ -318,6 +327,21 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(2.dp))
                         }
                         itemIndex++
+
+                        if (category == SettingsCategory.PLAYBACK) {
+                            ExpressiveNavigationItem(
+                                title = stringResource(R.string.setcat_lyrics_title),
+                                subtitle = stringResource(R.string.setcat_lyrics_subtitle),
+                                icon = Icons.Rounded.Lyrics,
+                                colors = getCategoryColors(SettingsCategory.PLAYBACK, isDark),
+                                onClick = { navController.navigateSafely(Screen.LyricsSettings.createRoute()) },
+                                shape = shapeFor(itemIndex)
+                            )
+                            if (itemIndex < totalItems - 1) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                            }
+                            itemIndex++
+                        }
                     }
 
                     ExpressiveNavigationItem(

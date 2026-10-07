@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">Показать романизацию</string>
     <string name="lyrics_more_show_translations">Показать переводы</string>
     <string name="multi_selection_playlists_count_upper">%1$d ПЛЕЙЛИСТОВ</string>
+    <string name="multi_selection_genres_count_upper">%1$d ЖАНРОВ</string>
+    <string name="multi_selection_genres_queue_hint">Выполняйте пакетные операции для всех треков в этих жанрах.</string>
     <string name="multi_selection_selected">выбрано</string>
     <string name="multi_selection_songs_count_upper">%1$d ТРЕКОВ</string>
     <string name="no_internet_dialog_message">Для этого контента требуется подключение к интернету. Проверьте настройки сети и попробуйте снова.</string>

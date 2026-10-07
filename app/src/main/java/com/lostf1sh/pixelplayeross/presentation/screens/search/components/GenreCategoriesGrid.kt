@@ -2,8 +2,12 @@ package com.lostf1sh.pixelplayeross.presentation.screens.search.components
 
 import androidx.annotation.OptIn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +26,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,8 +40,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.model.Genre
@@ -57,7 +65,12 @@ fun GenreCategoriesGrid(
     genres: ImmutableList<Genre>,
     onGenreClick: (Genre) -> Unit,
     playerViewModel: PlayerViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false,
+    selectedGenreIds: Set<String> = emptySet(),
+    onGenreLongPress: (Genre) -> Unit = {},
+    onGenreSelectionToggle: (Genre) -> Unit = {},
+    getSelectionIndex: (String) -> Int? = { null }
 ) {
     if (genres.isEmpty()) {
         Box(
@@ -138,7 +151,12 @@ fun GenreCategoriesGrid(
                 genre = genre,
                 customIcons = customGenreIcons,
                 onClick = { onGenreClick(genre) },
-                isGridView = isGridView
+                isGridView = isGridView,
+                isSelectionMode = isSelectionMode,
+                isSelected = genre.id in selectedGenreIds,
+                selectionIndex = getSelectionIndex(genre.id),
+                onLongPress = { onGenreLongPress(genre) },
+                onSelectionToggle = { onGenreSelectionToggle(genre) }
             )
         }
     }
@@ -149,7 +167,12 @@ private fun GenreCard(
     genre: Genre,
     customIcons: Map<String, Int>,
     onClick: () -> Unit,
-    isGridView: Boolean
+    isGridView: Boolean,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    selectionIndex: Int?,
+    onLongPress: () -> Unit,
+    onSelectionToggle: () -> Unit
 ) {
     val isDark = LocalPixelPlayerDarkTheme.current
     val themeColor = remember(genre, isDark) {
@@ -163,6 +186,16 @@ private fun GenreCard(
     val onBackgroundColor = themeColor.onContainer
 
     val shape = RoundedCornerShape(20.dp)
+    val selectionScale by animateFloatAsState(
+        targetValue = if (isSelected) 0.98f else 1f,
+        animationSpec = tween(durationMillis = 200),
+        label = "genreCardSelectionScale"
+    )
+    val selectionBorderWidth by animateDpAsState(
+        targetValue = if (isSelected) 2.5.dp else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "genreCardSelectionBorder"
+    )
 
     val cardModifier = if (isGridView) {
         Modifier.aspectRatio(1.2f)
@@ -172,8 +205,23 @@ private fun GenreCard(
 
     Card(
         modifier = cardModifier
+            .scale(selectionScale)
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = selectionBorderWidth,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = shape
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clip(shape)
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = if (isSelectionMode) onSelectionToggle else onClick,
+                onLongClick = onLongPress
+            ),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -244,6 +292,31 @@ private fun GenreCard(
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(titlePresentation.secondLineWidthFraction)
                     )
+                }
+            }
+
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selectionIndex != null && selectionIndex >= 0) {
+                        Text(
+                            text = selectionIndex.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = stringResource(R.string.presentation_batch_g_cd_selected),
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
         }

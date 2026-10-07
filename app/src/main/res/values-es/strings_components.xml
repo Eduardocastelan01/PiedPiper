@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">Mostrar romanización</string>
     <string name="lyrics_more_show_translations">Mostrar traducciones</string>
     <string name="multi_selection_playlists_count_upper">%1$d LISTAS</string>
+    <string name="multi_selection_genres_count_upper">%1$d GÉNEROS</string>
+    <string name="multi_selection_genres_queue_hint">Realizar operaciones por lotes en todas las canciones de estos géneros.</string>
     <string name="multi_selection_selected">seleccionadas</string>
     <string name="multi_selection_songs_count_upper">%1$d CANCIONES</string>
     <string name="no_internet_dialog_message">Este contenido requiere conexión a internet. Comprueba la red e inténtalo de nuevo.</string>

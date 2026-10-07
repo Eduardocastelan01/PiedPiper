@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ButtonDefaults
@@ -57,7 +58,8 @@ fun AlbumMultiSelectionOptionSheet(
     onDismiss: () -> Unit,
     onPlay: () -> Unit,
     onPlayNext: () -> Unit,
-    onAddToQueue: () -> Unit
+    onAddToQueue: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
@@ -116,26 +118,55 @@ fun AlbumMultiSelectionOptionSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            AlbumSelectionActionButton(
-                onClick = {
-                    onPlay()
-                    onDismiss()
-                },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 66.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(R.string.cd_play_selected_albums)
-                    )
-                },
-                text = stringResource(R.string.play_playback)
-            )
+                    .height(IntrinsicSize.Min),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AlbumSelectionActionButton(
+                    onClick = {
+                        onPlay()
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .fillMaxHeight(),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(R.string.cd_play_selected_albums)
+                        )
+                    },
+                    text = stringResource(R.string.play_playback)
+                )
+
+                AlbumSelectionActionButton(
+                    onClick = {
+                        onAddToPlaylist()
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .weight(0.5f)
+                        .fillMaxHeight(),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                            contentDescription = stringResource(R.string.cd_add_to_playlist)
+                        )
+                    },
+                    text = stringResource(R.string.shortcut_playlist_short)
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 

@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">로마자 표기 표시</string>
     <string name="lyrics_more_show_translations">번역 표시</string>
     <string name="multi_selection_playlists_count_upper">플레이리스트 %1$d개</string>
+    <string name="multi_selection_genres_count_upper">장르 %1$d개</string>
+    <string name="multi_selection_genres_queue_hint">이 장르에 속한 모든 곡에 대해 일괄 작업을 수행합니다.</string>
     <string name="multi_selection_selected">선택됨</string>
     <string name="multi_selection_songs_count_upper">곡 %1$d개</string>
     <string name="no_internet_dialog_message">이 콘텐츠를 이용하려면 인터넷 연결이 필요합니다. 네트워크 설정을 확인하고 다시 시도해 주세요.</string>
