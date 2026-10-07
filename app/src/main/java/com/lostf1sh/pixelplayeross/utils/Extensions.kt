@@ -2,7 +2,9 @@ package com.lostf1sh.pixelplayeross.utils
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import java.nio.CharBuffer
 import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
 import java.text.Normalizer
 import java.util.Locale
 
@@ -25,20 +27,40 @@ fun String?.normalizeMetadataText(): String? {
     val trimmed = this.trim()
     if (trimmed.isEmpty()) return trimmed
 
-    val suspiciousPatterns = listOf("Ã", "â", "�", "ð", "Ÿ")
-    val needsFix = suspiciousPatterns.any { trimmed.contains(it) }
-
-    val reencoded = if (needsFix) {
-        runCatching {
-            String(trimmed.toByteArray(WINDOWS_1252), Charsets.UTF_8).trim()
-        }.getOrNull()
-    } else null
-
-    val candidate = reencoded?.takeIf { it.isNotEmpty() } ?: trimmed
+    val candidate = repairUtf8Mojibake(trimmed) ?: trimmed
 
     val cleaned = candidate.replace("\u0000", "")
 
     return Normalizer.normalize(cleaned, Normalizer.Form.NFC)
+}
+
+// Lead characters of UTF-8 sequences once mis-decoded as Windows-1252 ("Ã©" = é, "â€™" = ’).
+private val MOJIBAKE_LEAD_CHARS = charArrayOf('Ã', 'Â', 'â', 'Å', 'Æ', 'Ð', 'ð')
+
+/**
+ * Returns the repaired text only when [text] is genuinely UTF-8 that was decoded as
+ * Windows-1252, or null to keep it as-is.
+ *
+ * "â" and "Ã" are ordinary letters in French and Portuguese ("Château", "CORAÇÃO"), so the
+ * round trip has to succeed *strictly*: every character must exist in Windows-1252 and the
+ * resulting bytes must be valid UTF-8, which real text with accents virtually never
+ * satisfies ("â" followed by "t" is not a UTF-8 continuation byte).
+ */
+internal fun repairUtf8Mojibake(text: String): String? {
+    if (text.none { it in MOJIBAKE_LEAD_CHARS }) return null
+    return runCatching {
+        val bytes = WINDOWS_1252.newEncoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .encode(CharBuffer.wrap(text))
+        val decoded = Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(bytes)
+            .toString()
+            .trim()
+        decoded.takeIf { it.isNotEmpty() && it != text }
+    }.getOrNull()
 }
 
 fun String?.normalizeMetadataTextOrEmpty(): String {

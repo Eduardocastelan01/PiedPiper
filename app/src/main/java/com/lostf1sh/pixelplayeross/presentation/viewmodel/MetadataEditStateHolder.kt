@@ -184,16 +184,11 @@ class MetadataEditStateHolder @Inject constructor(
 
     suspend fun deleteSong(song: Song): Boolean = withContext(Dispatchers.IO) {
         val fileInfo = FileDeletionUtils.getFileInfo(song.path)
-        if (fileInfo.exists && fileInfo.canWrite) {
-            val success = FileDeletionUtils.deleteFile(context, song.path)
-            if (success) {
-                
-                true
-            } else {
-                false
-            }
-        } else {
-            false
+        when {
+            // Already gone from disk: nothing to delete, let the caller drop it from the library.
+            !fileInfo.exists -> true
+            fileInfo.canWrite -> FileDeletionUtils.deleteFile(context, song.path)
+            else -> false
         }
     }
 
