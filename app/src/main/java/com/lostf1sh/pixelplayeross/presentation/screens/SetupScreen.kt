@@ -150,6 +150,8 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.SetupViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.ExpTitleTypography
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.utils.StorageInfo
+import com.lostf1sh.pixelplayeross.utils.isIgnoringBatteryOptimizations
+import com.lostf1sh.pixelplayeross.utils.openBatteryOptimizationSettings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -222,6 +224,7 @@ fun SetupScreen(
     }
 
     val directorySelectionPageIndex = remember(pages) { pages.indexOf(SetupPage.DirectorySelection) }
+    val batteryOptimizationPageIndex = remember(pages) { pages.indexOf(SetupPage.BatteryOptimization) }
     val finishPageIndex = remember(pages) { pages.indexOf(SetupPage.Finish) }
 
     LaunchedEffect(setupViewModel, lifecycleOwner) {
@@ -233,7 +236,12 @@ fun SetupScreen(
                     }
                     is SetupEvent.RestoreCompleted -> {
                         Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
-                        val targetPageIndex = finishPageIndex.takeIf { it >= 0 }
+                        val targetPageIndex = when {
+                            batteryOptimizationPageIndex >= 0 && !isIgnoringBatteryOptimizations(context) ->
+                                batteryOptimizationPageIndex
+                            finishPageIndex >= 0 -> finishPageIndex
+                            else -> null
+                        }
 
                         if (targetPageIndex != null) {
                             pagerState.animateScrollToPage(targetPageIndex)
@@ -365,6 +373,11 @@ fun SetupScreen(
                     )
                     SetupPage.AlarmsPermission -> AlarmsPermissionPage(
                         uiState = uiState,
+                        onSkip = {
+                            navigateToPage(pagerState.currentPage + 1)
+                        }
+                    )
+                    SetupPage.BatteryOptimization -> BatteryOptimizationPage(
                         onSkip = {
                             navigateToPage(pagerState.currentPage + 1)
                         }
@@ -540,6 +553,7 @@ sealed class SetupPage {
     object AlarmsPermission : SetupPage()
     object LibraryLayout : SetupPage()
     object NavBarLayout : SetupPage()
+    object BatteryOptimization : SetupPage()
     object Finish : SetupPage()
 }
 
@@ -564,6 +578,7 @@ private fun buildSetupPages(sdkInt: Int): List<SetupPage> {
         pages += SetupPage.AlarmsPermission
     }
 
+    pages += SetupPage.BatteryOptimization
     pages += SetupPage.Finish
     return pages
 }
@@ -857,6 +872,54 @@ fun AlarmsPermissionPage(
         }
     ) {
         if (!isGranted) {
+            TextButton(onClick = onSkip) {
+                Text(stringResource(R.string.skip_for_now), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
+fun BatteryOptimizationPage(
+    onSkip: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isIgnoringOptimizations by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
+
+    // Re-check when the user comes back from the system dialog or settings.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isIgnoringOptimizations = isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val icons = persistentListOf(
+        R.drawable.rounded_all_inclusive_24,
+        R.drawable.rounded_headphones_24,
+        R.drawable.rounded_play_arrow_24,
+        R.drawable.rounded_timer_24,
+        R.drawable.rounded_music_note_24
+    )
+
+    PermissionPageLayout(
+        title = stringResource(R.string.setup_battery_optimization_title),
+        granted = isIgnoringOptimizations,
+        description = stringResource(R.string.setup_battery_optimization_description),
+        buttonText = if (isIgnoringOptimizations) stringResource(R.string.setup_permission_granted) else stringResource(R.string.setup_disable_battery_optimization),
+        buttonEnabled = !isIgnoringOptimizations,
+        icons = icons,
+        onGrantClicked = {
+            if (!isIgnoringOptimizations && !openBatteryOptimizationSettings(context)) {
+                Toast.makeText(context, context.getString(R.string.setcat_toast_battery_settings_unavailable), Toast.LENGTH_SHORT).show()
+            }
+        }
+    ) {
+        if (!isIgnoringOptimizations) {
             TextButton(onClick = onSkip) {
                 Text(stringResource(R.string.skip_for_now), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

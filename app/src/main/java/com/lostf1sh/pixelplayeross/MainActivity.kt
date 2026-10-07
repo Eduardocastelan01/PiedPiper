@@ -109,7 +109,9 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.NavBarStyle
 import com.lostf1sh.pixelplayeross.data.preferences.sanitizeNavBarCornerRadius
+import com.lostf1sh.pixelplayeross.data.preferences.SidebarShortcutKeys
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
+import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.service.MusicService
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
@@ -123,6 +125,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerBottomSpace
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
 import com.lostf1sh.pixelplayeross.presentation.components.PlayerInternalNavigationBar
 import com.lostf1sh.pixelplayeross.presentation.components.PlayerNavigationRail
+import com.lostf1sh.pixelplayeross.presentation.components.SmartMixHost
 import com.lostf1sh.pixelplayeross.presentation.components.UnifiedPlayerSheetV2
 import com.lostf1sh.pixelplayeross.presentation.components.calculatePlayerSheetCollapsedTargetY
 import com.lostf1sh.pixelplayeross.presentation.components.resolveNavBarOccupiedHeight
@@ -133,8 +136,10 @@ import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.screens.SetupScreen
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.MainViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
+import com.lostf1sh.pixelplayeross.presentation.splash.PixelPlayerSplash
 import com.lostf1sh.pixelplayeross.ui.theme.PixelPlayerTheme
 import com.lostf1sh.pixelplayeross.ui.theme.resolveAppWideNowPlayingColorSchemePair
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.utils.AppLocaleManager
 import com.lostf1sh.pixelplayeross.utils.CrashHandler
 import com.lostf1sh.pixelplayeross.utils.LogUtils
@@ -170,6 +175,8 @@ private data class DismissUndoBarSlice(
     val durationMillis: Long = 4000L
 )
 
+private const val SYSTEM_SPLASH_HANDOFF_MS = 150L
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -187,6 +194,9 @@ class MainActivity : ComponentActivity() {
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
     private val _pendingUpdatesNavigation = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /** Flips when the system splash view is removed; PixelPlayerSplash starts animating then. */
+    private val systemSplashGone = mutableStateOf(false)
 
     private val requestAllFilesAccessLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
     }
@@ -240,6 +250,26 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { false }
 
         val isBenchmarkMode = intent.getBooleanExtra("is_benchmark", false)
+
+        // The animated splash plays on fresh launches only (not on recreation), and never
+        // when the user has turned animations off or a benchmark is timing startup.
+        val playAnimatedSplash = savedInstanceState == null &&
+            !isBenchmarkMode &&
+            Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+        if (playAnimatedSplash) {
+            // PixelPlayerSplash's first frame is the system splash's last one, so the system view
+            // only needs a short fade to cover device-specific icon rendering differences.
+            splashScreen.setOnExitAnimationListener { provider ->
+                provider.view.animate()
+                    .alpha(0f)
+                    .setDuration(SYSTEM_SPLASH_HANDOFF_MS)
+                    .withEndAction {
+                        provider.remove()
+                        systemSplashGone.value = true
+                    }
+                    .start()
+            }
+        }
         val shouldBenchmarkRebuildDatabase =
             isBenchmarkMode && intent.getBooleanExtra("benchmark_rebuild_database", false)
         Timber.tag("PixelPlayerBenchmark").i(
@@ -258,6 +288,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
+            val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -341,7 +372,8 @@ class MainActivity : ComponentActivity() {
 
             PixelPlayerTheme(
                 darkTheme = useDarkTheme,
-                colorSchemePairOverride = appWideNowPlayingScheme
+                colorSchemePairOverride = appWideNowPlayingScheme,
+                themePreset = themePreset
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(
@@ -355,42 +387,53 @@ class MainActivity : ComponentActivity() {
                     contentVisible = true
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha }, 
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    if (showSetupScreen == null) {
-                        SetupGateLoadingScreen()
-                    } else {
-                        AnimatedContent(
-                            targetState = showSetupScreen,
-                            transitionSpec = {
-                                if (targetState) {
-                                    fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400))
+                var showAnimatedSplash by remember { mutableStateOf(playAnimatedSplash) }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha },
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        if (showSetupScreen == null) {
+                            SetupGateLoadingScreen()
+                        } else {
+                            AnimatedContent(
+                                targetState = showSetupScreen,
+                                transitionSpec = {
+                                    if (targetState) {
+                                        fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400))
+                                    } else {
+                                        scaleIn(initialScale = 0.95f, animationSpec = tween(450)) + fadeIn(animationSpec = tween(450)) togetherWith
+                                                slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(450)) + fadeOut(animationSpec = tween(450))
+                                    }
+                                },
+                                label = "SetupTransition"
+                            ) { shouldShowSetup ->
+                                if (shouldShowSetup) {
+                                    SetupScreen(onSetupComplete = {
+                                    })
                                 } else {
-                                    scaleIn(initialScale = 0.95f, animationSpec = tween(450)) + fadeIn(animationSpec = tween(450)) togetherWith
-                                            slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(450)) + fadeOut(animationSpec = tween(450))
+                                    MainAppContent(playerViewModel, mainViewModel)
                                 }
-                            },
-                            label = "SetupTransition"
-                        ) { shouldShowSetup ->
-                            if (shouldShowSetup) {
-                                SetupScreen(onSetupComplete = {
-                                })
-                            } else {
-                                MainAppContent(playerViewModel, mainViewModel)
                             }
+                        }
+
+                        if (showCrashReportDialog && crashLogData != null) {
+                            CrashReportDialog(
+                                crashLog = crashLogData!!,
+                                onDismiss = {
+                                    CrashHandler.clearCrashLog()
+                                    crashLogData = null
+                                    showCrashReportDialog = false
+                                }
+                            )
                         }
                     }
 
-                    if (showCrashReportDialog && crashLogData != null) {
-                        CrashReportDialog(
-                            crashLog = crashLogData!!,
-                            onDismiss = {
-                                CrashHandler.clearCrashLog()
-                                crashLogData = null
-                                showCrashReportDialog = false
-                            }
+                    if (showAnimatedSplash) {
+                        PixelPlayerSplash(
+                            systemSplashGone = systemSplashGone.value,
+                            onFinished = { showAnimatedSplash = false }
                         )
                     }
                 }
@@ -664,6 +707,7 @@ class MainActivity : ComponentActivity() {
                 Screen.Stats.route,
                 Screen.EditTransition.route,
                 Screen.Experimental.route,
+                Screen.LyricsSettings.route,
                 Screen.ArtistSettings.route,
                 Screen.Equalizer.route,
                 Screen.SettingsCategory.route,
@@ -673,6 +717,7 @@ class MainActivity : ComponentActivity() {
                 Screen.DeviceCapabilities.route,
                 Screen.EasterEgg.route,
                 Screen.WordDelimiterConfig.route,
+                Screen.ExcludedDirectories.route,
                 Screen.AudioBookmarks.route,
                 Screen.AudioBookmarkFolder.route,
                 Screen.Updates.route
@@ -781,13 +826,22 @@ class MainActivity : ComponentActivity() {
             userPreferencesRepository.clearDeprecatedPlayerSheetPreference()
         }
 
+        val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
+
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
-            LocalHapticFeedback provides scopedHapticFeedback
+            LocalHapticFeedback provides scopedHapticFeedback,
+            LocalShowScrollbar provides showScrollbar
         ) {
+            val sidebarShortcuts by userPreferencesRepository.sidebarShortcutsFlow
+                .collectAsStateWithLifecycle(initialValue = SidebarShortcutKeys.DEFAULT)
             AppSidebarDrawer(
                 drawerState = drawerState,
                 selectedRoute = currentRoute ?: Screen.Home.route,
+                enabledShortcuts = sidebarShortcuts,
+                onShortcutsChanged = { shortcuts ->
+                    scope.launch { userPreferencesRepository.setSidebarShortcuts(shortcuts) }
+                },
                 onDestinationSelected = { destination ->
                     scope.launch { drawerState.close() }
                     when (destination) {
@@ -795,6 +849,7 @@ class MainActivity : ComponentActivity() {
                             popUpTo(Screen.Home.route) { inclusive = true }
                         }
                         DrawerDestination.Equalizer -> navController.navigateSafely(Screen.Equalizer.route)
+                        DrawerDestination.Bookmarks -> navController.navigateSafely(Screen.AudioBookmarks.route)
                         DrawerDestination.Settings -> navController.navigateSafely(Screen.Settings.route)
                     }
                 }
@@ -1040,6 +1095,14 @@ class MainActivity : ComponentActivity() {
                                 durationMillis = dismissUndoBarSlice.durationMillis
                             )
                         }
+
+                        SmartMixHost(
+                            playerViewModel = playerViewModel,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = innerPadding.calculateBottomPadding() + MiniPlayerHeight)
+                                .padding(horizontal = horizontalPadding)
+                        )
                     }
                 }
             }
