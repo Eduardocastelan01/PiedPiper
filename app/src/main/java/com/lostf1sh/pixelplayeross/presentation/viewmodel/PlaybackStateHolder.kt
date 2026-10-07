@@ -372,6 +372,11 @@ class PlaybackStateHolder @Inject constructor(
         }
     }
 
+    /** Always moves to the previous queue item, never restarting the current track. */
+    fun forcePreviousSong() {
+        activeLocalPlayer().seekToPreviousMediaItem()
+    }
+
     fun nextSong() {
         activeLocalPlayer().seekToNext()
     }
@@ -586,6 +591,20 @@ class PlaybackStateHolder @Inject constructor(
     }
 
     /**
+     * Which playlist each queued song came from. Songs the user added from elsewhere have no
+     * tag and must not gain one on a rebuild, or a custom transition would apply to a pair the
+     * user put together by hand.
+     */
+    private fun playlistTagsOf(player: Player): Map<String, String> {
+        val tags = HashMap<String, String>()
+        for (index in 0 until player.mediaItemCount) {
+            val item = player.getMediaItemAt(index)
+            MediaItemBuilder.playlistIdOf(item)?.let { tags.putIfAbsent(item.mediaId, it) }
+        }
+        return tags
+    }
+
+    /**
      * Replaces the player timeline with [newQueue] in a single setMediaItems call,
      * preserving the currently playing song and its position. This is O(1) IPC calls
      * versus O(n) for reorderQueueInPlace, making it suitable for large queue shuffles.
@@ -593,13 +612,16 @@ class PlaybackStateHolder @Inject constructor(
     private suspend fun buildQueueReplacement(
         newQueue: List<Song>,
         targetIndex: Int,
-        currentMediaItem: MediaItem?
+        currentMediaItem: MediaItem?,
+        playlistTags: Map<String, String>,
     ): PreparedQueueReplacement = withContext(Dispatchers.Default) {
         val safeTargetIndex = targetIndex.coerceIn(0, (newQueue.size - 1).coerceAtLeast(0))
+        // A reshuffle keeps the same songs, so each keeps its own playlist context too;
+        // dropping it would switch off the playlist's transitions.
         val mediaItems = List(newQueue.size) { index ->
             currentMediaItem
                 ?.takeIf { index == safeTargetIndex && it.mediaId == newQueue[safeTargetIndex].id }
-                ?: MediaItemBuilder.build(newQueue[index])
+                ?: rebuildQueueItem(newQueue[index], playlistTags)
         }
 
         PreparedQueueReplacement(
@@ -608,10 +630,14 @@ class PlaybackStateHolder @Inject constructor(
         )
     }
 
+    private fun rebuildQueueItem(song: Song, playlistTags: Map<String, String>): MediaItem =
+        MediaItemBuilder.withPlaylistId(MediaItemBuilder.build(song), playlistTags[song.id])
+
     private suspend fun buildQueueSegments(
         newQueue: List<Song>,
         currentIndex: Int,
-        currentMediaItem: MediaItem?
+        currentMediaItem: MediaItem?,
+        playlistTags: Map<String, String>,
     ): PreparedQueueSegments? = withContext(Dispatchers.Default) {
         val safeCurrentIndex = currentIndex.coerceIn(0, (newQueue.size - 1).coerceAtLeast(0))
         val currentQueueSong = newQueue.getOrNull(safeCurrentIndex) ?: return@withContext null
@@ -620,11 +646,11 @@ class PlaybackStateHolder @Inject constructor(
         }
 
         val beforeCurrent = List(safeCurrentIndex) { index ->
-            MediaItemBuilder.build(newQueue[index])
+            rebuildQueueItem(newQueue[index], playlistTags)
         }
         val afterStartIndex = safeCurrentIndex + 1
         val afterCurrent = List((newQueue.size - afterStartIndex).coerceAtLeast(0)) { offset ->
-            MediaItemBuilder.build(newQueue[afterStartIndex + offset])
+            rebuildQueueItem(newQueue[afterStartIndex + offset], playlistTags)
         }
 
         PreparedQueueSegments(
@@ -719,6 +745,7 @@ class PlaybackStateHolder @Inject constructor(
                         val currentPosition = player.currentPosition
                         val wasPlaying = player.isPlaying
                         val currentMediaItem = player.currentMediaItem
+                        val playlistTags = playlistTagsOf(player)
 
                         val shuffledQueue = withContext(Dispatchers.Default) {
                             QueueUtils.buildAnchoredShuffleQueueSuspending(currentSongs, currentIndex)
@@ -728,7 +755,8 @@ class PlaybackStateHolder @Inject constructor(
                             val preservedReplacement = buildQueueSegments(
                                 newQueue = shuffledQueue,
                                 currentIndex = currentIndex,
-                                currentMediaItem = currentMediaItem
+                                currentMediaItem = currentMediaItem,
+                                playlistTags = playlistTags
                             )
                             val replacedInPlace = preservedReplacement?.let { preparedSegments ->
                                 replacePlayerQueuePreservingCurrent(player, currentIndex, preparedSegments)
@@ -738,7 +766,8 @@ class PlaybackStateHolder @Inject constructor(
                                 val preparedQueue = buildQueueReplacement(
                                     newQueue = shuffledQueue,
                                     targetIndex = currentIndex,
-                                    currentMediaItem = currentMediaItem
+                                    currentMediaItem = currentMediaItem,
+                                    playlistTags = playlistTags
                                 )
                                 replacePlayerQueue(player, preparedQueue, currentPosition)
                             }
@@ -748,7 +777,8 @@ class PlaybackStateHolder @Inject constructor(
                                 val preservedReplacement = buildQueueSegments(
                                     newQueue = shuffledQueue,
                                     currentIndex = currentIndex,
-                                    currentMediaItem = currentMediaItem
+                                    currentMediaItem = currentMediaItem,
+                                    playlistTags = playlistTags
                                 )
                                 val replacedInPlace = preservedReplacement?.let { preparedSegments ->
                                     replacePlayerQueuePreservingCurrent(player, currentIndex, preparedSegments)
@@ -758,7 +788,8 @@ class PlaybackStateHolder @Inject constructor(
                                     val preparedQueue = buildQueueReplacement(
                                         newQueue = shuffledQueue,
                                         targetIndex = currentIndex,
-                                        currentMediaItem = currentMediaItem
+                                        currentMediaItem = currentMediaItem,
+                                        playlistTags = playlistTags
                                     )
                                     replacePlayerQueue(player, preparedQueue, currentPosition)
                                 }
@@ -793,6 +824,7 @@ class PlaybackStateHolder @Inject constructor(
                         val currentPosition = player.currentPosition
                         val currentSongId = currentSong?.id ?: player.currentMediaItem?.mediaId
                         val currentMediaItem = player.currentMediaItem
+                        val playlistTags = playlistTagsOf(player)
                         val originalIndex = originalQueue.indexOfFirst { it.id == currentSongId }.takeIf { it >= 0 }
 
                         if (originalIndex == null) {
@@ -804,7 +836,8 @@ class PlaybackStateHolder @Inject constructor(
                             val preservedReplacement = buildQueueSegments(
                                 newQueue = originalQueue,
                                 currentIndex = originalIndex,
-                                currentMediaItem = currentMediaItem
+                                currentMediaItem = currentMediaItem,
+                                playlistTags = playlistTags
                             )
                             val replacedInPlace = preservedReplacement?.let { preparedSegments ->
                                 replacePlayerQueuePreservingCurrent(player, originalIndex, preparedSegments)
@@ -814,7 +847,8 @@ class PlaybackStateHolder @Inject constructor(
                                 val preparedQueue = buildQueueReplacement(
                                     newQueue = originalQueue,
                                     targetIndex = originalIndex,
-                                    currentMediaItem = currentMediaItem
+                                    currentMediaItem = currentMediaItem,
+                                    playlistTags = playlistTags
                                 )
                                 replacePlayerQueue(player, preparedQueue, currentPosition)
                             }
@@ -824,7 +858,8 @@ class PlaybackStateHolder @Inject constructor(
                                 val preservedReplacement = buildQueueSegments(
                                     newQueue = originalQueue,
                                     currentIndex = originalIndex,
-                                    currentMediaItem = currentMediaItem
+                                    currentMediaItem = currentMediaItem,
+                                    playlistTags = playlistTags
                                 )
                                 val replacedInPlace = preservedReplacement?.let { preparedSegments ->
                                     replacePlayerQueuePreservingCurrent(player, originalIndex, preparedSegments)
@@ -834,7 +869,8 @@ class PlaybackStateHolder @Inject constructor(
                                     val preparedQueue = buildQueueReplacement(
                                         newQueue = originalQueue,
                                         targetIndex = originalIndex,
-                                        currentMediaItem = currentMediaItem
+                                        currentMediaItem = currentMediaItem,
+                                        playlistTags = playlistTags
                                     )
                                     replacePlayerQueue(player, preparedQueue, currentPosition)
                                 }

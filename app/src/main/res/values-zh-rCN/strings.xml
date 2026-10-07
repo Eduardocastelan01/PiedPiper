@@ -152,9 +152,18 @@
 <string name="player_no_songs_in_library_toast">曲库内暂无歌曲</string>
 <string name="player_playback_stopped_eot">播放停止：%1$s 播放完毕。</string>
 <string name="player_default_track_title">曲目</string>
+    <string name="player_audio_output_title">播放设备</string>
+<string name="player_audio_output_this_phone">本机</string>
+    <string name="player_audio_output_wired">有线耳机</string>
+    <string name="player_audio_output_unknown_device">音频设备</string>
+    <string name="player_audio_output_more_devices">更多设备</string>
+    <string name="player_audio_output_more_devices_subtitle">使用系统输出选择器连接或切换设备</string>
 <string name="player_no_songs_to_shuffle">没有歌曲可供随机播放。</string>
 <string name="player_queue_name_selected_albums">选中专辑</string>
 <string name="player_no_playable_songs_in_albums">选中专辑中没有可播放歌曲</string>
+<string name="player_no_playable_songs_in_genres">在选定的流派中未找到可播放的歌曲</string>
+    <string name="player_queue_name_selected_genres">选中流派</string>
+    <string name="player_could_not_queue_genres">无法将选中流派加入队列</string>
 <string name="player_only_first_n_albums_queued">仅加入前 %1$d 个专辑</string>
 <string name="player_albums_queued_format">已加入 %1$d 个专辑（共%2$d首歌曲）</string>
 <string name="player_could_not_queue_albums">无法将选中专辑加入队列</string>
@@ -223,6 +232,8 @@
 <string name="batch_edit_multiple_covers">（多张不同封面）</string>
 
 <string name="player_error_skipping">无法播放该曲目，自动跳过</string>
+<string name="player_unsupported_format">无法播放 %1$s：此设备没有 %2$s 的解码器</string>
+<string name="player_unsupported_format_unknown">此格式</string>
 <string name="sync_failed_toast">曲库同步失败，下拉刷新重试。</string>
 
 <string name="a11y_toggle_on">开启</string>

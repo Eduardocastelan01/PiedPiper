@@ -152,9 +152,18 @@
     <string name="player_no_songs_in_library_toast">No songs found in library</string>
     <string name="player_playback_stopped_eot">Playback stopped: %1$s finished (End of Track).</string>
     <string name="player_default_track_title">Track</string>
+    <string name="player_audio_output_title">Play on</string>
+    <string name="player_audio_output_this_phone">This phone</string>
+    <string name="player_audio_output_wired">Wired headphones</string>
+    <string name="player_audio_output_unknown_device">Audio device</string>
+    <string name="player_audio_output_more_devices">More devices</string>
+    <string name="player_audio_output_more_devices_subtitle">Connect or switch using the system output picker</string>
     <string name="player_no_songs_to_shuffle">No songs to shuffle.</string>
     <string name="player_queue_name_selected_albums">Selected Albums</string>
     <string name="player_no_playable_songs_in_albums">No playable songs found in selected albums</string>
+    <string name="player_no_playable_songs_in_genres">No playable songs found in selected genres</string>
+    <string name="player_queue_name_selected_genres">Selected Genres</string>
+    <string name="player_could_not_queue_genres">Could not queue selected genres</string>
     <string name="player_only_first_n_albums_queued">Only the first %1$d albums were queued</string>
     <string name="player_albums_queued_format">%1$d albums queued (%2$d songs)</string>
     <string name="player_could_not_queue_albums">Could not queue selected albums</string>
@@ -223,6 +232,8 @@
     <string name="batch_edit_multiple_covers">(Multiple different covers)</string>
 
     <string name="player_error_skipping">Couldn\'t play this track — skipping</string>
+    <string name="player_unsupported_format">Can\'t play %1$s: this device has no decoder for %2$s</string>
+    <string name="player_unsupported_format_unknown">this format</string>
     <string name="sync_failed_toast">Library sync failed. Pull down to refresh and try again.</string>
 
     <string name="a11y_toggle_on">On</string>

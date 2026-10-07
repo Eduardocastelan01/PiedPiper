@@ -159,7 +159,7 @@ class PlayerViewModelTest {
         every { mockPlaybackStateHolder.stablePlayerState } returns stablePlayerStateFlow
         every { mockPlaybackStateHolder.setMediaController(any()) } just runs
 
-        every { mockSleepTimerStateHolder.initialize(any(), any(), any(), any(), any()) } just runs
+        every { mockSleepTimerStateHolder.initialize(any(), any(), any(), any()) } just runs
         every { mockLibraryStateHolder.initialize(any()) } just runs
 
         every { mockMusicRepository.getPaginatedSongs(any(), any()) } returns flowOf(androidx.paging.PagingData.empty())
@@ -506,13 +506,13 @@ class PlayerViewModelTest {
         @Test
         fun `shuffleAllSongs calls prepareShuffledQueue with random songs at index zero`() = runTest {
             val randomSongs = listOf(song2, song3, song1)
-            coEvery { mockMusicRepository.getRandomSongs(500) } returns randomSongs
+            coEvery { mockMusicRepository.getRandomSongs(10_000) } returns randomSongs
             stubShuffledPlayback(randomSongs, startSong = song2)
 
             playerViewModel.shuffleAllSongs()
             advanceUntilIdle()
 
-            coVerify { mockMusicRepository.getRandomSongs(500) }
+            coVerify { mockMusicRepository.getRandomSongs(10_000) }
             coVerify {
                 mockQueueStateHolder.prepareShuffledQueueSuspending(
                     randomSongs,
@@ -524,7 +524,7 @@ class PlayerViewModelTest {
         @Test
         fun `playRandomSong calls prepareShuffledQueue with startAtZero`() = runTest {
             val randomSongs = listOf(song3, song1, song2)
-            coEvery { mockMusicRepository.getRandomSongs(500) } returns randomSongs
+            coEvery { mockMusicRepository.getRandomSongs(10_000) } returns randomSongs
             stubShuffledPlayback(randomSongs, startSong = song3)
 
             playerViewModel.playRandomSong()
@@ -603,13 +603,13 @@ class PlayerViewModelTest {
         @Test
         fun `triggerShuffleAllFromTile uses repository sample and startAtZero`() = runTest {
             val songs = listOf(song1, song2, song3)
-            coEvery { mockMusicRepository.getRandomSongs(500) } returns songs
+            coEvery { mockMusicRepository.getRandomSongs(10_000) } returns songs
             stubShuffledPlayback(songs, startSong = song1)
 
             playerViewModel.triggerShuffleAllFromTile()
             advanceUntilIdle()
 
-            coVerify { mockMusicRepository.getRandomSongs(500) }
+            coVerify { mockMusicRepository.getRandomSongs(10_000) }
             coVerify {
                 mockQueueStateHolder.prepareShuffledQueueSuspending(
                     songs,

@@ -12,6 +12,7 @@ import com.lostf1sh.pixelplayeross.data.model.TransitionResolution
 import com.lostf1sh.pixelplayeross.data.model.TransitionSource
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.TransitionRepository
+import com.lostf1sh.pixelplayeross.utils.MediaItemBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -123,11 +125,31 @@ class TransitionController @Inject constructor(
         currentObservedPlayer = engine.masterPlayer
         currentObservedPlayer?.addListener(transitionListener!!)
         engine.addPlayerSwapListener(swapListener)
+
+        // A sleep timer that stops at the end of the track must not crossfade into the next
+        // one; once it clears, the current track gets its transition back. A crossfade that
+        // is already running is left alone: the swap reschedules for the incoming track.
+        scope.launch {
+            engine.sleepTimerHold
+                .map { it.suppressCrossfade }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    if (engine.isTransitionRunning()) return@collect
+                    engine.masterPlayer.currentMediaItem?.let { scheduleTransitionFor(it) }
+                }
+        }
     }
 
     private fun scheduleTransitionFor(currentMediaItem: MediaItem) {
         transitionSchedulerJob?.cancel()
         engine.setPauseAtEndOfMediaItems(shouldPause = false)
+
+        if (engine.sleepTimerHold.value.suppressCrossfade) {
+            Timber.tag("TransitionDebug").d("Sleep timer holds playback at track end. No transition.")
+            if (!engine.isTransitionRunning()) engine.cancelNext()
+            return
+        }
 
         transitionSchedulerJob = scope.launch {
             if (engine.isTransitionRunning()) {
@@ -154,16 +176,31 @@ class TransitionController @Inject constructor(
 
             val nextMediaItem = transitionTarget.mediaItem
 
-            val playlistId = currentMediaItem.mediaMetadata.extras?.getString("playlistId")
             val fromTrackId = currentMediaItem.mediaId
             val toTrackId = nextMediaItem.mediaId
+            val currentPlaylistId = MediaItemBuilder.playlistIdOf(currentMediaItem)
+            val nextPlaylistId = MediaItemBuilder.playlistIdOf(nextMediaItem)
+            // A song the user queued from elsewhere carries no playlist tag; next to playlist
+            // songs it still takes the playlist's default transition rather than the global one.
+            val playlistId = currentPlaylistId ?: nextPlaylistId
+            // A pair's own transition only plays while the queue still plays that pair as the
+            // playlist has it: both songs queued from the playlist, back to back. Once the user
+            // moves, inserts or removes songs around it, it falls back to the playlist default.
+            val pairStillFromPlaylist = currentPlaylistId != null && currentPlaylistId == nextPlaylistId
 
-            Timber.tag("TransitionDebug").d("Resolving settings for playlistId=%s, %s -> %s", playlistId, fromTrackId, toTrackId)
+            Timber.tag("TransitionDebug").d(
+                "Resolving settings for playlistId=%s, %s -> %s (pairFromPlaylist=%s)",
+                playlistId, fromTrackId, toTrackId, pairStillFromPlaylist
+            )
 
             val isCrossfadeEnabledFlow = userPreferencesRepository.isCrossfadeEnabledFlow
 
             val settingsFlow = if (playlistId != null) {
-                transitionRepository.resolveTransitionSettings(playlistId, fromTrackId, toTrackId)
+                transitionRepository.resolveTransitionSettings(
+                    playlistId,
+                    fromTrackId.takeIf { pairStillFromPlaylist },
+                    toTrackId.takeIf { pairStillFromPlaylist },
+                )
             } else {
                 Timber.tag("TransitionDebug").d("Missing playlistId. Using global settings.")
                 transitionRepository.getGlobalSettings().map {
