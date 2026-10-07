@@ -36,4 +36,28 @@
         <item quantity="one">%d kez</item>
         <item quantity="other">%d kez</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d aktif gün</item>
+        <item quantity="other">%d aktif gün</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d sanatçı</item>
+        <item quantity="other">%d sanatçı</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d gün</item>
+        <item quantity="other">%d gün</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d dinlenme</item>
+        <item quantity="other">%d dinlenme</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d oturum</item>
+        <item quantity="other">%d oturum</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d parça</item>
+        <item quantity="other">%d parça</item>
+    </plurals>
 </resources>

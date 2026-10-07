@@ -72,4 +72,52 @@
         <item quantity="many">%d مرة</item>
         <item quantity="other">%d مرة</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="zero">%d يوم نشط</item>
+        <item quantity="one">%d يوم نشط</item>
+        <item quantity="two">%d يوم نشط</item>
+        <item quantity="few">%d أيام نشطة</item>
+        <item quantity="many">%d يوماً نشطاً</item>
+        <item quantity="other">%d يوم نشط</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="zero">%d فنان</item>
+        <item quantity="one">%d فنان</item>
+        <item quantity="two">%d فنان</item>
+        <item quantity="few">%d فنانين</item>
+        <item quantity="many">%d فناناً</item>
+        <item quantity="other">%d فنان</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="zero">%d يوم</item>
+        <item quantity="one">%d يوم</item>
+        <item quantity="two">%d يوم</item>
+        <item quantity="few">%d أيام</item>
+        <item quantity="many">%d يوماً</item>
+        <item quantity="other">%d يوم</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="zero">%d مرة تشغيل</item>
+        <item quantity="one">%d مرة تشغيل</item>
+        <item quantity="two">%d مرة تشغيل</item>
+        <item quantity="few">%d مرات تشغيل</item>
+        <item quantity="many">%d مرة تشغيل</item>
+        <item quantity="other">%d مرة تشغيل</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="zero">%d جلسة</item>
+        <item quantity="one">%d جلسة</item>
+        <item quantity="two">%d جلسة</item>
+        <item quantity="few">%d جلسات</item>
+        <item quantity="many">%d جلسة</item>
+        <item quantity="other">%d جلسة</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="zero">%d مسار</item>
+        <item quantity="one">%d مسار</item>
+        <item quantity="two">%d مسار</item>
+        <item quantity="few">%d مسارات</item>
+        <item quantity="many">%d مساراً</item>
+        <item quantity="other">%d مسار</item>
+    </plurals>
 </resources>

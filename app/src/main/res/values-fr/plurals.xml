@@ -36,4 +36,34 @@
         <item quantity="one">%d fois</item>
         <item quantity="other">%d fois</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d jour actif</item>
+        <item quantity="many">%d jours actifs</item>
+        <item quantity="other">%d jours actifs</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d artiste</item>
+        <item quantity="many">%d artistes</item>
+        <item quantity="other">%d artistes</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d jour</item>
+        <item quantity="many">%d jours</item>
+        <item quantity="other">%d jours</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d écoute</item>
+        <item quantity="many">%d écoutes</item>
+        <item quantity="other">%d écoutes</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d session</item>
+        <item quantity="many">%d sessions</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d titre</item>
+        <item quantity="many">%d titres</item>
+        <item quantity="other">%d titres</item>
+    </plurals>
 </resources>

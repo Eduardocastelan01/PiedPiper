@@ -36,4 +36,22 @@
         <item quantity="one">%d kali</item>
         <item quantity="other">%d kali</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="other">%d hari aktif</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="other">%d artis</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="other">%d hari</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="other">%d putaran</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="other">%d sesi</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="other">%d lagu</item>
+    </plurals>
 </resources>
