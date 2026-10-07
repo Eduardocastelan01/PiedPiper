@@ -6,11 +6,48 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 
 ### Added
 - An Updates screen (Settings → Updates, also linked from Settings → About) that checks for new versions on a chosen channel: Stable pulls from F-Droid, Alpha from the GitHub prereleases built for every merged change. Same-channel updates download and install in the app; switching channels walks through backing up, downloading the other build, and uninstalling, since F-Droid and GitHub builds are signed with different keys. An optional daily check notifies when an update is available (on by default for alpha builds, off for F-Droid builds).
+- Smart Mix composer that replaces the "Describe it" dialog. Describe a mix, adjust its energy and length, preview it, then play it, save it as a playlist, or use it as today's Daily Mix (with undo). It suggests mixes based on your library and listening habits and remembers recent requests. History can be cleared in Settings. Everything still runs offline.
+- The offline mix engine handles more requests: include or exclude artists and genres, "rock but not metal", "only" requests, "like <playlist>", spelled-out decades, and mood words nobody listed by hand. It ranks results by your listening habits and keeps mixes varied. Songs without genre tags get a genre from their artist, using a bundled Wikidata (CC0) table.
+- AMOLED theme preset with true-black surfaces.
+- Lyrics settings screen with an adjustable lyrics font size.
+- Multi-selection in Search for songs, albums, playlists, and genres.
+- Optional swipe-to-skip on the mini player.
+- Audio output picker in the player (phone speaker, wired, USB, or a Bluetooth device).
+- Audio bookmarks are now part of backups, can be selected and deleted in bulk, and reconnect to their songs after a rescan.
+- Excluded folders now open on their own screen, with a list of every audio folder.
+- In-app licenses screen under About.
+- Battery optimization exemption prompt in setup and Playback settings.
+- "Show scrollbar" setting, grid view for the Playlists tab, and customizable sidebar shortcuts.
+- Redesigned album and artist headers, segmented library lists, a new Stats screen with Heavy Rotation drill-down, and an animated splash.
+
+### Changed
+- The playback service now runs the sleep timer. Duration timers no longer drift while audio offload lets the CPU sleep. End-of-track pauses exactly at the end of the song, even with crossfade on. Counted play restores your previous repeat mode.
+- Shuffle All queues up to 10,000 songs instead of 500.
+- On devices where audio offload stalls, playback falls back after 1.5 seconds instead of 4, and offload stays off until the next system update.
+- Library tabs keep their scroll position when you come back to them.
+- Better online lyrics matching for non-Latin titles.
 
 ### Fixed
 - Navidrome/Subsonic and Jellyfin album artwork no longer gets stuck on the placeholder after a few songs. The player loaded cloud covers through the app's own artwork content provider, and concurrent loads could exhaust the image decoder slots that provider waited on, freezing every artwork load until the app restarted. Server error responses are also no longer cached as cover images, and concurrent cover downloads no longer corrupt each other's cache file ([#138](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/138)).
 - System media controls can load album artwork through the app's artwork URI again. System UI reads that URI without connecting as a media controller, so it never received the per-track read grant and was refused on every track; privileged media surfaces (holders of `MEDIA_CONTENT_CONTROL`) may now open the artwork the session currently shows, while every other cover, and every other app, still needs the explicit grant. Stock Android fell back to the session bitmap, but System UIs without that fallback could show no artwork.
 - Jellyfin playlists no longer go missing on Jellyfin 10.10 and newer, where playlists can hold mixed content and audio playlists are often reported without a media type.
+- With crossfade on, queues longer than 200 songs no longer shrink to a 200-song window after a transition, and the shortened queue is no longer restored after the app is killed.
+- Restoring a backup before the library scan finishes no longer drops songs from playlists. They are added back once the scan finds them. Transition rules restored on another device now point at the right songs.
+- Correctly accented titles such as "Château" or "CORAÇÃO" are no longer turned into garbled text during library scans.
+- Reordering the queue no longer flickers, and a swiped-away queue item no longer jumps back before it is removed.
+- Metadata edits work on files that can only be written through the system's media permission.
+- Songs whose files were already deleted can now be removed from the library.
+- Empty library tabs no longer stay stuck on the loading placeholder.
+- File info (bitrate, sample rate) no longer disappears when you toggle shuffle or repeat.
+- Tracks no decoder can play now pause and show a message, instead of playing silence while the progress bar moves.
+- The widget's "next up" artwork follows shuffle and repeat order.
+- When a song from elsewhere is queued between playlist songs, it now gets the playlist's default transition. A song pair's custom transition only plays while the two songs are still next to each other.
+- The scrollbar no longer keeps outdated state or reserves space when the list can't scroll. The folder picker no longer lists folders that contain no audio.
+- The "locate current song" button no longer appears in Liked for songs that aren't liked, or in Folders for folders that don't contain the current song.
+- Back closes the settings search before leaving Settings.
+- Kugou word-by-word lyrics get correct spacing. Plain lyrics no longer have romanization written into the text. Large Apple Music TTML files and `<smil>`-rooted TTML import correctly. Titles containing `$`, `#`, or `%` are no longer cut short when searching for lyrics.
+- Recently Played hour labels follow the system 24-hour setting, and the Search filter chips are translated.
+- Updated Netty to 4.2.28 for security fixes.
 - Pressing back with the Now Playing screen or the Next up queue open inside a folder in the Folders tab now closes the player instead of leaving the folder ([#136](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/136)).
 
 ## [0.3.0] - 2026-08-15
