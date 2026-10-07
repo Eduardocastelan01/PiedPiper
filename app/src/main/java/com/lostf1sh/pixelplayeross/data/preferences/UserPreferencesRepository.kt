@@ -224,6 +224,7 @@ constructor(
         val USE_FOLDER_ALBUM_ART = booleanPreferencesKey("use_folder_album_art")
         val FOLDER_ALBUM_ART_CACHE_STATE = booleanPreferencesKey("folder_album_art_cache_state")
         val TAP_BACKGROUND_CLOSES_PLAYER = booleanPreferencesKey("tap_background_closes_player")
+        val MINI_PLAYER_SWIPE_TO_SKIP = booleanPreferencesKey("mini_player_swipe_to_skip")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val ADVANCED_PERFORMANCE_DIAGNOSTICS_ENABLED =
             booleanPreferencesKey("advanced_performance_diagnostics_enabled")
@@ -240,9 +241,12 @@ constructor(
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
 
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
+        val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
+        val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
 
         val COLLAGE_PATTERN = stringPreferencesKey("collage_pattern")
         val COLLAGE_AUTO_ROTATE = booleanPreferencesKey("collage_auto_rotate")
+        val SIDEBAR_SHORTCUTS = stringSetPreferencesKey("sidebar_shortcuts")
 
         val LAST_PLAYLIST_ID = stringPreferencesKey("last_playlist_id")
         val LAST_PLAYLIST_NAME = stringPreferencesKey("last_playlist_name")
@@ -780,6 +784,40 @@ constructor(
     suspend fun setAlbumsListView(isList: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_ALBUMS_LIST_VIEW] = isList
+        }
+    }
+
+    /** Grid layout for the Playlists tab and the Folders tab's playlist view. */
+    val isPlaylistsGridViewFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_PLAYLISTS_GRID_VIEW] ?: false
+        }
+
+    suspend fun setPlaylistsGridView(isGrid: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_PLAYLISTS_GRID_VIEW] = isGrid
+        }
+    }
+
+    val showScrollbarFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLLBAR] ?: true
+        }
+
+    suspend fun setShowScrollbar(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLLBAR] = enabled
+        }
+    }
+
+    val sidebarShortcutsFlow: Flow<Set<String>> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SIDEBAR_SHORTCUTS] ?: SidebarShortcutKeys.DEFAULT
+        }
+
+    suspend fun setSidebarShortcuts(shortcuts: Set<String>) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SIDEBAR_SHORTCUTS] = shortcuts
         }
     }
 
@@ -1480,6 +1518,18 @@ constructor(
         }
     }
 
+    val lyricsFontSizeFlow: Flow<Float> = dataStore.data
+        .map { preferences ->
+            sanitizeLyricsFontSize(preferences[LYRICS_FONT_SIZE_SP_KEY] ?: DEFAULT_LYRICS_FONT_SIZE_SP)
+        }
+        .distinctUntilChanged()
+
+    suspend fun setLyricsFontSize(fontSizeSp: Float) {
+        dataStore.edit { preferences ->
+            preferences[LYRICS_FONT_SIZE_SP_KEY] = sanitizeLyricsFontSize(fontSizeSp)
+        }
+    }
+
     val libraryTabsOrderFlow: Flow<String?> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
@@ -1705,6 +1755,21 @@ constructor(
     suspend fun setTapBackgroundClosesPlayer(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TAP_BACKGROUND_CLOSES_PLAYER] = enabled
+        }
+    }
+
+    /**
+     * Whether horizontal swipes on the mini player change track, moving dismissal to a downward
+     * swipe. Off by default, where short swipes change track and long swipes dismiss.
+     */
+    val miniPlayerSwipeToSkipFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] ?: false
+        }
+
+    suspend fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] = enabled
         }
     }
 

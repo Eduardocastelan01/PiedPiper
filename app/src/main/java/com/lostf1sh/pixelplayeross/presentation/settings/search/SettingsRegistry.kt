@@ -15,7 +15,7 @@ object SettingsRegistry {
                 titleRes = R.string.setcat_excluded_directories_title,
                 subtitleRes = R.string.setcat_excluded_directories_subtitle,
                 category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                subscreenRoute = Screen.ExcludedDirectories.route,
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("folder", "ignore", "exclude", "blacklist", "directories", "hidden")
             ),
@@ -87,6 +87,16 @@ object SettingsRegistry {
                 keywordsStatic = listOf("m3u", "playlist", "sync now", "reconcile")
             ),
             SettingSpec(
+                id = "library_smart_mix_history",
+                itemKey = "item_library_smart_mix_history",
+                titleRes = R.string.setcat_smart_mix_history_title,
+                subtitleRes = R.string.setcat_smart_mix_history_subtitle,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                type = SettingType.ACTION,
+                keywordsStatic = listOf("smart mix", "mix", "history", "clear", "recent requests", "historial", "borrar")
+            ),
+            SettingSpec(
                 id = "library_auto_scan_lrc",
                 itemKey = "item_library_auto_scan_lrc",
                 titleRes = R.string.setcat_auto_scan_lrc_title,
@@ -147,25 +157,59 @@ object SettingsRegistry {
                 getValue = { it.externalArtistImagesEnabled },
                 onToggle = { viewModel, checked -> viewModel.setExternalArtistImagesEnabled(checked) }
             ),
+
+            // --- LYRICS SUBSCREEN (grouped under Playback) ---
             SettingSpec(
-                id = "library_lyrics_source_priority",
-                itemKey = "item_library_lyrics_source_priority",
-                titleRes = R.string.setcat_lyrics_source_priority_label,
-                subtitleRes = R.string.setcat_lyrics_source_priority_desc,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                id = "playback_lyrics_subscreen",
+                itemKey = "item_playback_lyrics_subscreen",
+                titleRes = R.string.setcat_lyrics_title,
+                subtitleRes = R.string.setcat_lyrics_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("lyrics source", "embedded", "online", "priority", "lrc")
+                keywordsStatic = listOf("lyrics", "words", "text", "font", "lrc", "synced lyrics")
             ),
             SettingSpec(
-                id = "library_reset_imported_lyrics",
-                itemKey = "item_library_reset_imported_lyrics",
+                id = "lyrics_font_size",
+                itemKey = "item_lyrics_font_size",
+                titleRes = R.string.setcat_lyrics_font_size_title,
+                subtitleRes = R.string.setcat_lyrics_font_size_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("lyrics size", "text size", "font size", "bigger lyrics", "accessibility")
+            ),
+            SettingSpec(
+                id = "lyrics_animated_blur",
+                itemKey = "item_lyrics_animated_blur",
+                titleRes = R.string.presentation_batch_f_exp_lyric_blur_title,
+                subtitleRes = R.string.presentation_batch_f_exp_lyric_blur_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("lyrics blur", "animated blur", "depth of field", "blur strength"),
+                getValue = { it.animatedLyricsBlurEnabled },
+                onToggle = { viewModel, checked -> viewModel.setAnimatedLyricsBlurEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "lyrics_source_priority",
+                itemKey = "item_lyrics_source_priority",
+                titleRes = R.string.setcat_lyrics_source_priority_label,
+                subtitleRes = R.string.setcat_lyrics_source_priority_desc,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("lyrics source", "embedded", "online", "priority", "lrc", "lrclib")
+            ),
+            SettingSpec(
+                id = "lyrics_reset_imported",
+                itemKey = "item_lyrics_reset_imported",
                 titleRes = R.string.setcat_reset_imported_lyrics_title,
                 subtitleRes = R.string.setcat_reset_imported_lyrics_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("reset lyrics", "clear", "remove", "delete lyrics")
+                keywordsStatic = listOf("reset lyrics", "imported lyrics", "clear", "remove", "delete lyrics")
             ),
 
             // --- ACCOUNTS (grouped under Library) ---
@@ -222,6 +266,16 @@ object SettingsRegistry {
                 keywordsStatic = listOf("dark mode", "light mode", "theme", "system", "night")
             ),
             SettingSpec(
+                id = "appearance_theme_preset",
+                itemKey = "item_appearance_theme_preset",
+                titleRes = R.string.setcat_theme_preset_label,
+                subtitleRes = R.string.setcat_theme_preset_desc,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("amoled", "black", "oled", "true black", "dark", "theme", "preset")
+            ),
+            SettingSpec(
                 id = "appearance_global_now_playing_theme",
                 itemKey = "item_appearance_global_now_playing_theme",
                 titleRes = R.string.setcat_global_now_playing_theme_title,
@@ -246,6 +300,18 @@ object SettingsRegistry {
                 subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("corners", "shape", "rounded", "squircle", "performance")
+            ),
+            SettingSpec(
+                id = "appearance_show_scrollbar",
+                itemKey = "item_appearance_show_scrollbar",
+                titleRes = R.string.setcat_show_scrollbar_title,
+                subtitleRes = R.string.setcat_show_scrollbar_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("scrollbar", "scroll", "fast scroll", "bar"),
+                getValue = { it.showScrollbar },
+                onToggle = { viewModel, checked -> viewModel.setShowScrollbar(checked) }
             ),
             SettingSpec(
                 id = "appearance_player_theme",
@@ -389,6 +455,16 @@ object SettingsRegistry {
                 onToggle = { viewModel, checked -> viewModel.setKeepPlayingInBackground(checked) }
             ),
             SettingSpec(
+                id = "playback_battery_optimization",
+                itemKey = "item_playback_battery_optimization",
+                titleRes = R.string.setcat_battery_optimization_title,
+                subtitleRes = R.string.setcat_battery_optimization_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.SettingsCategory.createRoute("playback"),
+                type = SettingType.ACTION,
+                keywordsStatic = listOf("battery", "optimization", "doze", "background", "killed", "interrupted")
+            ),
+            SettingSpec(
                 id = "playback_keep_screen_awake",
                 itemKey = "item_playback_keep_screen_awake",
                 titleRes = R.string.setcat_keep_screen_awake_title,
@@ -523,6 +599,21 @@ object SettingsRegistry {
                 keywordsStatic = listOf("tap", "background", "close player", "gesture", "dismiss"),
                 getValue = { it.tapBackgroundClosesPlayer },
                 onToggle = { viewModel, checked -> viewModel.setTapBackgroundClosesPlayer(checked) }
+            ),
+            SettingSpec(
+                id = "behavior_mini_swipe_skip",
+                itemKey = "item_behavior_mini_swipe_skip",
+                titleRes = R.string.setcat_mini_player_swipe_to_skip_title,
+                subtitleRes = R.string.setcat_mini_player_swipe_to_skip_subtitle,
+                category = SettingsCategory.BEHAVIOR,
+                subscreenRoute = Screen.SettingsCategory.createRoute("behavior"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf(
+                    "mini player", "miniplayer", "swipe", "skip", "next song", "previous song",
+                    "swipe down", "dismiss", "gesture"
+                ),
+                getValue = { it.miniPlayerSwipeToSkip },
+                onToggle = { viewModel, checked -> viewModel.setMiniPlayerSwipeToSkip(checked) }
             ),
             SettingSpec(
                 id = "behavior_haptics",
@@ -672,6 +763,16 @@ object SettingsRegistry {
                 subscreenRoute = Screen.Updates.route,
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("update", "upgrade", "version", "alpha", "stable", "f-droid", "github", "channel")
+            ),
+            SettingSpec(
+                id = "about_licenses",
+                itemKey = "item_about_licenses",
+                titleRes = R.string.about_licenses_title,
+                subtitleRes = R.string.about_licenses_subtitle,
+                category = SettingsCategory.ABOUT,
+                subscreenRoute = Screen.Licenses.route,
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("licenses", "open source", "third party", "notices", "attribution", "fonts")
             )
         )
     }

@@ -69,6 +69,10 @@
     <string name="setcat_external_lyrics_subtitle">Allow searches and manual fetches from lrclib.net when lyrics are missing locally.</string>
     <string name="setcat_external_artist_images_title">Artist artwork from Deezer</string>
     <string name="setcat_external_artist_images_subtitle">Allow missing artist images to be fetched from Deezer and cached locally.</string>
+    <string name="setcat_smart_mix_history_title">Smart Mix history</string>
+    <string name="setcat_smart_mix_history_subtitle">Recent requests, and the memory that keeps new mixes from repeating the last ones.</string>
+    <string name="setcat_smart_mix_history_action">Clear history</string>
+    <string name="setcat_smart_mix_history_cleared">Smart Mix history cleared</string>
     <string name="setcat_lyrics_management">Lyrics Management</string>
     <string name="setcat_lyrics_source_priority_label">Lyrics Source Priority</string>
     <string name="setcat_lyrics_source_priority_desc">Choose which source to try first when fetching lyrics.</string>
@@ -77,6 +81,13 @@
     <string name="setcat_lyrics_local_first">Local (.lrc) First</string>
     <string name="setcat_reset_imported_lyrics_title">Reset Imported Lyrics</string>
     <string name="setcat_reset_imported_lyrics_subtitle">Remove all imported lyrics from the database.</string>
+    <string name="setcat_lyrics_title">Lyrics</string>
+    <string name="setcat_lyrics_subtitle">Text size, blur and lyrics sources</string>
+    <string name="setcat_lyrics_readability_section">Readability and motion</string>
+    <string name="setcat_lyrics_font_size_title">Lyrics size</string>
+    <string name="setcat_lyrics_font_size_subtitle">Text size for synced and plain lyrics</string>
+    <string name="setcat_lyrics_font_size_value">%1$.0f sp</string>
+    <string name="setcat_lyrics_blur_requires_animated">Turn on Animated lyrics in Experimental settings to use this effect.</string>
 
     <string name="setcat_global_theme">Global Theme</string>
     <string name="setcat_app_language_label">App Language</string>
@@ -96,6 +107,10 @@
     <string name="language_zh_rCN" translatable="false">简体中文</string>
     <string name="setcat_app_theme_label">App Theme</string>
     <string name="setcat_app_theme_desc">Switch between light, dark, or follow system appearance.</string>
+    <string name="setcat_theme_preset_label">Theme preset</string>
+    <string name="setcat_theme_preset_desc">Default follows your wallpaper colors. AMOLED uses true black surfaces and always stays dark.</string>
+    <string name="setcat_theme_preset_default">Default</string>
+    <string name="setcat_theme_preset_amoled">AMOLED</string>
     <string name="setcat_global_now_playing_theme_title" tools:ignore="MissingTranslation">Use now playing colors across the app</string>
     <string name="setcat_global_now_playing_theme_subtitle" tools:ignore="MissingTranslation">Colors the whole app from the current song\'s album art. Light and dark mode are still respected.</string>
     <string name="setcat_theme_light">Light Theme</string>
@@ -103,6 +118,8 @@
     <string name="setcat_theme_follow_system">Follow System</string>
     <string name="setcat_smooth_corners_title">Use Smooth Corners</string>
     <string name="setcat_smooth_corners_subtitle">Use complex shaped corners effectively improving aesthetics but may affect performance on low-end devices</string>
+    <string name="setcat_show_scrollbar_title">Show Scrollbar</string>
+    <string name="setcat_show_scrollbar_subtitle">Display lateral scrollbar on music lists for quick scrolling</string>
     <string name="setcat_now_playing">Now Playing</string>
     <string name="setcat_player_theme_label">Player Theme</string>
     <string name="setcat_player_theme_desc">Choose the appearance for the floating player.</string>
@@ -151,6 +168,10 @@
     <string name="setcat_background_playback">Background Playback</string>
     <string name="setcat_keep_playing_label">Keep playing after closing</string>
     <string name="setcat_keep_playing_desc">If off, removing the app from recents will stop playback.</string>
+    <string name="setcat_battery_optimization_title">Battery Optimization</string>
+    <string name="setcat_battery_optimization_subtitle">Disable battery optimization to prevent playback interruptions.</string>
+    <string name="setcat_toast_battery_already_disabled">Battery optimization is already disabled</string>
+    <string name="setcat_toast_battery_settings_unavailable">Could not open battery settings</string>
     <string name="setcat_keep_screen_awake_title" tools:ignore="MissingTranslation">Keep screen awake while playing</string>
     <string name="setcat_keep_screen_awake_subtitle" tools:ignore="MissingTranslation">Prevents the screen from sleeping while music is actively playing and the app is visible.</string>
     <string name="setcat_replaygain_section">Volume Normalization (ReplayGain)</string>
@@ -189,6 +210,8 @@
     <string name="setcat_player_gestures">Player Gestures</string>
     <string name="setcat_tap_bg_closes_title">Tap background closes player</string>
     <string name="setcat_tap_bg_closes_subtitle">Tap the blurred background to close the player sheet.</string>
+    <string name="setcat_mini_player_swipe_to_skip_title">Swipe to change song</string>
+    <string name="setcat_mini_player_swipe_to_skip_subtitle">Swipe the mini player left for the next song and right for the previous one. Dismiss it by swiping down instead.</string>
     <string name="setcat_haptics">Haptics</string>
     <string name="setcat_haptic_feedback_title">Haptic feedback</string>
     <string name="setcat_haptic_feedback_subtitle">Enable vibration feedback across the app.</string>
