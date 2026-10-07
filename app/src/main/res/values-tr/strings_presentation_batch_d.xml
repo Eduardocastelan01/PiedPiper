@@ -96,4 +96,5 @@
     <string name="presentation_batch_d_view_grid">Izgara</string>
     <string name="presentation_batch_d_view_list">Liste</string>
     <string name="presentation_batch_d_view_section_view">Görünüm</string>
+    <string name="presentation_batch_d_view_section_layout">Düzen</string>
 </resources>

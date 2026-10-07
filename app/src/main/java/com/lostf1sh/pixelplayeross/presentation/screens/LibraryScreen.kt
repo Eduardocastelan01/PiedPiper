@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -102,7 +103,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -166,7 +166,6 @@ import com.lostf1sh.pixelplayeross.presentation.components.subcomps.LibraryActio
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.components.MultiSelectionBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistMultiSelectionBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.DescribePlaylistDialog
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistCreationTypeDialog
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionActionRow
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionCountPill
@@ -178,11 +177,17 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SongInfoBottomSheetViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixTarget
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixViewModel
 import com.lostf1sh.pixelplayeross.data.model.LibraryTabId
 import com.lostf1sh.pixelplayeross.data.model.toLibraryTabIdOrNull
 import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
 import com.lostf1sh.pixelplayeross.data.worker.SyncProgress
 import com.lostf1sh.pixelplayeross.presentation.screens.search.components.GenreTypography
+import com.lostf1sh.pixelplayeross.presentation.utils.SegmentedItemShapeDefaults
+import com.lostf1sh.pixelplayeross.presentation.utils.clipToShapePath
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
+import com.lostf1sh.pixelplayeross.presentation.utils.seamlessSelectionScale
 import com.lostf1sh.pixelplayeross.presentation.components.SyncProgressBar
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.LibraryViewModel
 import com.lostf1sh.pixelplayeross.presentation.selection.appendDistinctSelection
@@ -255,6 +260,8 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.LoadState
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
+import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.LibrarySortBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
 import timber.log.Timber
@@ -285,6 +292,7 @@ private data class LibraryScreenPlayerProjection(
     val currentFavoriteSortOption: SortOption = SortOption.LikedSongDateLiked,
     val currentFolderSortOption: SortOption = SortOption.FolderNameAZ,
     val isAlbumsListView: Boolean = false,
+    val isPlaylistsGridView: Boolean = false,
     val isSdCardAvailable: Boolean = false,
     val musicFolders: ImmutableList<MusicFolder> = persistentListOf(),
     val isLoadingLibraryCategories: Boolean = true,
@@ -306,6 +314,7 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
         currentFavoriteSortOption = currentFavoriteSortOption,
         currentFolderSortOption = currentFolderSortOption,
         isAlbumsListView = isAlbumsListView,
+        isPlaylistsGridView = isPlaylistsGridView,
         isSdCardAvailable = isSdCardAvailable,
         musicFolders = musicFolders,
         isLoadingLibraryCategories = isLoadingLibraryCategories,
@@ -324,7 +333,8 @@ fun LibraryScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     songInfoBottomSheetViewModel: SongInfoBottomSheetViewModel = hiltViewModel(),
-    cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel()
+    cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel(),
+    smartMixViewModel: SmartMixViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -373,7 +383,6 @@ fun LibraryScreen(
     }.collectAsStateWithLifecycle(initialValue = false)
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showPlaylistCreationTypeDialog by remember { mutableStateOf(false) }
-    var showDescribePlaylistDialog by remember { mutableStateOf(false) }
 
     val m3uImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1273,6 +1282,47 @@ fun LibraryScreen(
                                     }
                                 } else null,
                                 extraContent = {
+                                    if (currentTabId == LibraryTabId.PLAYLISTS || (isFoldersTab && playerUiState.isFoldersPlaylistView)) {
+                                        Text(
+                                            text = stringResource(R.string.presentation_batch_d_view_section_layout),
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontFamily = com.lostf1sh.pixelplayeross.ui.theme.RoundedSans,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(48.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            val isGrid = playerUiState.isPlaylistsGridView
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = !isGrid,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setPlaylistsGridView(false) },
+                                                text = stringResource(R.string.presentation_batch_d_view_list),
+                                                imageVector = Icons.AutoMirrored.Rounded.ViewList
+                                            )
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = isGrid,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setPlaylistsGridView(true) },
+                                                text = stringResource(R.string.presentation_batch_d_view_grid),
+                                                imageVector = Icons.Rounded.ViewModule
+                                            )
+                                        }
+                                    }
                                     if (!isFoldersTab) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
@@ -1406,7 +1456,8 @@ fun LibraryScreen(
                                             selectedPlaylistIds = selectedPlaylistIds,
                                             onPlaylistLongPress = onPlaylistLongPress,
                                             onPlaylistSelectionToggle = onPlaylistSelectionToggle,
-                                            onPlaylistOptionsClick = { showPlaylistMultiSelectionSheet = true }
+                                            onPlaylistOptionsClick = { showPlaylistMultiSelectionSheet = true },
+                                            isGridView = playerUiState.isPlaylistsGridView
                                         )
                                     }
 
@@ -1467,6 +1518,7 @@ fun LibraryScreen(
                                             },
                                             onMoreOptionsClick = stableOnMoreOptionsClick,
                                             isPlaylistView = playerUiState.isFoldersPlaylistView,
+                                            isPlaylistGridView = playerUiState.isPlaylistsGridView,
                                             currentSortOption = playerUiState.currentFolderSortOption,
                                             isRefreshing = isRefreshing,
                                             onRefresh = onRefresh,
@@ -1548,25 +1600,9 @@ fun LibraryScreen(
             showPlaylistCreationTypeDialog = false
             showCreatePlaylistDialog = true
         },
-        onDescribeSelected = {
+        onSmartMixSelected = {
             showPlaylistCreationTypeDialog = false
-            showDescribePlaylistDialog = true
-        }
-    )
-
-    val nlpPlaylistPreviewState by playlistViewModel.nlpPlaylistPreviewState.collectAsStateWithLifecycle()
-    DescribePlaylistDialog(
-        visible = showDescribePlaylistDialog,
-        state = nlpPlaylistPreviewState,
-        onGenerate = playlistViewModel::generateNlpPlaylistPreview,
-        onSave = { name, songIds ->
-            playlistViewModel.createPlaylist(name = name, songIds = songIds)
-            playlistViewModel.resetNlpPlaylistPreview()
-            showDescribePlaylistDialog = false
-        },
-        onDismiss = {
-            playlistViewModel.resetNlpPlaylistPreview()
-            showDescribePlaylistDialog = false
+            smartMixViewModel.open(SmartMixTarget.Library)
         }
     )
 
@@ -2528,10 +2564,25 @@ internal fun resolveFolderNavigationDirection(initialPath: String?, targetPath: 
     }
 
 private fun isDescendantFolderPath(ancestorPath: String, candidatePath: String): Boolean {
-    val normalizedAncestor = ancestorPath.trimEnd(File.separatorChar)
-    val normalizedCandidate = candidatePath.trimEnd(File.separatorChar)
+    // These are Android storage paths, including when unit tests run on a Windows host.
+    val normalizedAncestor = ancestorPath.trimEnd('/')
+    val normalizedCandidate = candidatePath.trimEnd('/')
     if (normalizedAncestor == normalizedCandidate) return false
-    return normalizedCandidate.startsWith("$normalizedAncestor${File.separatorChar}")
+    return normalizedCandidate.startsWith("$normalizedAncestor/")
+}
+
+internal fun isSongParentInFolderScope(
+    songParentPath: String?,
+    currentFolderPath: String?,
+    rootFolders: List<MusicFolder>
+): Boolean {
+    if (songParentPath == null) return false
+    fun containsSongParent(folderPath: String): Boolean =
+        folderPath.trimEnd('/') == songParentPath.trimEnd('/') ||
+            isDescendantFolderPath(folderPath, songParentPath)
+
+    return currentFolderPath?.let(::containsSongParent)
+        ?: rootFolders.any { containsSongParent(it.path) }
 }
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -2548,6 +2599,7 @@ fun LibraryFoldersTab(
     bottomBarHeight: Dp,
     onMoreOptionsClick: (Song) -> Unit,
     isPlaylistView: Boolean = false,
+    isPlaylistGridView: Boolean = false,
     currentSortOption: SortOption = SortOption.FolderNameAZ,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -2626,12 +2678,12 @@ fun LibraryFoldersTab(
             playlistMode,
             songInCurrentFolder,
             currentSongParentPath,
-            currentFolder?.path
+            activeFolder?.path,
+            folders
         ) {
             !playlistMode &&
                 !songInCurrentFolder &&
-                currentSongParentPath != null &&
-                currentSongParentPath != currentFolder?.path
+                isSongParentInFolderScope(currentSongParentPath, activeFolder?.path, folders)
         }
         val locateCurrentSongAction: (() -> Unit)? = remember(
             songInCurrentFolder,
@@ -2735,6 +2787,30 @@ fun LibraryFoldersTab(
                     )
                 }
 
+                showPlaylistCards && isPlaylistGridView -> {
+                    val foldersPullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = onRefresh,
+                        state = foldersPullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.LoadingIndicator(
+                                state = foldersPullToRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter)
+                            )
+                        }
+                    ) {
+                        FolderPlaylistGrid(
+                            folders = itemsToShow,
+                            hasCurrentSong = stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong(),
+                            bottomBarHeight = bottomBarHeight,
+                            onFolderClick = onFolderAsPlaylistClick
+                        )
+                    }
+                }
+
                 else -> {
                     val foldersPullToRefreshState = rememberPullToRefreshState()
                     PullToRefreshBox(
@@ -2753,43 +2829,39 @@ fun LibraryFoldersTab(
                         Box(modifier = Modifier.fillMaxSize()) {
                             LazyColumn(
                                 modifier = Modifier
-                                    .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp)
+                                    .padding(start = 12.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward), 22.dp, 12.dp))
                                     .fillMaxSize()
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 26.dp,
-                                            topEnd = 26.dp,
-                                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                                        )
-                                    ),
+                                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
                                 state = listState,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 contentPadding = PaddingValues(
                                     bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap,
                                     top = 0.dp                            )
                             ) {
                                 if (showPlaylistCards) {
-                                    items(itemsToShow, key = { it.path }, contentType = { "folder_card" }) { folder ->
+                                    itemsIndexed(itemsToShow, key = { _, folder -> folder.path }, contentType = { _, _ -> "folder_card" }) { index, folder ->
                                         FolderPlaylistItem(
                                             folder = folder,
-                                            onClick = { onFolderAsPlaylistClick(folder) }
+                                            onClick = { onFolderAsPlaylistClick(folder) },
+                                            customShape = getSegmentedItemShape(index, itemsToShow.size)
                                         )
                                     }
                                 } else {
-                                    items(itemsToShow, key = { it.path }, contentType = { "folder_list" }) { folder ->
+                                    itemsIndexed(itemsToShow, key = { _, folder -> folder.path }, contentType = { _, _ -> "folder_list" }) { index, folder ->
                                         FolderListItem(
                                             folder = folder,
-                                            onClick = { onFolderClick(folder.path) }
+                                            onClick = { onFolderClick(folder.path) },
+                                            customShape = getSegmentedItemShape(index, itemsToShow.size)
                                         )
                                     }
                                 }
 
-                                items(songsToShow, key = { it.id }, contentType = { "song" }) { song ->
+                                itemsIndexed(songsToShow, key = { _, song -> song.id }, contentType = { _, _ -> "song" }) { index, song ->
                                     EnhancedSongListItem(
                                         song = song,
                                         isPlaying = stablePlayerState.currentSong?.id == song.id && stablePlayerState.isPlaying,
                                         isCurrentSong = stablePlayerState.currentSong?.id == song.id,
+                                        customShape = getSegmentedItemShape(index, songsToShow.size),
                                         onMoreOptionsClick = { onMoreOptionsClick(song) },
                                         isSelected = selectedSongIds.contains(song.id),
                                         selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
@@ -2827,12 +2899,17 @@ fun LibraryFoldersTab(
 }
 
 @Composable
-fun FolderPlaylistItem(folder: MusicFolder, onClick: () -> Unit) {
+fun FolderPlaylistItem(
+    folder: MusicFolder,
+    onClick: () -> Unit,
+    customShape: androidx.compose.ui.graphics.Shape? = null
+) {
     val previewSongs = remember(folder) { folder.collectAllSongs().take(9).toImmutableList() }
 
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = customShape ?: SegmentedItemShapeDefaults.CardSingleShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -2867,10 +2944,93 @@ fun FolderPlaylistItem(folder: MusicFolder, onClick: () -> Unit) {
 }
 
 @Composable
-fun FolderListItem(folder: MusicFolder, onClick: () -> Unit) {
+private fun FolderPlaylistGrid(
+    folders: List<MusicFolder>,
+    hasCurrentSong: Boolean,
+    bottomBarHeight: Dp,
+    onFolderClick: (MusicFolder) -> Unit
+) {
+    val gridState = rememberLazyGridState()
+    Box(modifier = Modifier.fillMaxSize()) {
+        val showScrollbar = LocalShowScrollbar.current &&
+            (gridState.canScrollForward || gridState.canScrollBackward)
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
+            state = gridState,
+            modifier = Modifier
+                .padding(start = 12.dp, end = animatedScrollbarInset(showScrollbar, 22.dp, 12.dp))
+                .fillMaxSize()
+                .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
+        ) {
+            items(folders, key = { it.path }, contentType = { "folder_grid_card" }) { folder ->
+                FolderPlaylistGridItem(folder = folder, onClick = { onFolderClick(folder) })
+            }
+        }
+        val bottomPadding = if (hasCurrentSong) {
+            bottomBarHeight + MiniPlayerHeight + 16.dp
+        } else {
+            bottomBarHeight + 16.dp
+        }
+        ExpressiveScrollBar(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
+            gridState = gridState
+        )
+    }
+}
+
+@Composable
+private fun FolderPlaylistGridItem(folder: MusicFolder, onClick: () -> Unit) {
+    val previewSongs = remember(folder) { folder.collectAllSongs().take(9).toImmutableList() }
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = SegmentedItemShapeDefaults.LibraryContainerShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            PlaylistArtCollage(
+                songs = previewSongs,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                folder.name,
+                style = MaterialTheme.typography.titleMedium.copy(fontFamily = RoundedSans),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Text(
+                formatSongCount(folder.totalSongCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun FolderListItem(
+    folder: MusicFolder,
+    onClick: () -> Unit,
+    customShape: androidx.compose.ui.graphics.Shape? = null
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = customShape ?: SegmentedItemShapeDefaults.CardSingleShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -2968,7 +3128,8 @@ fun AlbumGridItemRedesigned(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -2983,8 +3144,7 @@ fun AlbumGridItemRedesigned(
 
     val gradientBaseColor = itemDesignColorScheme.primaryContainer
     val onGradientColor = itemDesignColorScheme.onPrimaryContainer
-    val cardCornerRadius = 20.dp
-    val cardShape = RoundedCornerShape(cardCornerRadius)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(20.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.985f else 1f,
         animationSpec = tween(durationMillis = 220),
@@ -3047,7 +3207,7 @@ fun AlbumGridItemRedesigned(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .scale(selectionScale)
+                .seamlessSelectionScale(selectionScale)
                 .then(
                     if (isSelected) {
                         Modifier.border(
@@ -3059,7 +3219,7 @@ fun AlbumGridItemRedesigned(
                         Modifier
                     }
                 )
-                .clip(cardShape)
+                .clipToShapePath(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {
@@ -3170,9 +3330,10 @@ fun ArtistListItem(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
-    val cardShape = RoundedCornerShape(18.dp)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(18.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.99f else 1f,
         animationSpec = tween(durationMillis = 200),
@@ -3187,7 +3348,7 @@ fun ArtistListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(selectionScale)
+            .seamlessSelectionScale(selectionScale)
             .then(
                 if (isSelected) {
                     Modifier.border(
@@ -3199,7 +3360,7 @@ fun ArtistListItem(
                     Modifier
                 }
             )
-            .clip(cardShape)
+            .clipToShapePath(cardShape)
             .combinedClickable(
                 enabled = !isLoading,
                 onClick = {
@@ -3313,7 +3474,8 @@ fun AlbumListItem(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -3327,8 +3489,7 @@ fun AlbumListItem(
 
     val gradientBaseColor = itemDesignColorScheme.primaryContainer
     val onGradientColor = itemDesignColorScheme.onPrimaryContainer
-    val cardCornerRadius = 16.dp
-    val cardShape = RoundedCornerShape(cardCornerRadius)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(16.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.99f else 1f,
         animationSpec = tween(durationMillis = 200),
@@ -3344,7 +3505,8 @@ fun AlbumListItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(80.dp)
+                .clipToShapePath(cardShape),
             shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
@@ -3381,7 +3543,7 @@ fun AlbumListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(88.dp)
-                .scale(selectionScale)
+                .seamlessSelectionScale(selectionScale)
                 .then(
                     if (isSelected) {
                         Modifier.border(
@@ -3393,7 +3555,9 @@ fun AlbumListItem(
                         Modifier
                     }
                 )
-                .clip(cardShape)
+                // Clipped on the canvas: an outline clip leaves the corners of non-uniform
+                // (segmented first/last) rows square on older render pipelines.
+                .clipToShapePath(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {

@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -33,9 +32,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +57,8 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.model.SortOption
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
+import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistContainer
 import com.lostf1sh.pixelplayeross.presentation.components.albumFastScrollLabel
@@ -73,9 +72,18 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import androidx.compose.ui.text.style.TextOverflow
+import com.lostf1sh.pixelplayeross.presentation.utils.SegmentedItemShapeDefaults
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedGridItemShape
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
 import kotlinx.collections.immutable.ImmutableList
 
 private val EmptyColorSchemePairFlow: StateFlow<ColorSchemePair?> = MutableStateFlow(null)
+
+private const val AlbumGridColumns = 2
+private val AlbumGridSpacing = 6.dp
+
+/** Radius of the album grid's four outer corners; every inner corner is 8dp. */
+private val AlbumGridOuterCornerRadius = SegmentedItemShapeDefaults.LibraryOuterCornerRadius
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -96,8 +104,10 @@ fun LibraryAlbumsTab(
     getSelectionIndex: (Long) -> Int? = { null },
     storageFilter: StorageFilter = StorageFilter.ALL
 ) {
-    val gridState = rememberLazyGridState()
-    val listState = rememberLazyListState()
+    val gridState = rememberRestoredLazyGridState(albums)
+    val listState = rememberRestoredLazyListState(albums)
+    val dummyListState = rememberLazyListState()
+    val dummyGridState = rememberLazyGridState()
     val context = LocalContext.current
     val imageLoader = context.imageLoader
 
@@ -110,39 +120,17 @@ fun LibraryAlbumsTab(
         }
     }
 
-    var lastHandledAlbumSortKey by remember {
-        mutableStateOf(currentAlbumSortOption.storageKey)
-    }
-    var pendingAlbumSortScrollReset by remember { mutableStateOf(false) }
-    var albumSortSawRefreshLoading by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentAlbumSortOption) {
-        val currentSortKey = currentAlbumSortOption.storageKey
-        if (currentSortKey == lastHandledAlbumSortKey) return@LaunchedEffect
-        lastHandledAlbumSortKey = currentSortKey
-        pendingAlbumSortScrollReset = true
-        albumSortSawRefreshLoading = false
-        if (isListView) {
-            listState.scrollToItem(0)
-        } else {
-            gridState.scrollToItem(0)
+    ResetScrollOnSortChange(
+        sortKey = currentAlbumSortOption.storageKey,
+        items = albums,
+        scrollToTop = {
+            if (isListView) {
+                listState.scrollToItem(0)
+            } else {
+                gridState.scrollToItem(0)
+            }
         }
-    }
-
-    LaunchedEffect(albums.loadState.refresh, pendingAlbumSortScrollReset, isListView) {
-        if (!pendingAlbumSortScrollReset) return@LaunchedEffect
-        if (albums.loadState.refresh is LoadState.Loading) {
-            albumSortSawRefreshLoading = true
-            return@LaunchedEffect
-        }
-        if (!albumSortSawRefreshLoading) return@LaunchedEffect
-        if (isListView) {
-            listState.scrollToItem(0)
-        } else {
-            gridState.scrollToItem(0)
-        }
-        pendingAlbumSortScrollReset = false
-    }
+    )
 
     LaunchedEffect(albums, gridState, listState, isListView) {
         if (isListView) {
@@ -208,11 +196,7 @@ fun LibraryAlbumsTab(
 
     val refreshState = albums.loadState.refresh
     val reachedEndOfPagination = albums.loadState.append.endOfPaginationReached
-    val shouldShowInitialLoading = albums.itemCount == 0 && (
-        isLoading ||
-            refreshState is LoadState.Loading ||
-            (refreshState is LoadState.NotLoading && !reachedEndOfPagination)
-    )
+    val shouldShowInitialLoading = albums.itemCount == 0 && isLoading
 
     when {
         refreshState is LoadState.Error && albums.itemCount == 0 -> {
@@ -243,25 +227,18 @@ fun LibraryAlbumsTab(
                 LazyColumn(
                     modifier = Modifier
                         .padding(start = 14.dp, end = 14.dp, bottom = 6.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = PlayerSheetCollapsedCornerRadius,
-                                bottomEnd = PlayerSheetCollapsedCornerRadius
-                            )
-                        )
+                        .clip(SegmentedItemShapeDefaults.LibraryContainerShape)
                         .fillMaxSize(),
-                    state = listState,
                     contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap + 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(8, key = { "skeleton_album_list_$it" }) {
+                    items(8, key = { "skeleton_album_list_$it" }) { index ->
                         AlbumListItem(
                             album = Album.empty(),
                             albumColorSchemePairFlow = EmptyColorSchemePairFlow,
                             onClick = {},
-                            isLoading = true
+                            isLoading = true,
+                            customShape = getSegmentedItemShape(index, 8)
                         )
                     }
                 }
@@ -269,27 +246,28 @@ fun LibraryAlbumsTab(
                 LazyVerticalGrid(
                     modifier = Modifier
                         .padding(start = 14.dp, end = 14.dp, bottom = 6.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = PlayerSheetCollapsedCornerRadius,
-                                bottomEnd = PlayerSheetCollapsedCornerRadius
-                            )
-                        )
+                        .clip(SegmentedItemShapeDefaults.LibraryContainerShape)
                         .fillMaxSize(),
-                    state = gridState,
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(AlbumGridColumns),
                     contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap + 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(AlbumGridSpacing),
+                    horizontalArrangement = Arrangement.spacedBy(AlbumGridSpacing)
                 ) {
-                    items(8, key = { "skeleton_album_grid_$it" }) {
+                    items(8, key = { "skeleton_album_grid_$it" }) { index ->
+                        val itemShape = remember(index) {
+                            getSegmentedGridItemShape(
+                                index = index,
+                                count = 8,
+                                columns = AlbumGridColumns,
+                                outerRadius = AlbumGridOuterCornerRadius
+                            )
+                        }
                         AlbumGridItemRedesigned(
                             album = Album.empty(),
                             albumColorSchemePairFlow = EmptyColorSchemePairFlow,
                             onClick = {},
-                            isLoading = true
+                            isLoading = true,
+                            customShape = itemShape
                         )
                     }
                 }
@@ -322,20 +300,14 @@ fun LibraryAlbumsTab(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (isListView) {
+                            val activeListState = if (albums.itemCount > 0) listState else dummyListState
                             LazyColumn(
                                 modifier = Modifier
-                                    .padding(start = 14.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 24.dp else 14.dp, bottom = 6.dp)
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 16.dp,
-                                            topEnd = 16.dp,
-                                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                                        )
-                                    ),
-                                state = listState,
+                                    .padding(start = 14.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (activeListState.canScrollForward || activeListState.canScrollBackward), 24.dp, 14.dp), bottom = 6.dp)
+                                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+                                state = activeListState,
                                 contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap + 4.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 items(
                                     count = albums.itemCount,
@@ -343,6 +315,7 @@ fun LibraryAlbumsTab(
                                     contentType = { "album_list_item" }
                                 ) { index ->
                                     val album = albums[index]
+                                    val itemShape = getSegmentedItemShape(index, albums.itemCount)
                                     if (album != null) {
                                         val albumSpecificColorSchemeFlow =
                                             playerViewModel.themeStateHolder.getAlbumColorSchemeFlow(album.albumArtUriString ?: "")
@@ -364,14 +337,16 @@ fun LibraryAlbumsTab(
                                             isSelected = selectedAlbumIds.contains(album.id),
                                             selectionIndex = getSelectionIndex(album.id),
                                             onLongPress = rememberedOnLongPress,
-                                            onSelectionToggle = rememberedOnSelectionToggle
+                                            onSelectionToggle = rememberedOnSelectionToggle,
+                                            customShape = itemShape
                                         )
                                     } else {
                                         AlbumListItem(
                                             album = Album.empty(),
                                             albumColorSchemePairFlow = EmptyColorSchemePairFlow,
                                             onClick = {},
-                                            isLoading = true
+                                            isLoading = true,
+                                            customShape = itemShape
                                         )
                                     }
                                 }
@@ -390,26 +365,20 @@ fun LibraryAlbumsTab(
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
                                     .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
-                                listState = listState,
+                                listState = activeListState,
                                 dragLabelProvider = albumFastScrollLabelProvider
                             )
                         } else {
+                            val activeGridState = if (albums.itemCount > 0) gridState else dummyGridState
                             LazyVerticalGrid(
                                 modifier = Modifier
-                                    .padding(start = 14.dp, end = if (gridState.canScrollForward || gridState.canScrollBackward) 24.dp else 14.dp, bottom = 6.dp)
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 16.dp,
-                                            topEnd = 16.dp,
-                                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                                        )
-                                    ),
-                                state = gridState,
-                                columns = GridCells.Fixed(2),
+                                    .padding(start = 14.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (activeGridState.canScrollForward || activeGridState.canScrollBackward), 24.dp, 14.dp), bottom = 6.dp)
+                                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+                                state = activeGridState,
+                                columns = GridCells.Fixed(AlbumGridColumns),
                                 contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap + 4.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(AlbumGridSpacing),
+                                horizontalArrangement = Arrangement.spacedBy(AlbumGridSpacing)
                             ) {
                                 items(
                                     count = albums.itemCount,
@@ -417,6 +386,15 @@ fun LibraryAlbumsTab(
                                     contentType = { "album_grid_item" }
                                 ) { index ->
                                     val album = albums[index]
+                                    val albumCount = albums.itemCount
+                                    val itemShape = remember(index, albumCount) {
+                                        getSegmentedGridItemShape(
+                                            index = index,
+                                            count = albumCount,
+                                            columns = AlbumGridColumns,
+                                            outerRadius = AlbumGridOuterCornerRadius
+                                        )
+                                    }
                                     if (album != null) {
                                         val albumSpecificColorSchemeFlow =
                                             playerViewModel.themeStateHolder.getAlbumColorSchemeFlow(album.albumArtUriString ?: "")
@@ -438,14 +416,16 @@ fun LibraryAlbumsTab(
                                             isSelected = selectedAlbumIds.contains(album.id),
                                             selectionIndex = getSelectionIndex(album.id),
                                             onLongPress = rememberedOnLongPress,
-                                            onSelectionToggle = rememberedOnSelectionToggle
+                                            onSelectionToggle = rememberedOnSelectionToggle,
+                                            customShape = itemShape
                                         )
                                     } else {
                                         AlbumGridItemRedesigned(
                                             album = Album.empty(),
                                             albumColorSchemePairFlow = EmptyColorSchemePairFlow,
                                             onClick = {},
-                                            isLoading = true
+                                            isLoading = true,
+                                            customShape = itemShape
                                         )
                                     }
                                 }
@@ -465,7 +445,7 @@ fun LibraryAlbumsTab(
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
                                     .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
-                                gridState = gridState,
+                                gridState = activeGridState,
                                 dragLabelProvider = albumFastScrollLabelProvider
                             )
                         }
@@ -494,7 +474,8 @@ fun LibraryArtistsTab(
     getSelectionIndex: (Long) -> Int? = { null },
     storageFilter: StorageFilter = StorageFilter.ALL
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberRestoredLazyListState(artists)
+    val dummyListState = rememberLazyListState()
     val artistFastScrollLabelProvider = remember(artists, currentArtistSortOption) {
         { index: Int ->
             artistFastScrollLabel(
@@ -503,39 +484,15 @@ fun LibraryArtistsTab(
             )
         }
     }
-    var lastHandledArtistSortKey by remember {
-        mutableStateOf(currentArtistSortOption.storageKey)
-    }
-    var pendingArtistSortScrollReset by remember { mutableStateOf(false) }
-    var artistSortSawRefreshLoading by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentArtistSortOption) {
-        val currentSortKey = currentArtistSortOption.storageKey
-        if (currentSortKey == lastHandledArtistSortKey) return@LaunchedEffect
-        lastHandledArtistSortKey = currentSortKey
-        pendingArtistSortScrollReset = true
-        artistSortSawRefreshLoading = false
-        listState.scrollToItem(0)
-    }
-
-    LaunchedEffect(artists.loadState.refresh, pendingArtistSortScrollReset) {
-        if (!pendingArtistSortScrollReset) return@LaunchedEffect
-        if (artists.loadState.refresh is LoadState.Loading) {
-            artistSortSawRefreshLoading = true
-            return@LaunchedEffect
-        }
-        if (!artistSortSawRefreshLoading) return@LaunchedEffect
-        listState.scrollToItem(0)
-        pendingArtistSortScrollReset = false
-    }
+    ResetScrollOnSortChange(
+        sortKey = currentArtistSortOption.storageKey,
+        items = artists,
+        scrollToTop = { listState.scrollToItem(0) }
+    )
 
     val refreshState = artists.loadState.refresh
     val reachedEndOfPagination = artists.loadState.append.endOfPaginationReached
-    val shouldShowInitialLoading = artists.itemCount == 0 && (
-        isLoading ||
-            refreshState is LoadState.Loading ||
-            (refreshState is LoadState.NotLoading && !reachedEndOfPagination)
-    )
+    val shouldShowInitialLoading = artists.itemCount == 0 && isLoading
 
     when {
         refreshState is LoadState.Error && artists.itemCount == 0 -> {
@@ -565,25 +522,17 @@ fun LibraryArtistsTab(
             LazyColumn(
                 modifier = Modifier
                     .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 26.dp,
-                            topEnd = 26.dp,
-                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                        )
-                    )
+                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape)
                     .fillMaxSize(),
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
             ) {
-                item(key = "skeleton_top_spacer") { Spacer(Modifier.height(4.dp)) }
-                items(10, key = { "skeleton_artist_$it" }) {
+                items(10, key = { "skeleton_artist_$it" }) { index ->
                     ArtistListItem(
                         artist = Artist.empty(),
                         onClick = {},
-                        isLoading = true
+                        isLoading = true,
+                        customShape = getSegmentedItemShape(index, 10)
                     )
                 }
             }
@@ -616,19 +565,13 @@ fun LibraryArtistsTab(
                     }
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val activeListState = if (artists.itemCount > 0) listState else dummyListState
                         LazyColumn(
                             modifier = Modifier
-                                .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp, bottom = 6.dp)
-                                .clip(
-                                    RoundedCornerShape(
-                                        topStart = 26.dp,
-                                        topEnd = 26.dp,
-                                        bottomStart = PlayerSheetCollapsedCornerRadius,
-                                        bottomEnd = PlayerSheetCollapsedCornerRadius
-                                    )
-                                ),
-                            state = listState,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                .padding(start = 12.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (activeListState.canScrollForward || activeListState.canScrollBackward), 22.dp, 12.dp), bottom = 6.dp)
+                                .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+                            state = activeListState,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                             contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
                         ) {
                             items(
@@ -637,6 +580,7 @@ fun LibraryArtistsTab(
                                 contentType = { "artist" }
                             ) { index ->
                                 val artist = artists[index]
+                                val itemShape = getSegmentedItemShape(index, artists.itemCount)
                                 if (artist != null) {
                                     val rememberedOnClick = remember(artist.id, onArtistClick) {
                                         { onArtistClick(artist.id) }
@@ -654,13 +598,15 @@ fun LibraryArtistsTab(
                                         isSelected = selectedArtistIds.contains(artist.id),
                                         selectionIndex = getSelectionIndex(artist.id),
                                         onLongPress = rememberedOnLongPress,
-                                        onSelectionToggle = rememberedOnSelectionToggle
+                                        onSelectionToggle = rememberedOnSelectionToggle,
+                                        customShape = itemShape
                                     )
                                 } else {
                                     ArtistListItem(
                                         artist = Artist.empty(),
                                         onClick = {},
-                                        isLoading = true
+                                        isLoading = true,
+                                        customShape = itemShape
                                     )
                                 }
                             }
@@ -680,7 +626,7 @@ fun LibraryArtistsTab(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
-                            listState = listState,
+                            listState = activeListState,
                             dragLabelProvider = artistFastScrollLabelProvider
                         )
                     }
@@ -704,7 +650,8 @@ fun LibraryPlaylistsTab(
     selectedPlaylistIds: Set<String> = emptySet(),
     onPlaylistLongPress: (com.lostf1sh.pixelplayeross.data.model.Playlist) -> Unit = {},
     onPlaylistSelectionToggle: (com.lostf1sh.pixelplayeross.data.model.Playlist) -> Unit = {},
-    onPlaylistOptionsClick: () -> Unit = {}
+    onPlaylistOptionsClick: () -> Unit = {},
+    isGridView: Boolean = false
 ) {
     PlaylistContainer(
         playlistUiState = playlistUiState,
@@ -718,6 +665,7 @@ fun LibraryPlaylistsTab(
         isSelectionMode = isSelectionMode,
         selectedPlaylistIds = selectedPlaylistIds,
         onPlaylistLongPress = onPlaylistLongPress,
-        onPlaylistSelectionToggle = onPlaylistSelectionToggle
+        onPlaylistSelectionToggle = onPlaylistSelectionToggle,
+        isGridView = isGridView
     )
 }

@@ -74,6 +74,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.AlbumData
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.utils.formatDuration
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import kotlinx.collections.immutable.persistentListOf
@@ -126,8 +127,10 @@ fun GenreDetailScreen(
             1f - ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(0f, 1f)
         }
     }
-    val showScrollBar by remember {
+    val isScrollbarEnabled = LocalShowScrollbar.current
+    val showScrollBar by remember(isScrollbarEnabled) {
         derivedStateOf {
+            isScrollbarEnabled &&
             collapseFraction > 0.95f &&
                 (lazyListState.canScrollForward || lazyListState.canScrollBackward)
         }

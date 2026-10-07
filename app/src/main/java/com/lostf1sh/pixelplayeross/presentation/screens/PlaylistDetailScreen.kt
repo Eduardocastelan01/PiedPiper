@@ -120,6 +120,8 @@ import com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.QueuePlaylistSongItem
 import com.lostf1sh.pixelplayeross.presentation.components.SongPickerBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
+import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.TightWrapText
@@ -719,16 +721,16 @@ fun PlaylistDetailScreen(
                                 )
                                 .background(color = MaterialTheme.colorScheme.surfaceContainerHigh),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(
-                                top = 12.dp,
-                                bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
-                                end = if (listState.canScrollForward || listState.canScrollBackward) 24.dp else 0.dp
-                            ).let {
+                            contentPadding = run {
+                                val scrollbarEnd = animatedScrollbarInset(
+                                    LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward),
+                                    24.dp,
+                                    0.dp
+                                )
                                 PaddingValues(
-                                    top = it.calculateTopPadding(),
-                                    bottom = it.calculateBottomPadding(),
-                                    start = it.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-                                    end = if (listState.canScrollForward || listState.canScrollBackward) 24.dp else 0.dp
+                                    top = 12.dp,
+                                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
+                                    end = scrollbarEnd
                                 )
                             }
                         ) {

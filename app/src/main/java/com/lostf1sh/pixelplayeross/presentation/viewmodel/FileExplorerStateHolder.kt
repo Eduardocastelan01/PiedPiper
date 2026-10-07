@@ -125,6 +125,17 @@ class FileExplorerStateHolder(
     private val _currentDirectoryChildren = MutableStateFlow<ImmutableList<DirectoryEntry>>(persistentListOf())
     val currentDirectoryChildren: StateFlow<ImmutableList<DirectoryEntry>> = _currentDirectoryChildren.asStateFlow()
 
+    // Flat list of every folder under the current storage root that directly holds audio,
+    // so exclusions can be toggled without drilling through the tree.
+    private val _rawAllAudioFolders = MutableStateFlow<List<RawDirectoryEntry>>(emptyList())
+    private val _allAudioFolders = MutableStateFlow<ImmutableList<DirectoryEntry>>(persistentListOf())
+    val allAudioFolders: StateFlow<ImmutableList<DirectoryEntry>> = _allAudioFolders.asStateFlow()
+
+    private val _isLoadingAllAudioFolders = MutableStateFlow(false)
+    val isLoadingAllAudioFolders: StateFlow<Boolean> = _isLoadingAllAudioFolders.asStateFlow()
+    private var allAudioFoldersJob: Job? = null
+    private var allAudioFoldersGeneration = 0
+
     private val mapperDispatcher = Dispatchers.Default
     private val prefetchDispatcher = Dispatchers.IO.limitedParallelism(2)
     private val loadMutex = Mutex()
@@ -179,6 +190,26 @@ class FileExplorerStateHolder(
                 _currentDirectoryChildren.value = it.toImmutableList()
             }.launchIn(scope)
 
+        combine(
+            _rawAllAudioFolders,
+            _allowedDirectories,
+            _blockedDirectories
+        ) { rawEntries, allowed, blocked ->
+            val resolver = DirectoryRuleResolver(allowed, blocked)
+            rawEntries.map { raw ->
+                DirectoryEntry(
+                    file = raw.file,
+                    directAudioCount = raw.directAudioCount,
+                    totalAudioCount = raw.totalAudioCount,
+                    canonicalPath = raw.canonicalPath,
+                    displayName = raw.displayName,
+                    isBlocked = resolver.isBlocked(raw.canonicalPath)
+                )
+            }.toImmutableList()
+        }
+            .flowOn(mapperDispatcher)
+            .onEach { _allAudioFolders.value = it }
+            .launchIn(scope)
     }
 
     fun refreshAvailableStorages() {
@@ -200,6 +231,50 @@ class FileExplorerStateHolder(
         _currentPath.value = visibleRoot
 
         loadDirectory(visibleRoot, updatePath = true, forceRefresh = false)
+        if (_rawAllAudioFolders.value.isNotEmpty() || allAudioFoldersJob?.isActive == true) {
+            loadAllAudioFolders()
+        }
+    }
+
+    /**
+     * Builds the flat "all subfolders" list from the MediaStore audio index: every folder
+     * below the selected storage root that directly contains at least one track.
+     */
+    fun loadAllAudioFolders(forceRefresh: Boolean = false): Job {
+        allAudioFoldersJob?.cancel()
+        val generation = ++allAudioFoldersGeneration
+        if (forceRefresh || _rawAllAudioFolders.value.isEmpty()) {
+            _isLoadingAllAudioFolders.value = true
+        }
+        val root = rootCanonicalPath
+        val job = scope.launch {
+            try {
+                val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh)
+                val entries = withContext(mapperDispatcher) {
+                    index.directAudioCountByPath
+                        .asSequence()
+                        .filter { (path, count) -> count > 0 && (path == root || path.startsWith("$root/")) }
+                        .map { (path, count) ->
+                            RawDirectoryEntry(
+                                file = File(path),
+                                directAudioCount = count,
+                                totalAudioCount = index.totalAudioCountByPath[path] ?: count,
+                                canonicalPath = path
+                            )
+                        }
+                        .sortedWith(compareBy({ it.file.name.lowercase() }, { it.canonicalPath.lowercase() }))
+                        .toList()
+                }
+                _rawAllAudioFolders.value = entries
+            } finally {
+                // A cancelled older load must not clear the flag a newer one just raised.
+                if (generation == allAudioFoldersGeneration) {
+                    _isLoadingAllAudioFolders.value = false
+                }
+            }
+        }
+        allAudioFoldersJob = job
+        return job
     }
 
     fun refreshCurrentDirectory(): Job {
@@ -340,38 +415,55 @@ class FileExplorerStateHolder(
         _isCurrentDirectoryResolved.value = false
         _rawCurrentDirectoryChildren.value = emptyList()
 
-        val immediateEntries = listImmediateDirectoryEntries(target)
-        val resultEntries = if (immediateEntries.isNotEmpty()) {
-            immediateEntries
-        } else {
-            computeDirectoryEntriesFromMediaStore(target, forceRefresh).also {
-                resolvedDirectoryKeys.add(targetKey)
-            }
+        // Build (or reuse) the MediaStore audio index up front so the list only ever
+        // contains directories that actually hold audio at some level. The plain
+        // filesystem listing would otherwise surface every folder, including ones
+        // without any audio. This index is the authoritative source of "music folders".
+        val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh)
+        val immediateEntries = listImmediateDirectoryEntries(target, index)
+        val resultEntries = immediateEntries.ifEmpty {
+            computeDirectoryEntriesFromMediaStore(target, index)
         }
         directoryChildrenCache[targetKey] = resultEntries
+        resolvedDirectoryKeys.add(targetKey)
 
         _rawCurrentDirectoryChildren.value = resultEntries
         _isLoading.value = false
         _isExplorerReady.value = true
-        _isCurrentDirectoryResolved.value = resolvedDirectoryKeys.contains(targetKey)
-        enrichDirectoryEntries(target, resultEntries, forceRefresh)
+        _isCurrentDirectoryResolved.value = true
+        // The index is already fresh, so enrichment only needs to merge in any audio
+        // folders the filesystem listing could not enumerate (no forced rebuild needed).
+        enrichDirectoryEntries(target, resultEntries, forceRefresh = false)
         prefetchChildDirectories(resultEntries)
     }
 
-    private suspend fun listImmediateDirectoryEntries(target: File): List<RawDirectoryEntry> =
+    private suspend fun listImmediateDirectoryEntries(
+        target: File,
+        index: MediaStoreDirectoryIndex?
+    ): List<RawDirectoryEntry> =
         withContext(Dispatchers.IO) {
-            val cachedIndex = mediaStoreDirectoryIndex
+            val resolvedIndex = index ?: mediaStoreDirectoryIndex
             runCatching {
                 target.listFiles()
                     ?.asSequence()
                     ?.filter { it.isDirectory && !it.isHidden }
-                    ?.map { child ->
+                    ?.mapNotNull { child ->
                         val childKey = normalizePath(child)
+                        // Keep only folders that contain audio (directly or in any
+                        // descendant). A directory present in the index always has at
+                        // least one audio file somewhere below it. When the index isn't
+                        // available yet we can't decide, so we keep the entry and let
+                        // enrichment prune it once the index is ready.
+                        if (resolvedIndex != null &&
+                            !resolvedIndex.totalAudioCountByPath.containsKey(childKey)
+                        ) {
+                            return@mapNotNull null
+                        }
                         RawDirectoryEntry(
                             file = child,
-                            directAudioCount = cachedIndex?.directAudioCountByPath?.get(childKey)
+                            directAudioCount = resolvedIndex?.directAudioCountByPath?.get(childKey)
                                 ?: UNKNOWN_AUDIO_COUNT,
-                            totalAudioCount = cachedIndex?.totalAudioCountByPath?.get(childKey)
+                            totalAudioCount = resolvedIndex?.totalAudioCountByPath?.get(childKey)
                                 ?: UNKNOWN_AUDIO_COUNT,
                             canonicalPath = childKey
                         )
@@ -382,11 +474,10 @@ class FileExplorerStateHolder(
             }.getOrElse { emptyList() }
         }
 
-    private suspend fun computeDirectoryEntriesFromMediaStore(
+    private fun computeDirectoryEntriesFromMediaStore(
         target: File,
-        forceRefresh: Boolean
+        index: MediaStoreDirectoryIndex
     ): List<RawDirectoryEntry> {
-        val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh)
         val targetKey = normalizePath(target)
         val childPaths = index.childrenByParent[targetKey].orEmpty()
 
@@ -534,7 +625,8 @@ class FileExplorerStateHolder(
 
                 scope.launch(prefetchDispatcher) {
                     try {
-                        val prefetchedEntries = listImmediateDirectoryEntries(entry.file)
+                        val index = getOrBuildMediaStoreDirectoryIndex(forceRefresh = false)
+                        val prefetchedEntries = listImmediateDirectoryEntries(entry.file, index)
                         directoryChildrenCache[targetKey] = prefetchedEntries
                         enrichDirectoryEntries(
                             target = entry.file,
