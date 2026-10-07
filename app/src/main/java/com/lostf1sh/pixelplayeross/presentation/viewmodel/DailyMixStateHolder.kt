@@ -63,6 +63,15 @@ class DailyMixStateHolder @Inject constructor(
         }
     }
 
+    /** Replaces today's Daily Mix (e.g. with a Smart Mix preview) and persists it. */
+    fun setDailyMixSongs(songs: List<Song>) {
+        updateJob?.cancel()
+        _dailyMixSongs.value = songs.toImmutableList()
+        updateJob = scope?.launch {
+            userPreferencesRepository.saveDailyMixSongIds(songs.map { it.id })
+        }
+    }
+
     /**
      * Update the daily mix with new songs.
      * Uses getAllSongsOnce() to load songs on-demand instead of keeping a permanent subscription.
