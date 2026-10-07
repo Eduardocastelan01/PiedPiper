@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d contrib.</string>
     <string name="about_link_fdroid_subtitle">Disponible dans le catalogue F-Droid</string>
+    <string name="about_licenses_title">Licences et attributions</string>
+    <string name="about_licenses_subtitle">Bibliothèques open source, polices et données intégrées</string>
+    <string name="about_licenses_sheet_subtitle">Logiciels tiers, polices et données intégrés à cette application.</string>
+    <string name="licenses_tab_all">Tout</string>
+    <string name="licenses_tab_libraries">Bibliothèques</string>
+    <string name="licenses_tab_fonts">Polices</string>
+    <string name="licenses_tab_data">Données</string>
+    <string name="licenses_tab_raw_notice">Avis brut</string>
+    <string name="licenses_search_placeholder">Rechercher des bibliothèques ou des licences…</string>
+    <string name="licenses_cd_clear_search">Effacer la recherche</string>
+    <string name="licenses_empty_results">Aucune licence ne correspond à « %1$s »</string>
+    <string name="licenses_detail_section">Section</string>
+    <string name="licenses_detail_source">Source</string>
+    <string name="licenses_detail_license">Licence</string>
+    <string name="licenses_toast_copied">Texte de la licence copié dans le presse-papiers</string>
+    <string name="licenses_cd_close">Fermer</string>
+    <string name="licenses_cd_copy">Copier le texte de la licence</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Code source</string>
     <string name="about_maintainer_subtitle">Maintenance des éditions FOSS et originale/non-FOSS.</string>
@@ -26,6 +43,22 @@
     <string name="album_cover_for">Couverture de %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Enregistrer le marque-page</string>
+    <string name="audio_bookmarks_selected_count">%1$d sélectionné(s)</string>
+    <string name="audio_bookmarks_cd_selected">Sélectionné</string>
+    <string name="audio_bookmarks_cd_delete_selected">Supprimer la sélection</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">Supprimer %1$d dossier ?</item>
+        <item quantity="other">Supprimer %1$d dossiers ?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d moment enregistré sera définitivement supprimé. Cette action est irréversible.</item>
+        <item quantity="other">%1$d moments enregistrés seront définitivement supprimés. Cette action est irréversible.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">Supprimer %1$d moment ?</item>
+        <item quantity="other">Supprimer %1$d moments ?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">Les moments enregistrés sélectionnés seront définitivement supprimés. Cette action est irréversible.</string>
     <string name="audio_bookmarks_cd_open">Marque-pages audio</string>
     <string name="audio_bookmarks_back_to_top">Retour en haut</string>
     <string name="audio_bookmarks_clear_filter">Effacer le filtre</string>
@@ -61,6 +94,18 @@
     <string name="cd_search_icon">Rechercher</string>
     <string name="cd_shuffle_play">Lecture aléatoire</string>
     <string name="cd_shuffle_play_album">Lire l\'album en aléatoire</string>
+    <string name="detail_hero_shuffle">Aléatoire</string>
+    <string name="detail_hero_play">Lecture</string>
+    <string name="detail_hero_pause">Pause</string>
+    <string name="detail_hero_resume">Reprendre</string>
+    <string name="detail_hero_more_actions">Plus d\'actions</string>
+    <string name="detail_hero_add_to_playlist">Ajouter à la playlist</string>
+    <string name="detail_hero_play_next">Lire ensuite</string>
+    <string name="detail_hero_add_to_queue">Ajouter à la file d\'attente</string>
+    <string name="detail_hero_album_count_many">%1$d albums</string>
+    <string name="detail_hero_album_count_one">1 album</string>
+    <string name="detail_hero_duration_minutes">%1$d min</string>
+    <string name="detail_hero_duration_hours">%1$d h %2$d min</string>
     <string name="cd_song_cover">Pochette de la chanson</string>
     <string name="cd_sync">Synchroniser</string>
     <string name="cd_toggle_grid_list">Basculer entre la vue grille et la vue liste</string>
@@ -142,6 +187,7 @@
     <string name="search_nothing_found">Rien trouvé</string>
     <string name="search_placeholder">Rechercher…</string>
     <string name="search_try_different_or_filters">Essayez un autre terme ou vérifiez vos filtres.</string>
+    <string name="search_filter_all">Tout</string>
     <string name="setup_all_set_body">Vous êtes prêt à profiter de votre musique.</string>
     <string name="setup_all_set_title">Tout est prêt !</string>
     <string name="setup_app_navigation_subtitle">Choisissez le style de la barre de navigation inférieure.</string>
@@ -180,6 +226,9 @@
     <string name="setup_navbar_default_style">Style par défaut</string>
     <string name="setup_navbar_footer">Vous pouvez changer cela plus tard dans Paramètres &gt; Apparence &gt; Style de la barre de navigation.</string>
     <string name="setup_permission_alarms_title">Alarmes et rappels</string>
+    <string name="setup_battery_optimization_title">Optimisation de la batterie</string>
+    <string name="setup_battery_optimization_description">Certains appareils Android ferment agressivement les applications en arrière-plan. Désactivez l\'optimisation de la batterie pour PixelPlayerOSS afin d\'éviter les interruptions de lecture inattendues.</string>
+    <string name="setup_disable_battery_optimization">Désactiver l\'optimisation</string>
     <string name="setup_permission_granted">Autorisation accordée</string>
     <string name="setup_permission_media_title">Autorisation média</string>
     <string name="setup_permission_notifications_description">Activez les notifications pour contrôler votre musique depuis l\'écran de verrouillage et le volet de notification.</string>

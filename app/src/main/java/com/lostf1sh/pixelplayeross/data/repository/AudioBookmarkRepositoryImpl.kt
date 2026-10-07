@@ -1,5 +1,7 @@
 package com.lostf1sh.pixelplayeross.data.repository
 
+import com.lostf1sh.pixelplayeross.data.backup.module.BackupSongMetadata
+import com.lostf1sh.pixelplayeross.data.backup.module.BackupSongResolver
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkDao
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
 import kotlinx.coroutines.flow.Flow
@@ -8,7 +10,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AudioBookmarkRepositoryImpl @Inject constructor(
-    private val audioBookmarkDao: AudioBookmarkDao
+    private val audioBookmarkDao: AudioBookmarkDao,
+    private val songResolver: BackupSongResolver
 ) : AudioBookmarkRepository {
     override fun getAllBookmarksFlow(): Flow<List<AudioBookmarkEntity>> =
         audioBookmarkDao.getAllBookmarksFlow()
@@ -22,6 +25,42 @@ class AudioBookmarkRepositoryImpl @Inject constructor(
     override suspend fun deleteBookmark(id: Long) =
         audioBookmarkDao.deleteBookmark(id)
 
+    override suspend fun deleteBookmarks(ids: Collection<Long>) {
+        // Chunked to stay under SQLite's bound-variable limit on older devices.
+        ids.distinct().chunked(500).forEach { audioBookmarkDao.deleteBookmarks(it) }
+    }
+
     override suspend fun getBookmarkById(id: Long): AudioBookmarkEntity? =
         audioBookmarkDao.getBookmarkById(id)
+
+    /**
+     * Song ids are MediaStore ids, so a bookmark loses its song when the file is re-indexed
+     * under a new id, or when a backup is restored before the library has been scanned. Points
+     * each bookmark whose song is gone at the library song with its stored title and artist, if
+     * exactly one matches. Bookmarks without a confident match are left alone.
+     */
+    override suspend fun relinkOrphanedBookmarks() {
+        val bookmarks = audioBookmarkDao.getAllBookmarksOnce()
+        if (bookmarks.isEmpty()) return
+        val presentIds = songResolver.songsFor(bookmarks.map { it.songId }).keys
+        val orphans = bookmarks.filter { it.songId !in presentIds && it.songTitle.isNotBlank() }
+        if (orphans.isEmpty()) return
+
+        val library = songResolver.library()
+        val relinked = orphans.groupBy { it.songId }.flatMap { (songId, group) ->
+            val sample = group.first()
+            val meta = BackupSongMetadata(sample.songTitle, sample.artistName, album = "", duration = 0L)
+            val newId = library.resolve(songId, meta) ?: return@flatMap emptyList()
+            group.map { it.copy(songId = newId) }
+        }
+        if (relinked.isEmpty()) return
+
+        // The stored artwork uri belonged to the old id; take the matched song's.
+        val songs = songResolver.songsFor(relinked.map { it.songId })
+        audioBookmarkDao.insertAll(
+            relinked.map { bookmark ->
+                songs[bookmark.songId]?.let { bookmark.copy(albumArtUri = it.albumArtUriString) } ?: bookmark
+            }
+        )
+    }
 }

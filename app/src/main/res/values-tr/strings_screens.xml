@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d katkı</string>
     <string name="about_link_fdroid_subtitle">F-Droid kataloğunda mevcut</string>
+    <string name="about_licenses_title">Lisanslar ve atıflar</string>
+    <string name="about_licenses_subtitle">Açık kaynak kütüphaneler, yazı tipleri ve paketlenmiş veriler</string>
+    <string name="about_licenses_sheet_subtitle">Bu uygulamayla birlikte gelen üçüncü taraf yazılımlar, yazı tipleri ve veriler.</string>
+    <string name="licenses_tab_all">Tümü</string>
+    <string name="licenses_tab_libraries">Kütüphaneler</string>
+    <string name="licenses_tab_fonts">Yazı tipleri</string>
+    <string name="licenses_tab_data">Veriler</string>
+    <string name="licenses_tab_raw_notice">Ham bildirim</string>
+    <string name="licenses_search_placeholder">Kütüphane veya lisans ara…</string>
+    <string name="licenses_cd_clear_search">Aramayı temizle</string>
+    <string name="licenses_empty_results">\"%1$s\" ile eşleşen lisans yok</string>
+    <string name="licenses_detail_section">Bölüm</string>
+    <string name="licenses_detail_source">Kaynak</string>
+    <string name="licenses_detail_license">Lisans</string>
+    <string name="licenses_toast_copied">Lisans metni panoya kopyalandı</string>
+    <string name="licenses_cd_close">Kapat</string>
+    <string name="licenses_cd_copy">Lisans metnini kopyala</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Kaynak kodu</string>
     <string name="about_maintainer_subtitle">FOSS ve orijinal/FOSS olmayan sürümlerin bakımı.</string>
@@ -26,6 +43,22 @@
     <string name="album_cover_for">%1$s kapağı</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Yer imi kaydet</string>
+    <string name="audio_bookmarks_selected_count">%1$d seçildi</string>
+    <string name="audio_bookmarks_cd_selected">Seçildi</string>
+    <string name="audio_bookmarks_cd_delete_selected">Seçilenleri sil</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">%1$d klasör silinsin mi?</item>
+        <item quantity="other">%1$d klasör silinsin mi?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d kayıtlı an kalıcı olarak kaldırılacak. Bu işlem geri alınamaz.</item>
+        <item quantity="other">%1$d kayıtlı an kalıcı olarak kaldırılacak. Bu işlem geri alınamaz.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">%1$d an silinsin mi?</item>
+        <item quantity="other">%1$d an silinsin mi?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">Seçilen kayıtlı anlar kalıcı olarak kaldırılacak. Bu işlem geri alınamaz.</string>
     <string name="audio_bookmarks_cd_open">Ses yer imleri</string>
     <string name="audio_bookmarks_back_to_top">Başa dön</string>
     <string name="audio_bookmarks_clear_filter">Filtreyi temizle</string>
@@ -61,6 +94,18 @@
     <string name="cd_search_icon">Ara</string>
     <string name="cd_shuffle_play">Karışık Oynat</string>
     <string name="cd_shuffle_play_album">Albümü karışık oynat</string>
+    <string name="detail_hero_shuffle">Karıştır</string>
+    <string name="detail_hero_play">Oynat</string>
+    <string name="detail_hero_pause">Duraklat</string>
+    <string name="detail_hero_resume">Devam et</string>
+    <string name="detail_hero_more_actions">Daha fazla eylem</string>
+    <string name="detail_hero_add_to_playlist">Çalma listesine ekle</string>
+    <string name="detail_hero_play_next">Sıradaki olarak oynat</string>
+    <string name="detail_hero_add_to_queue">Kuyruğa ekle</string>
+    <string name="detail_hero_album_count_many">%1$d Albüm</string>
+    <string name="detail_hero_album_count_one">1 Albüm</string>
+    <string name="detail_hero_duration_minutes">%1$d dk</string>
+    <string name="detail_hero_duration_hours">%1$d sa %2$d dk</string>
     <string name="cd_song_cover">Şarkı kapağı</string>
     <string name="cd_sync">Senkronize et</string>
     <string name="cd_toggle_grid_list">Izgara/liste görünümünü değiştir</string>
@@ -142,6 +187,7 @@
     <string name="search_nothing_found">Hiçbir şey bulunamadı</string>
     <string name="search_placeholder">Ara…</string>
     <string name="search_try_different_or_filters">Farklı bir arama terimi deneyin veya filtrelerinizi kontrol edin.</string>
+    <string name="search_filter_all">Tümü</string>
     <string name="setup_all_set_body">Müziğinizin keyfini çıkarmaya hazırsınız.</string>
     <string name="setup_all_set_title">Her Şey Hazır!</string>
     <string name="setup_app_navigation_subtitle">Alt navigasyon çubuğunun stilini seçin.</string>
@@ -180,6 +226,9 @@
     <string name="setup_navbar_default_style">Varsayılan Stil</string>
     <string name="setup_navbar_footer">Bunu daha sonra Ayarlar &gt; Görünüm &gt; Navigasyon Çubuğu Stili bölümünden değiştirebilirsiniz.</string>
     <string name="setup_permission_alarms_title">Alarmlar ve Hatırlatıcılar</string>
+    <string name="setup_battery_optimization_title">Pil Optimizasyonu</string>
+    <string name="setup_battery_optimization_description">Bazı Android cihazlar arka plan uygulamalarını agresif bir şekilde kapatır. Beklenmedik oynatma kesintilerini önlemek için PixelPlayerOSS için pil optimizasyonunu devre dışı bırakın.</string>
+    <string name="setup_disable_battery_optimization">Optimizasyonu Devre Dışı Bırak</string>
     <string name="setup_permission_granted">İzin Verildi</string>
     <string name="setup_permission_media_title">Medya İzni</string>
     <string name="setup_permission_notifications_description">Müziğinizi kilit ekranından ve bildirim panelinden kontrol edebilmek için bildirimleri etkinleştirin.</string>

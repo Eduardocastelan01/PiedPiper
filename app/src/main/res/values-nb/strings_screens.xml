@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d bidrag.</string>
     <string name="about_link_fdroid_subtitle">Tilgjengelig i F-Droid-katalogen</string>
+    <string name="about_licenses_title">Lisenser og kreditering</string>
+    <string name="about_licenses_subtitle">Biblioteker med åpen kildekode, skrifttyper og medfølgende data</string>
+    <string name="about_licenses_sheet_subtitle">Tredjepartsprogramvare, skrifttyper og data som følger med denne appen.</string>
+    <string name="licenses_tab_all">Alle</string>
+    <string name="licenses_tab_libraries">Biblioteker</string>
+    <string name="licenses_tab_fonts">Skrifttyper</string>
+    <string name="licenses_tab_data">Data</string>
+    <string name="licenses_tab_raw_notice">Rå merknad</string>
+    <string name="licenses_search_placeholder">Søk i biblioteker eller lisenser…</string>
+    <string name="licenses_cd_clear_search">Tøm søk</string>
+    <string name="licenses_empty_results">Ingen lisenser samsvarer med \"%1$s\"</string>
+    <string name="licenses_detail_section">Del</string>
+    <string name="licenses_detail_source">Kilde</string>
+    <string name="licenses_detail_license">Lisens</string>
+    <string name="licenses_toast_copied">Lisensteksten er kopiert til utklippstavlen</string>
+    <string name="licenses_cd_close">Lukk</string>
+    <string name="licenses_cd_copy">Kopier lisenstekst</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Kildekode</string>
     <string name="about_maintainer_subtitle">Vedlikehold av FOSS-utgaven og den opprinnelige, ikke-FOSS-utgaven.</string>
@@ -26,6 +43,22 @@
     <string name="album_cover_for">Cover for %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Lagre bokmerke</string>
+    <string name="audio_bookmarks_selected_count">%1$d valgt</string>
+    <string name="audio_bookmarks_cd_selected">Valgt</string>
+    <string name="audio_bookmarks_cd_delete_selected">Slett valgte</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">Slette denne mappen?</item>
+        <item quantity="other">Slette %1$d mapper?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d lagret øyeblikk blir fjernet permanent. Dette kan ikke angres.</item>
+        <item quantity="other">%1$d lagrede øyeblikk blir fjernet permanent. Dette kan ikke angres.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">Slette dette øyeblikket?</item>
+        <item quantity="other">Slette %1$d øyeblikk?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">De valgte lagrede øyeblikkene blir fjernet permanent. Dette kan ikke angres.</string>
     <string name="audio_bookmarks_cd_open">Lydbokmerker</string>
     <string name="audio_bookmarks_back_to_top">Til toppen</string>
     <string name="audio_bookmarks_clear_filter">Fjern filter</string>
@@ -61,6 +94,18 @@
     <string name="cd_search_icon">Søk</string>
     <string name="cd_shuffle_play">Bland og spill</string>
     <string name="cd_shuffle_play_album">Bland album</string>
+    <string name="detail_hero_shuffle">Bland</string>
+    <string name="detail_hero_play">Spill av</string>
+    <string name="detail_hero_pause">Pause</string>
+    <string name="detail_hero_resume">Fortsett</string>
+    <string name="detail_hero_more_actions">Flere handlinger</string>
+    <string name="detail_hero_add_to_playlist">Legg til i spilleliste</string>
+    <string name="detail_hero_play_next">Spill neste</string>
+    <string name="detail_hero_add_to_queue">Legg til i kø</string>
+    <string name="detail_hero_album_count_many">%1$d album</string>
+    <string name="detail_hero_album_count_one">1 album</string>
+    <string name="detail_hero_duration_minutes">%1$d min</string>
+    <string name="detail_hero_duration_hours">%1$d t %2$d min</string>
     <string name="cd_song_cover">Sangcover</string>
     <string name="cd_sync">Synkroniser</string>
     <string name="cd_toggle_grid_list">Bytt mellom rutenett og liste</string>
@@ -142,6 +187,7 @@
     <string name="search_nothing_found">Fant ingenting</string>
     <string name="search_placeholder">Søk…</string>
     <string name="search_try_different_or_filters">Prøv et annet søkeord eller sjekk filtrene dine.</string>
+    <string name="search_filter_all">Alle</string>
     <string name="setup_all_set_body">Du er klar til å nyte musikken din.</string>
     <string name="setup_all_set_title">Alt klart!</string>
     <string name="setup_app_navigation_subtitle">Velg stil på navigasjonslinjen.</string>
@@ -180,6 +226,9 @@
     <string name="setup_navbar_default_style">Standardstil</string>
     <string name="setup_navbar_footer">Du kan endre dette senere i innstillinger.</string>
     <string name="setup_permission_alarms_title">Alarmer og påminnelser</string>
+    <string name="setup_battery_optimization_title">Batterioptimalisering</string>
+    <string name="setup_battery_optimization_description">Deaktiver optimalisering for å unngå avbrudd i avspillingen.</string>
+    <string name="setup_disable_battery_optimization">Deaktiver optimalisering</string>
     <string name="setup_permission_granted">Tillatelse gitt</string>
     <string name="setup_permission_media_title">Medietilgang</string>
     <string name="setup_permission_notifications_description">Aktiver varslinger for å styre musikken fra låst skjerm.</string>

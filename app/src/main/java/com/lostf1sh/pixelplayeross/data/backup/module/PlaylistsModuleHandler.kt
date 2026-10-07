@@ -10,28 +10,55 @@ import com.lostf1sh.pixelplayeross.data.model.SortOption
 import com.lostf1sh.pixelplayeross.data.model.isSmartPlaylistSource
 import com.lostf1sh.pixelplayeross.data.backup.model.BackupSection
 import com.lostf1sh.pixelplayeross.data.database.MusicDao
-import com.lostf1sh.pixelplayeross.data.database.SongSummary
 import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.PreferenceBackupEntry
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
+import com.lostf1sh.pixelplayeross.data.worker.SyncManager
+import com.lostf1sh.pixelplayeross.di.AppScope
 import com.lostf1sh.pixelplayeross.di.BackupGson
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 
+/**
+ * Playlists and their ordering preferences.
+ *
+ * Song ids are matched against the current library on restore (see [BackupSongResolver]). A
+ * restore made before the library scan has indexed the songs can't match them yet, so the
+ * payload is kept in [PENDING_RESTORE_FILE_NAME] and the restored playlists are filled in after
+ * each library sync finishes, until every song resolves.
+ */
 @Singleton
 class PlaylistsModuleHandler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val playlistPreferencesRepository: PlaylistPreferencesRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val musicDao: MusicDao,
-    @BackupGson private val gson: Gson
+    private val songResolver: BackupSongResolver,
+    @BackupGson private val gson: Gson,
+    private val syncManagerProvider: Provider<SyncManager>,
+    @AppScope private val appScope: CoroutineScope
 ) : BackupModuleHandler {
+
+    private val pendingRestoreMutex = Mutex()
+    private val pendingRestoreFile: File
+        get() = File(context.filesDir, PENDING_RESTORE_FILE_NAME)
+
+    init {
+        appScope.launch { retryPendingWhenIdle() }
+    }
 
     override val section = BackupSection.PLAYLISTS
 
@@ -42,26 +69,10 @@ class PlaylistsModuleHandler @Inject constructor(
 
         val cloudSongIds = buildCloudSongIdSet()
 
-        val allLocalSummaries = musicDao.getAllLocalSongSummaries()
-        val summaryById = allLocalSummaries.associateBy { it.id.toString() }
-
-        val songMetadata = mutableMapOf<String, SongMetadataEntry>()
         val filteredPlaylists = playlists.map { playlist ->
-            val localSongIds = playlist.songIds.filter { id -> id !in cloudSongIds }
-            localSongIds.forEach { id ->
-                if (id !in songMetadata) {
-                    summaryById[id]?.let { summary ->
-                        songMetadata[id] = SongMetadataEntry(
-                            title = summary.title,
-                            artist = summary.artistName,
-                            album = summary.albumName,
-                            duration = summary.duration
-                        )
-                    }
-                }
-            }
-            playlist.copy(songIds = localSongIds)
+            playlist.copy(songIds = playlist.songIds.filter { id -> id !in cloudSongIds })
         }
+        val songMetadata = songResolver.metadataFor(filteredPlaylists.flatMap { it.songIds })
 
         val coverImages = mutableMapOf<String, String>()
         filteredPlaylists.forEach { playlist ->
@@ -113,16 +124,17 @@ class PlaylistsModuleHandler @Inject constructor(
         val songMetadata = parsed.songMetadata
         val coverImages = parsed.coverImages
 
-        val resolvedPlaylists = if (songMetadata != null && songMetadata.isNotEmpty()) {
+        val resolution = if (songMetadata != null && songMetadata.isNotEmpty()) {
             resolvePlaylists(backupPlaylists, songMetadata)
         } else {
-            backupPlaylists
+            PlaylistsResolution(backupPlaylists, unresolvedCount = 0)
         }
+        savePendingRestore(payload, hasUnresolvedSongs = resolution.unresolvedCount > 0)
 
         val finalPlaylists = if (coverImages != null && coverImages.isNotEmpty()) {
-            restoreCoverImages(resolvedPlaylists, coverImages)
+            restoreCoverImages(resolution.playlists, coverImages)
         } else {
-            resolvedPlaylists
+            resolution.playlists
         }
 
         playlistPreferencesRepository.replaceAllPlaylists(finalPlaylists)
@@ -134,6 +146,84 @@ class PlaylistsModuleHandler @Inject constructor(
     }
 
     override suspend fun rollback(snapshot: String) = restore(snapshot)
+
+    /**
+     * Retries the pending restore on every distinct idle sync state: the first one at startup,
+     * and each one a sync leaves behind. A running -> idle edge isn't required, because a short
+     * sync can finish before its running state is ever observed.
+     */
+    private suspend fun retryPendingWhenIdle() {
+        syncManagerProvider.get().syncProgress
+            .distinctUntilChanged()
+            .filter { !it.isRunning }
+            .collect { resolvePendingPlaylists() }
+    }
+
+    /**
+     * Keeps [payload] for [resolvePendingPlaylists] when some of its songs aren't in the library
+     * yet; otherwise drops any payload left from an earlier restore.
+     */
+    private suspend fun savePendingRestore(payload: String, hasUnresolvedSongs: Boolean) =
+        pendingRestoreMutex.withLock {
+            val pendingFile = pendingRestoreFile
+            if (!hasUnresolvedSongs) {
+                if (pendingFile.exists()) pendingFile.delete()
+                return@withLock
+            }
+            try {
+                pendingFile.writeText(payload)
+                Timber.tag(TAG).i("Saved pending playlist restore for songs not in the library yet")
+            } catch (e: Exception) {
+                Timber.tag(TAG).e(e, "Failed to save pending playlist restore file")
+            }
+        }
+
+    /**
+     * Re-matches the pending restore payload against the library and grows the restored
+     * playlists that gained songs. The pending file is dropped once every song resolves.
+     */
+    private suspend fun resolvePendingPlaylists() = pendingRestoreMutex.withLock {
+        val pendingFile = pendingRestoreFile
+        if (!pendingFile.exists()) return@withLock
+
+        val payload = try {
+            pendingFile.readText()
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Failed to read pending playlist restore file")
+            return@withLock
+        }
+        val parsed = runCatching { gson.fromJson(payload, PlaylistsBackupPayload::class.java) }.getOrNull()
+        val songMetadata = parsed?.songMetadata
+        if (parsed == null || songMetadata.isNullOrEmpty()) {
+            pendingFile.delete()
+            return@withLock
+        }
+
+        val resolution = resolvePlaylists(parsed.playlists.orEmpty(), songMetadata)
+        val resolvedById = resolution.playlists.associateBy { it.id }
+
+        var updated = false
+        val updatedPlaylists = playlistPreferencesRepository.getPlaylistsOnce().map { current ->
+            val resolved = resolvedById[current.id]
+            if (resolved != null && current.songIds.size < resolved.songIds.size) {
+                updated = true
+                current.copy(songIds = resolved.songIds)
+            } else {
+                current
+            }
+        }
+        if (updated) {
+            playlistPreferencesRepository.replaceAllPlaylists(updatedPlaylists)
+            Timber.tag(TAG).i(
+                "Pending playlist restore: playlists grew, ${resolution.unresolvedCount} songs still unresolved"
+            )
+        }
+
+        if (resolution.unresolvedCount == 0) {
+            pendingFile.delete()
+            Timber.tag(TAG).i("Pending playlist restore: all songs resolved")
+        }
+    }
 
     private fun readFileAsBase64(path: String): String? {
         return try {
@@ -167,27 +257,15 @@ class PlaylistsModuleHandler @Inject constructor(
     }
 
     /**
-     * Resolves backup song IDs to current device song IDs using metadata matching.
-     *
-     * Strategy:
-     * 1. Direct ID match + metadata verification → confirmed
-     * 2. If direct ID exists but metadata doesn't match → try metadata match (avoids false positives)
-     * 3. If direct ID doesn't exist → try metadata match
-     * 4. Metadata match: title + artist (case-insensitive), disambiguate with album + duration
-     * 5. No confident match → song is dropped from the playlist (kept as unresolved would risk false matches)
+     * Resolves backup song IDs to current device song IDs (see [BackupSongResolver]). Songs
+     * without a confident match are left out of the playlist, since keeping their backup ids
+     * would risk false matches; [resolvePendingPlaylists] retries them after the next sync.
      */
     private suspend fun resolvePlaylists(
         playlists: List<Playlist>,
-        songMetadata: Map<String, SongMetadataEntry>
-    ): List<Playlist> {
-        val localSummaries = musicDao.getAllLocalSongSummaries()
-        val currentSongsById = localSummaries.associateBy { it.id.toString() }
-
-        val metadataIndex = mutableMapOf<String, MutableList<SongSummary>>()
-        localSummaries.forEach { song ->
-            val key = normalizeMatchKey(song.title, song.artistName)
-            metadataIndex.getOrPut(key) { mutableListOf() }.add(song)
-        }
+        songMetadata: Map<String, BackupSongMetadata>
+    ): PlaylistsResolution {
+        val library = songResolver.library()
 
         val resolutionCache = mutableMapOf<String, String?>()
         var totalSongs = 0
@@ -198,7 +276,7 @@ class PlaylistsModuleHandler @Inject constructor(
             playlist.songIds.forEach { songId ->
                 if (songId !in resolutionCache) {
                     totalSongs++
-                    val resolved = resolveSongId(songId, songMetadata, currentSongsById, metadataIndex)
+                    val resolved = library.resolve(songId, songMetadata[songId])
                     resolutionCache[songId] = resolved
                     if (resolved != null) resolvedCount++ else unresolvedCount++
                 }
@@ -209,72 +287,16 @@ class PlaylistsModuleHandler @Inject constructor(
             Timber.tag(TAG).w("Playlist restore: $resolvedCount/$totalSongs songs resolved, $unresolvedCount unresolved")
         }
 
-        return playlists.map { playlist ->
-            val resolvedSongIds = playlist.songIds.mapNotNull { songId ->
-                resolutionCache[songId]
-            }
-            playlist.copy(songIds = resolvedSongIds)
+        val resolvedPlaylists = playlists.map { playlist ->
+            playlist.copy(songIds = playlist.songIds.mapNotNull { songId -> resolutionCache[songId] })
         }
+        return PlaylistsResolution(resolvedPlaylists, unresolvedCount)
     }
 
-    private fun resolveSongId(
-        backupSongId: String,
-        songMetadata: Map<String, SongMetadataEntry>,
-        currentSongsById: Map<String, SongSummary>,
-        metadataIndex: Map<String, List<SongSummary>>
-    ): String? {
-        val meta = songMetadata[backupSongId]
-
-        val directMatch = currentSongsById[backupSongId]
-        if (directMatch != null) {
-            if (meta == null) {
-                return backupSongId
-            }
-            if (metadataMatches(meta, directMatch)) {
-                return backupSongId
-            }
-        }
-
-        if (meta == null) {
-            return if (directMatch != null) backupSongId else null
-        }
-
-        val matchKey = normalizeMatchKey(meta.title, meta.artist)
-        val candidates = metadataIndex[matchKey] ?: return null
-
-        if (candidates.size == 1) {
-            return candidates[0].id.toString()
-        }
-
-        val albumMatch = candidates.filter { candidate ->
-            normalizeText(candidate.albumName) == normalizeText(meta.album)
-        }
-        if (albumMatch.size == 1) {
-            return albumMatch[0].id.toString()
-        }
-
-        val durationCandidates = (albumMatch.ifEmpty { candidates }).filter { candidate ->
-            kotlin.math.abs(candidate.duration - meta.duration) <= DURATION_TOLERANCE_MS
-        }
-        if (durationCandidates.size == 1) {
-            return durationCandidates[0].id.toString()
-        }
-
-        return null
-    }
-
-    private fun metadataMatches(meta: SongMetadataEntry, song: SongSummary): Boolean {
-        return normalizeText(meta.title) == normalizeText(song.title) &&
-            normalizeText(meta.artist) == normalizeText(song.artistName)
-    }
-
-    private fun normalizeMatchKey(title: String, artist: String): String {
-        return "${normalizeText(title)}|${normalizeText(artist)}"
-    }
-
-    private fun normalizeText(text: String): String {
-        return text.trim().lowercase()
-    }
+    private data class PlaylistsResolution(
+        val playlists: List<Playlist>,
+        val unresolvedCount: Int
+    )
 
     private suspend fun buildCloudSongIdSet(): Set<String> {
         val cloudIds = mutableSetOf<String>()
@@ -321,27 +343,19 @@ class PlaylistsModuleHandler @Inject constructor(
         userPreferencesRepository.clearLegacyUserPlaylists()
     }
 
-    /** Song metadata stored alongside playlists for cross-device matching. */
-    data class SongMetadataEntry(
-        val title: String,
-        val artist: String,
-        val album: String,
-        val duration: Long
-    )
-
     private data class PlaylistsBackupPayload(
         val playlists: List<Playlist>? = null,
         val playlistSongOrderModes: Map<String, String>? = null,
         val playlistsSortOption: String? = null,
         /** Song metadata for cross-device matching. Key = songId from backup. Null in legacy/snapshot payloads. */
-        val songMetadata: Map<String, SongMetadataEntry>? = null,
+        val songMetadata: Map<String, BackupSongMetadata>? = null,
         /** Base64-encoded cover images. Key = playlist ID. Null if no custom covers. */
         val coverImages: Map<String, String>? = null
     )
 
     companion object {
         private const val TAG = "PlaylistsModuleHandler"
-        private const val DURATION_TOLERANCE_MS = 2000L
+        private const val PENDING_RESTORE_FILE_NAME = "pending_playlists_restore.json"
 
         /** Playlist sources that are backed up. Cloud-sourced playlists are excluded. */
         private fun isBackedUpPlaylistSource(source: String): Boolean =

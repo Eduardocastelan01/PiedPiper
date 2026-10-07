@@ -6,6 +6,19 @@
     <string name="audio_bookmarks_title">书签</string>
     <string name="audio_bookmarks_cd_open">音频书签</string>
     <string name="audio_bookmarks_cd_add">保存书签</string>
+    <string name="audio_bookmarks_selected_count">已选择 %1$d 项</string>
+    <string name="audio_bookmarks_cd_selected">已选择</string>
+    <string name="audio_bookmarks_cd_delete_selected">删除所选</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="other">确定删除 %1$d 个文件夹？</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="other">%1$d 个书签将被永久删除，此操作无法撤销。</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="other">确定删除 %1$d 个书签？</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">所选书签将被永久删除，此操作无法撤销。</string>
     <string name="nav_error_genre_id_missing">错误：缺少流派ID</string>
     <string name="easter_egg_thank_you">感谢使用 PixelPlayerOSS！</string>
 
@@ -108,6 +121,9 @@
     <string name="setup_enable_notifications">开启通知</string>
     <string name="setup_permission_alarms_title">闹钟与提醒</string>
     <string name="setup_permission_alarms_description">可选，若使用睡眠定时，建议开启，保证准时停止播放。</string>
+    <string name="setup_battery_optimization_title">电池优化</string>
+    <string name="setup_battery_optimization_description">某些 Android 设备会强制结束后台应用。请为 PixelPlayerOSS 禁用电池优化，以防止意外的播放中断。</string>
+    <string name="setup_disable_battery_optimization">禁用优化</string>
     <string name="setup_grant_permission_generic">授予权限</string>
     <string name="setup_backup_have_title">你是否拥有备份？</string>
     <string name="setup_backup_have_description">如果你有 PixelPlayerOSS 的备份，可以现在恢复，省去本机大部分设置步骤。</string>
@@ -140,6 +156,18 @@
     <string name="cd_generic_artist">未知艺术家</string>
     <string name="cd_play_album">播放专辑</string>
     <string name="cd_shuffle_play_album">随机播放专辑</string>
+    <string name="detail_hero_shuffle">随机播放</string>
+    <string name="detail_hero_play">播放</string>
+    <string name="detail_hero_pause">暂停</string>
+    <string name="detail_hero_resume">继续播放</string>
+    <string name="detail_hero_more_actions">更多操作</string>
+    <string name="detail_hero_add_to_playlist">添加到歌单</string>
+    <string name="detail_hero_play_next">下一首播放</string>
+    <string name="detail_hero_add_to_queue">添加到队列</string>
+    <string name="detail_hero_album_count_many">%1$d 张专辑</string>
+    <string name="detail_hero_album_count_one">1 张专辑</string>
+    <string name="detail_hero_duration_minutes">%1$d 分钟</string>
+    <string name="detail_hero_duration_hours">%1$d 小时 %2$d 分钟</string>
     <string name="album_cover_for">%1$s 的封面</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="mashup_cd_play_pause">播放/暂停</string>
@@ -168,6 +196,7 @@
     <string name="search_no_results_for_query">未找到“%1$s”相关内容</string>
     <string name="search_nothing_found">什么都没找到</string>
     <string name="search_try_different_or_filters">尝试更换关键词，或检查筛选条件。</string>
+    <string name="search_filter_all">全部</string>
     <string name="search_no_results_found">没有匹配结果。</string>
 
     <string name="browse_by_genre">按流派浏览</string>
@@ -186,6 +215,23 @@
     <string name="about_link_source_subtitle">github.com/lostf1sh/PixelPlayerOSS</string>
     <string name="about_link_fdroid_title">F‑Droid</string>
     <string name="about_link_fdroid_subtitle">可在 F‑Droid 软件库获取</string>
+    <string name="about_licenses_title">许可与致谢</string>
+    <string name="about_licenses_subtitle">开源库、字体及内置数据</string>
+    <string name="about_licenses_sheet_subtitle">本应用内置的第三方软件、字体及数据。</string>
+    <string name="licenses_tab_all">全部</string>
+    <string name="licenses_tab_libraries">库</string>
+    <string name="licenses_tab_fonts">字体</string>
+    <string name="licenses_tab_data">数据</string>
+    <string name="licenses_tab_raw_notice">原始声明</string>
+    <string name="licenses_search_placeholder">搜索库或许可证…</string>
+    <string name="licenses_cd_clear_search">清除搜索</string>
+    <string name="licenses_empty_results">没有与“%1$s”匹配的许可证</string>
+    <string name="licenses_detail_section">章节</string>
+    <string name="licenses_detail_source">来源</string>
+    <string name="licenses_detail_license">许可证</string>
+    <string name="licenses_toast_copied">许可证文本已复制到剪贴板</string>
+    <string name="licenses_cd_close">关闭</string>
+    <string name="licenses_cd_copy">复制许可证文本</string>
     <string name="cd_about_open_link">打开 %1$s</string>
     <string name="about_signal_open_source">开源</string>
     <string name="about_signal_community_first">社区驱动</string>

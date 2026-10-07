@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">기여 %1$d회</string>
     <string name="about_link_fdroid_subtitle">F-Droid 카탈로그에서 이용 가능</string>
+    <string name="about_licenses_title">라이선스 및 저작자 표시</string>
+    <string name="about_licenses_subtitle">오픈 소스 라이브러리, 글꼴 및 포함된 데이터</string>
+    <string name="about_licenses_sheet_subtitle">이 앱에 포함된 서드파티 소프트웨어, 글꼴 및 데이터입니다.</string>
+    <string name="licenses_tab_all">전체</string>
+    <string name="licenses_tab_libraries">라이브러리</string>
+    <string name="licenses_tab_fonts">글꼴</string>
+    <string name="licenses_tab_data">데이터</string>
+    <string name="licenses_tab_raw_notice">원문 고지</string>
+    <string name="licenses_search_placeholder">라이브러리 또는 라이선스 검색…</string>
+    <string name="licenses_cd_clear_search">검색어 지우기</string>
+    <string name="licenses_empty_results">\"%1$s\"와(과) 일치하는 라이선스가 없습니다</string>
+    <string name="licenses_detail_section">섹션</string>
+    <string name="licenses_detail_source">소스</string>
+    <string name="licenses_detail_license">라이선스</string>
+    <string name="licenses_toast_copied">라이선스 텍스트가 클립보드에 복사되었습니다</string>
+    <string name="licenses_cd_close">닫기</string>
+    <string name="licenses_cd_copy">라이선스 텍스트 복사</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">소스 코드</string>
     <string name="about_maintainer_subtitle">FOSS 버전과 원본/비FOSS 버전의 메인테이너입니다.</string>
@@ -26,6 +43,19 @@
     <string name="album_cover_for">%1$s 커버</string>
     <string name="album_detail_meta_line">%1$s • %2$s</string>
     <string name="audio_bookmarks_cd_add">북마크 저장</string>
+    <string name="audio_bookmarks_selected_count">%1$d개 선택됨</string>
+    <string name="audio_bookmarks_cd_selected">선택됨</string>
+    <string name="audio_bookmarks_cd_delete_selected">선택 항목 삭제</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="other">폴더 %1$d개를 삭제하시겠습니까?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="other">저장된 북마크 %1$d개가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="other">북마크 %1$d개를 삭제하시겠습니까?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">선택한 북마크가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</string>
     <string name="audio_bookmarks_cd_open">오디오 북마크</string>
     <string name="audio_bookmarks_back_to_top">맨 위로</string>
     <string name="audio_bookmarks_clear_filter">필터 지우기</string>
@@ -61,6 +91,18 @@
     <string name="cd_search_icon">검색</string>
     <string name="cd_shuffle_play">셔플 재생</string>
     <string name="cd_shuffle_play_album">앨범 셔플 재생</string>
+    <string name="detail_hero_shuffle">셔플</string>
+    <string name="detail_hero_play">재생</string>
+    <string name="detail_hero_pause">일시정지</string>
+    <string name="detail_hero_resume">이어서 재생</string>
+    <string name="detail_hero_more_actions">추가 작업</string>
+    <string name="detail_hero_add_to_playlist">플레이리스트에 추가</string>
+    <string name="detail_hero_play_next">다음에 재생</string>
+    <string name="detail_hero_add_to_queue">대기열에 추가</string>
+    <string name="detail_hero_album_count_many">앨범 %1$d개</string>
+    <string name="detail_hero_album_count_one">앨범 1개</string>
+    <string name="detail_hero_duration_minutes">%1$d분</string>
+    <string name="detail_hero_duration_hours">%1$d시간 %2$d분</string>
     <string name="cd_song_cover">곡 커버</string>
     <string name="cd_sync">동기화</string>
     <string name="cd_toggle_grid_list">그리드/목록 보기 전환</string>
@@ -142,6 +184,7 @@
     <string name="search_nothing_found">검색 결과가 없습니다</string>
     <string name="search_placeholder">검색…</string>
     <string name="search_try_different_or_filters">다른 검색어를 입력하거나 필터를 확인해 보세요.</string>
+    <string name="search_filter_all">전체</string>
     <string name="setup_all_set_body">이제 음악을 즐길 준비가 되었습니다.</string>
     <string name="setup_all_set_title">준비 완료!</string>
     <string name="setup_app_navigation_subtitle">하단 내비게이션 바의 스타일을 선택하세요.</string>
@@ -180,6 +223,9 @@
     <string name="setup_navbar_default_style">기본 스타일</string>
     <string name="setup_navbar_footer">나중에 설정 &gt; 디자인 &gt; 내비게이션 바 스타일에서 변경할 수 있습니다.</string>
     <string name="setup_permission_alarms_title">알람 및 리마인더</string>
+    <string name="setup_battery_optimization_title">배터리 최적화</string>
+    <string name="setup_battery_optimization_description">일부 Android 기기는 백그라운드 앱을 강제로 종료합니다. 예기치 않은 재생 중단을 방지하려면 배터리 최적화를 비활성화하세요.</string>
+    <string name="setup_disable_battery_optimization">최적화 비활성화</string>
     <string name="setup_permission_granted">권한 허용됨</string>
     <string name="setup_permission_media_title">미디어 권한</string>
     <string name="setup_permission_notifications_description">잠금 화면 및 알림창에서 음악을 제어하려면 알림을 활성화하세요.</string>

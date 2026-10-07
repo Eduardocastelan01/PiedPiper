@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d kontrib.</string>
     <string name="about_link_fdroid_subtitle">Tersedia di katalog F-Droid</string>
+    <string name="about_licenses_title">Lisensi &amp; atribusi</string>
+    <string name="about_licenses_subtitle">Pustaka open source, font, dan data bawaan</string>
+    <string name="about_licenses_sheet_subtitle">Perangkat lunak pihak ketiga, font, dan data yang disertakan dalam aplikasi ini.</string>
+    <string name="licenses_tab_all">Semua</string>
+    <string name="licenses_tab_libraries">Pustaka</string>
+    <string name="licenses_tab_fonts">Font</string>
+    <string name="licenses_tab_data">Data</string>
+    <string name="licenses_tab_raw_notice">Teks asli</string>
+    <string name="licenses_search_placeholder">Cari pustaka atau lisensi…</string>
+    <string name="licenses_cd_clear_search">Bersihkan pencarian</string>
+    <string name="licenses_empty_results">Tidak ada lisensi yang cocok dengan \"%1$s\"</string>
+    <string name="licenses_detail_section">Bagian</string>
+    <string name="licenses_detail_source">Sumber</string>
+    <string name="licenses_detail_license">Lisensi</string>
+    <string name="licenses_toast_copied">Teks lisensi disalin ke papan klip</string>
+    <string name="licenses_cd_close">Tutup</string>
+    <string name="licenses_cd_copy">Salin teks lisensi</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Kode sumber</string>
     <string name="about_maintainer_subtitle">Pemeliharaan edisi FOSS dan edisi asli/non-FOSS.</string>
@@ -26,6 +43,22 @@
     <string name="album_cover_for">Sampul %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Simpan bookmark</string>
+    <string name="audio_bookmarks_selected_count">%1$d terpilih</string>
+    <string name="audio_bookmarks_cd_selected">Terpilih</string>
+    <string name="audio_bookmarks_cd_delete_selected">Hapus yang terpilih</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">Hapus %1$d folder?</item>
+        <item quantity="other">Hapus %1$d folder?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d momen tersimpan akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</item>
+        <item quantity="other">%1$d momen tersimpan akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">Hapus %1$d momen?</item>
+        <item quantity="other">Hapus %1$d momen?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">Momen tersimpan yang dipilih akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</string>
     <string name="audio_bookmarks_cd_open">Bookmark audio</string>
     <string name="audio_bookmarks_back_to_top">Kembali ke atas</string>
     <string name="audio_bookmarks_clear_filter">Hapus filter</string>
@@ -61,6 +94,18 @@
     <string name="cd_search_icon">Cari</string>
     <string name="cd_shuffle_play">Putar Acak</string>
     <string name="cd_shuffle_play_album">Putar acak album</string>
+    <string name="detail_hero_shuffle">Acak</string>
+    <string name="detail_hero_play">Putar</string>
+    <string name="detail_hero_pause">Jeda</string>
+    <string name="detail_hero_resume">Lanjutkan</string>
+    <string name="detail_hero_more_actions">Opsi lainnya</string>
+    <string name="detail_hero_add_to_playlist">Tambah ke playlist</string>
+    <string name="detail_hero_play_next">Putar berikutnya</string>
+    <string name="detail_hero_add_to_queue">Tambah ke antrean</string>
+    <string name="detail_hero_album_count_many">%1$d Album</string>
+    <string name="detail_hero_album_count_one">1 Album</string>
+    <string name="detail_hero_duration_minutes">%1$d menit</string>
+    <string name="detail_hero_duration_hours">%1$d j %2$d mnt</string>
     <string name="cd_song_cover">Sampul lagu</string>
     <string name="cd_sync">Sinkronisasi</string>
     <string name="cd_toggle_grid_list">Alihkan tampilan kisi/daftar</string>
@@ -142,6 +187,7 @@
     <string name="search_nothing_found">Tidak ditemukan apa pun</string>
     <string name="search_placeholder">Cari…</string>
     <string name="search_try_different_or_filters">Coba istilah pencarian yang berbeda atau periksa filter Anda.</string>
+    <string name="search_filter_all">Semua</string>
     <string name="setup_all_set_body">Anda siap untuk menikmati musik Anda.</string>
     <string name="setup_all_set_title">Semua Sudah Siap!</string>
     <string name="setup_app_navigation_subtitle">Pilih gaya bilah navigasi bawah.</string>
@@ -180,6 +226,9 @@
     <string name="setup_navbar_default_style">Gaya Default</string>
     <string name="setup_navbar_footer">Anda dapat mengubah ini nanti di Pengaturan &gt; Tampilan &gt; Gaya Navbar.</string>
     <string name="setup_permission_alarms_title">Alarm &amp; Pengingat</string>
+    <string name="setup_battery_optimization_title">Optimalisasi Baterai</string>
+    <string name="setup_battery_optimization_description">Beberapa perangkat Android secara agresif mematikan aplikasi latar belakang. Nonaktifkan optimalisasi baterai untuk PixelPlayerOSS untuk mencegah gangguan pemutaran yang tidak terduga.</string>
+    <string name="setup_disable_battery_optimization">Nonaktifkan Optimalisasi</string>
     <string name="setup_permission_granted">Izin Diberikan</string>
     <string name="setup_permission_media_title">Izin Media</string>
     <string name="setup_permission_notifications_description">Aktifkan notifikasi untuk mengontrol musik Anda dari layar kunci dan panel notifikasi.</string>

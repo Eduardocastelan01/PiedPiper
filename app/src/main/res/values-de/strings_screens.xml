@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d Beiträge</string>
     <string name="about_link_fdroid_subtitle">Im F-Droid-Katalog verfügbar</string>
+    <string name="about_licenses_title">Lizenzen &amp; Namensnennung</string>
+    <string name="about_licenses_subtitle">Open-Source-Bibliotheken, Schriftarten und mitgelieferte Daten</string>
+    <string name="about_licenses_sheet_subtitle">Software, Schriftarten und Daten von Drittanbietern, die in dieser App enthalten sind.</string>
+    <string name="licenses_tab_all">Alle</string>
+    <string name="licenses_tab_libraries">Bibliotheken</string>
+    <string name="licenses_tab_fonts">Schriftarten</string>
+    <string name="licenses_tab_data">Daten</string>
+    <string name="licenses_tab_raw_notice">Originaltext</string>
+    <string name="licenses_search_placeholder">Bibliotheken oder Lizenzen suchen…</string>
+    <string name="licenses_cd_clear_search">Suche löschen</string>
+    <string name="licenses_empty_results">Keine Lizenzen für „%1$s“ gefunden</string>
+    <string name="licenses_detail_section">Abschnitt</string>
+    <string name="licenses_detail_source">Quelle</string>
+    <string name="licenses_detail_license">Lizenz</string>
+    <string name="licenses_toast_copied">Lizenztext in die Zwischenablage kopiert</string>
+    <string name="licenses_cd_close">Schließen</string>
+    <string name="licenses_cd_copy">Lizenztext kopieren</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Quellcode</string>
     <string name="about_maintainer_subtitle">Betreuung der FOSS- und der ursprünglichen/nicht-FOSS-Version.</string>
@@ -26,6 +43,22 @@
     <string name="album_cover_for">Cover von %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Lesezeichen speichern</string>
+    <string name="audio_bookmarks_selected_count">%1$d ausgewählt</string>
+    <string name="audio_bookmarks_cd_selected">Ausgewählt</string>
+    <string name="audio_bookmarks_cd_delete_selected">Ausgewählte löschen</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">%1$d Ordner löschen?</item>
+        <item quantity="other">%1$d Ordner löschen?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d gespeichertes Lesezeichen wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</item>
+        <item quantity="other">%1$d gespeicherte Lesezeichen werden dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">%1$d Lesezeichen löschen?</item>
+        <item quantity="other">%1$d Lesezeichen löschen?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">Die ausgewählten Lesezeichen werden dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</string>
     <string name="audio_bookmarks_cd_open">Audio-Lesezeichen</string>
     <string name="audio_bookmarks_back_to_top">Nach oben</string>
     <string name="audio_bookmarks_clear_filter">Filter löschen</string>
@@ -61,6 +94,18 @@
     <string name="cd_search_icon">Suchen</string>
     <string name="cd_shuffle_play">Shuffle Play</string>
     <string name="cd_shuffle_play_album">Album zufällig abspielen</string>
+    <string name="detail_hero_shuffle">Shuffle</string>
+    <string name="detail_hero_play">Abspielen</string>
+    <string name="detail_hero_pause">Pause</string>
+    <string name="detail_hero_resume">Fortsetzen</string>
+    <string name="detail_hero_more_actions">Weitere Aktionen</string>
+    <string name="detail_hero_add_to_playlist">Zu Playlist hinzufügen</string>
+    <string name="detail_hero_play_next">Als Nächstes abspielen</string>
+    <string name="detail_hero_add_to_queue">Zur Queue</string>
+    <string name="detail_hero_album_count_many">%1$d Alben</string>
+    <string name="detail_hero_album_count_one">1 Album</string>
+    <string name="detail_hero_duration_minutes">%1$d Min.</string>
+    <string name="detail_hero_duration_hours">%1$d Std. %2$d Min.</string>
     <string name="cd_song_cover">Song-Cover</string>
     <string name="cd_sync">Synchronisieren</string>
     <string name="cd_toggle_grid_list">Zwischen Raster- und Listenansicht wechseln</string>
@@ -142,6 +187,7 @@
     <string name="search_nothing_found">Nichts gefunden</string>
     <string name="search_placeholder">Suchen…</string>
     <string name="search_try_different_or_filters">Anderen Suchbegriff versuchen oder Filter prüfen.</string>
+    <string name="search_filter_all">Alle</string>
     <string name="setup_all_set_body">Du kannst jetzt deine Musik genießen.</string>
     <string name="setup_all_set_title">Alles bereit!</string>
     <string name="setup_app_navigation_subtitle">Stil der Navigationsleiste wählen</string>
@@ -180,6 +226,9 @@
     <string name="setup_navbar_default_style">Standard</string>
     <string name="setup_navbar_footer">Änderbar unter Einstellungen &gt; Darstellung &gt; NavBar-Stil.</string>
     <string name="setup_permission_alarms_title">Alarme &amp; Erinnerungen</string>
+    <string name="setup_battery_optimization_title">Akku-Optimierung</string>
+    <string name="setup_battery_optimization_description">Manche Geräte beenden Apps im Hintergrund aggressiv. Akku-Optimierung für PixelPlayerOSS deaktivieren, damit die Wiedergabe nicht unterbrochen wird.</string>
+    <string name="setup_disable_battery_optimization">Optimierung deaktivieren</string>
     <string name="setup_permission_granted">Berechtigung erteilt</string>
     <string name="setup_permission_media_title">Medienberechtigung</string>
     <string name="setup_permission_notifications_description">Musik vom Sperrbildschirm und der Benachrichtigungsleiste steuern.</string>
