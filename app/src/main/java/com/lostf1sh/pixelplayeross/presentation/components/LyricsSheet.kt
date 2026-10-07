@@ -128,6 +128,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.lostf1sh.pixelplayeross.data.preferences.dataStore
+import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_FONT_SIZE_SP
+import com.lostf1sh.pixelplayeross.data.preferences.LYRICS_FONT_SIZE_SP_KEY
+import com.lostf1sh.pixelplayeross.data.preferences.sanitizeLyricsFontSize
 
 import kotlin.math.abs
 import kotlin.math.pow
@@ -143,6 +146,9 @@ import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayingEqIco
 import com.lostf1sh.pixelplayeross.utils.MultiLangRomanizer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.produceState
 
 internal data class LyricsSheetColors(
     val container: Color,
@@ -349,6 +355,32 @@ fun LyricsSheet(
     }
     val animatedLyricsBlurStrength by animatedLyricsBlurStrengthFlow.collectAsStateWithLifecycle(initialValue = 2.5f)
 
+    val lyricsFontSizeFlow = remember(context) {
+        context.dataStore.data.map {
+            sanitizeLyricsFontSize(it[LYRICS_FONT_SIZE_SP_KEY] ?: DEFAULT_LYRICS_FONT_SIZE_SP)
+        }
+    }
+    val lyricsFontSizeSp by lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = DEFAULT_LYRICS_FONT_SIZE_SP)
+    val sizedLyricsTextStyle = remember(lyricsTextStyle, lyricsFontSizeSp) {
+        lyricsTextStyle.withLyricsFontSize(lyricsFontSizeSp)
+    }
+
+    // Plain lyrics are stored without romanization; derive it off the main thread only
+    // while the romanization toggle is on.
+    val shouldRomanizePlainLyrics = showLyricsRomanization && hasRomanizedLyrics
+    val plainLyricsRomanization by produceState<List<String?>?>(
+        initialValue = null,
+        lyrics?.plain,
+        shouldRomanizePlainLyrics
+    ) {
+        val plainLines = lyrics?.plain
+        value = if (!shouldRomanizePlainLyrics || plainLines.isNullOrEmpty()) {
+            null
+        } else {
+            withContext(Dispatchers.Default) { romanizePlainLyrics(plainLines) }
+        }
+    }
+
     val keepScreenOnFlow = remember(context) {
         context.dataStore.data.map { it[booleanPreferencesKey("keep_screen_on_lyrics")] ?: false }
     }
@@ -483,9 +515,9 @@ fun LyricsSheet(
         label = "fontScale"
     )
     
-    val scaledTextStyle = lyricsTextStyle.copy(
-        fontSize = lyricsTextStyle.fontSize * fontScale,
-        lineHeight = lyricsTextStyle.lineHeight * fontScale
+    val scaledTextStyle = sizedLyricsTextStyle.copy(
+        fontSize = sizedLyricsTextStyle.fontSize * fontScale,
+        lineHeight = sizedLyricsTextStyle.lineHeight * fontScale
     )
 
     fun resetImmersiveTimer() {
@@ -806,10 +838,11 @@ fun LyricsSheet(
                                 itemsIndexed(
                                     items = plain,
                                     key = { index, line -> "$index-$line" }
-                                ) { _, line ->
+                                ) { index, line ->
                                     PlainLyricsLine(
                                         line = line,
-                                        style = lyricsTextStyle,
+                                        style = sizedLyricsTextStyle,
+                                        romanization = plainLyricsRomanization?.getOrNull(index),
                                         lyricsAlignment = lyricsAlignment,
                                         showTranslation = if (hasTranslatedLyrics) showLyricsTranslation else true,
                                         showRomanization = if (hasRomanizedLyrics) showLyricsRomanization else true,
@@ -1636,6 +1669,7 @@ private fun LyricWordSpan(
 fun PlainLyricsLine(
     line: String,
     style: TextStyle,
+    romanization: String? = null,
     lyricsAlignment: String = "left",
     showTranslation: Boolean = true,
     showRomanization: Boolean = true,
@@ -1660,7 +1694,7 @@ fun PlainLyricsLine(
         } else ""
     }
 
-    val romanizationText = remember(sanitizedLines, primaryText, isRomanizedScript) {
+    val embeddedRomanizationText = remember(sanitizedLines, primaryText, isRomanizedScript) {
          if (sanitizedLines.size > 1) {
             val firstExtra = sanitizedLines[1]
             val isLatin = firstExtra.any { it.code in 32..126 } 
@@ -1669,6 +1703,7 @@ fun PlainLyricsLine(
             if (isFirstRomanization) sanitizeLyricLineText(firstExtra) else ""
         } else ""
     }
+    val romanizationText = romanization?.takeIf { it.isNotBlank() } ?: embeddedRomanizationText
     val textAlign = when (lyricsAlignment) {
         "center" -> TextAlign.Center
         "right" -> TextAlign.Right
@@ -1715,6 +1750,35 @@ fun PlainLyricsLine(
         }
     }
 }
+
+private val KanaRange = '\u3040'..'\u30FF'
+
+/** Romanizes each plain lyric line; null entries mean the line needs no romanization. */
+private fun romanizePlainLyrics(lines: List<String>): List<String?> {
+    val entireLyricsHasKana = lines.any { line -> line.any { it in KanaRange } }
+    return lines.map { line ->
+        val primary = sanitizeLyricLineText(line.substringBefore('\n'))
+        if (MultiLangRomanizer.isScriptThatNeedsRomanization(primary)) {
+            MultiLangRomanizer.romanizeLine(primary, entireLyricsHasKana)
+        } else {
+            null
+        }
+    }
+}
+
+private fun TextStyle.withLyricsFontSize(fontSizeSp: Float): TextStyle {
+    val lineHeightRatio = if (fontSize.isSp && lineHeight.isSp && fontSize.value > 0f) {
+        lineHeight.value / fontSize.value
+    } else {
+        DEFAULT_LYRICS_LINE_HEIGHT_RATIO
+    }
+    return copy(
+        fontSize = fontSizeSp.sp,
+        lineHeight = (fontSizeSp * lineHeightRatio).sp
+    )
+}
+
+private const val DEFAULT_LYRICS_LINE_HEIGHT_RATIO = 1.18f
 
 private val LeadingTagRegex = Regex("^v\\d+:\\s*", RegexOption.IGNORE_CASE)
 
