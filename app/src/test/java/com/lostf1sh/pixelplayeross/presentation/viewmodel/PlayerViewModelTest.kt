@@ -389,7 +389,7 @@ class PlayerViewModelTest {
     }
 
     @Test
-    fun `playlist playback keeps playlist id on the initial media item`() = runTest {
+    fun `playlist playback keeps playlist id on the initial media item and the original order`() = runTest {
         mockkStatic(Uri::class)
         mockkConstructor(Bundle::class)
         val playbackUri = mockk<Uri>(relaxed = true)
@@ -424,6 +424,7 @@ class PlayerViewModelTest {
 
         verify { anyConstructed<Bundle>().putString("playlistId", "playlist-42") }
         verify { player.setMediaItem(any(), 0L) }
+        verify { mockQueueStateHolder.setOriginalQueueOrder(listOf(song), listOf("playlist-42")) }
     }
 
     @Test
