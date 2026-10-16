@@ -8,6 +8,8 @@ import com.google.gson.reflect.TypeToken
 import com.lostf1sh.pixelplayeross.data.backup.model.BackupSection
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkDao
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
+import com.lostf1sh.pixelplayeross.data.database.backupSongIdOfRestoredBookmark
+import com.lostf1sh.pixelplayeross.data.database.restoredBookmarkSongId
 import com.lostf1sh.pixelplayeross.di.BackupGson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,7 +25,9 @@ import javax.inject.Singleton
  * metadata under [SONG], and restore points it at this library's id for that song; older
  * versions ignore the extra field. A backup without it is matched on the title and artist the
  * bookmark already stores. The stored artwork uri is device-specific too, so it is refreshed
- * from the matched song.
+ * from the matched song. A local song that can't be matched yet, because it is missing or the
+ * library hasn't been scanned, gets a [restoredBookmarkSongId] rather than an id that may name
+ * another song here.
  */
 @Singleton
 class AudioBookmarksModuleHandler @Inject constructor(
@@ -61,24 +65,29 @@ class AudioBookmarksModuleHandler @Inject constructor(
             .mapNotNull { parseEntry(it.asJsonObject) }
         val library = songResolver.library()
 
-        var dropped = 0
-        val remapped = entries.mapNotNull { (bookmark, meta) ->
-            val resolvedId = library.resolve(bookmark.songId, meta)
+        var unmatched = 0
+        val remapped = entries.map { (bookmark, meta) ->
+            // Nothing to tell its song by, so nothing to check its id against either.
+            if (meta == null) return@map bookmark
+            // A backup taken before a restored bookmark was matched still has its restored id.
+            val backupSongId = backupSongIdOfRestoredBookmark(bookmark.songId) ?: bookmark.songId
+            val resolvedId = library.resolve(backupSongId, meta)
             when {
                 resolvedId != null -> bookmark.copy(songId = resolvedId)
-                // The id is taken by another song here, and ours wasn't found: keeping it would
-                // file the bookmark under the wrong song.
-                meta != null && library.namesAnotherSong(bookmark.songId, meta) -> {
-                    dropped++
-                    null
+                // A local song's id is MediaStore's, which differs on another device: here it may
+                // name another song, or one a scan hasn't reached yet will be given it. Keep the
+                // bookmark under an id no song has until its own is found; the bookmarks screen
+                // matches it later. The stored artwork uri is the old device's, so it goes too.
+                isMediaStoreId(backupSongId) -> {
+                    unmatched++
+                    bookmark.copy(songId = restoredBookmarkSongId(backupSongId), albumArtUri = null)
                 }
-                // Not in the library (a cloud song, or not scanned yet): keep it. The bookmarks
-                // screen relinks it once the song can be matched.
+                // A cloud song's id is derived from the server's, the same on every device.
                 else -> bookmark
             }
         }
-        if (dropped > 0) {
-            Timber.tag(TAG).w("Bookmark restore: dropped $dropped whose song id names another song here")
+        if (unmatched > 0) {
+            Timber.tag(TAG).i("Bookmark restore: $unmatched kept aside until their songs are found")
         }
 
         val songs = songResolver.songsFor(remapped.map { it.songId })
@@ -127,5 +136,12 @@ class AudioBookmarksModuleHandler @Inject constructor(
     private companion object {
         const val TAG = "AudioBookmarksBackup"
         const val SONG = "song"
+
+        /**
+         * Local songs are keyed by MediaStore id, a positive number. Synced cloud songs have
+         * negative ids derived from the server's, and songs played straight off a server have
+         * ids like "navidrome_…": both are the same on every device.
+         */
+        fun isMediaStoreId(songId: String): Boolean = (songId.toLongOrNull() ?: 0L) > 0L
     }
 }

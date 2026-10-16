@@ -6,6 +6,8 @@ import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
 import com.lostf1sh.pixelplayeross.data.database.MusicDao
 import com.lostf1sh.pixelplayeross.data.database.SongEntity
 import com.lostf1sh.pixelplayeross.data.database.SongSummary
+import com.lostf1sh.pixelplayeross.data.database.restoredBookmarkSongId
+import com.lostf1sh.pixelplayeross.data.repository.AudioBookmarkRepositoryImpl
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.just
@@ -14,7 +16,6 @@ import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class AudioBookmarksModuleHandlerTest {
@@ -67,12 +68,65 @@ class AudioBookmarksModuleHandlerTest {
     }
 
     @Test
-    fun `a bookmark whose id now names another song and whose song is missing is dropped`() {
-        val legacy = """[{"id":10,"songId":"1","songTitle":"Gone","artistName":"Artist","title":"Drop","timestampMs":5000,"createdTime":1}]"""
+    fun `a bookmark whose song isn't here yet is kept under a restored id rather than its old one`() {
+        // Id 1 names another song here, and the bookmark's own may be on storage not scanned yet.
+        val legacy = """[{"id":10,"songId":"1","songTitle":"Gone","artistName":"Artist","albumArtUri":"art://old","title":"Drop","timestampMs":5000,"createdTime":1}]"""
         coEvery { targetDao.getAllLocalSongSummaries() } returns listOf(summary(1, "Other"))
         coEvery { targetDao.getSongsByIdsListSimple(any()) } returns emptyList()
 
-        assertTrue(restoreOnTarget(legacy).isEmpty())
+        val restored = restoreOnTarget(legacy).single()
+        assertEquals(restoredBookmarkSongId("1"), restored.songId)
+        assertEquals("Gone", restored.songTitle)
+        assertEquals("Drop", restored.title)
+        assertEquals(5000L, restored.timestampMs)
+        assertNull(restored.albumArtUri)
+    }
+
+    @Test
+    fun `bookmarks restored before the first scan reach their songs once it runs`() = runTest {
+        coEvery { sourceDao.getAllLocalSongSummaries() } returns
+            listOf(summary(130, "Chapter 31"), summary(131, "Chapter 32"))
+        coEvery { bookmarks.getAllBookmarksOnce() } returns listOf(
+            bookmark(10, "130", "Chapter 31", "Drop"),
+            bookmark(11, "131", "Chapter 32", "Chorus"),
+        )
+        val payload = AudioBookmarksModuleHandler(bookmarks, BackupSongResolver(sourceDao), gson).export()
+
+        // New device, not scanned yet.
+        coEvery { targetDao.getAllLocalSongSummaries() } returns emptyList()
+        coEvery { targetDao.getSongsByIdsListSimple(any()) } returns emptyList()
+        val restored = restoreOnTarget(payload)
+        assertEquals(setOf(restoredBookmarkSongId("130"), restoredBookmarkSongId("131")), restored.map { it.songId }.toSet())
+
+        // The scan gives id 130 to another chapter by the same artist, and 131 to nothing.
+        val scanned = listOf(song(130, "Chapter 11", "art://130"), song(150, "Chapter 31", "art://150"), song(151, "Chapter 32", "art://151"))
+        coEvery { targetDao.getAllLocalSongSummaries() } returns scanned.map { SongSummary(it.id, it.title, "Artist", "Album", 200_000) }
+        coEvery { targetDao.getSongsByIdsListSimple(any()) } answers {
+            val ids = firstArg<List<Long>>()
+            scanned.filter { it.id in ids }
+        }
+        coEvery { bookmarks.getAllBookmarksOnce() } returns restored
+        val relinked = slot<List<AudioBookmarkEntity>>()
+        coEvery { bookmarks.insertAll(capture(relinked)) } just Runs
+        AudioBookmarkRepositoryImpl(bookmarks, BackupSongResolver(targetDao)).relinkOrphanedBookmarks()
+
+        val byTitle = relinked.captured.associateBy { it.title }
+        assertEquals("150", byTitle.getValue("Drop").songId)
+        assertEquals("art://150", byTitle.getValue("Drop").albumArtUri)
+        assertEquals("151", byTitle.getValue("Chorus").songId)
+    }
+
+    @Test
+    fun `a bookmark restored again before it was matched is matched on the backup's id`() {
+        val payload = """[
+            {"id":10,"songId":"restored:1","songTitle":"One","artistName":"Artist","title":"Drop","timestampMs":5000,"createdTime":1},
+            {"id":11,"songId":"restored:2","songTitle":"Gone","artistName":"Artist","title":"Chorus","timestampMs":5000,"createdTime":1}
+        ]"""
+        coEvery { targetDao.getAllLocalSongSummaries() } returns listOf(summary(1, "One"), summary(2, "Other"))
+        coEvery { targetDao.getSongsByIdsListSimple(any()) } returns emptyList()
+
+        val restored = restoreOnTarget(payload).associate { it.title to it.songId }
+        assertEquals(mapOf("Drop" to "1", "Chorus" to restoredBookmarkSongId("2")), restored)
     }
 
     @Test
@@ -85,15 +139,19 @@ class AudioBookmarksModuleHandlerTest {
     }
 
     @Test
-    fun `an unmatched song that no other song claims keeps its id`() {
-        // A cloud song, or a library that hasn't been scanned yet.
-        val legacy = """[{"id":10,"songId":"-55","songTitle":"Remote","artistName":"Artist","title":"Drop","timestampMs":5000,"createdTime":1}]"""
+    fun `an unmatched cloud song keeps its id, which is the same on every device`() {
+        // A synced cloud song's id, and a server's own song id.
+        val legacy = """[
+            {"id":10,"songId":"-55","songTitle":"Remote","artistName":"Artist","title":"Drop","timestampMs":5000,"createdTime":1},
+            {"id":11,"songId":"navidrome_abc","songTitle":"Streamed","artistName":"Artist","title":"Chorus","timestampMs":5000,"createdTime":1}
+        ]"""
         coEvery { targetDao.getAllLocalSongSummaries() } returns emptyList()
         coEvery { targetDao.getSongsByIdsListSimple(any()) } returns emptyList()
 
-        val restored = restoreOnTarget(legacy).single()
-        assertEquals("-55", restored.songId)
-        assertNull(restored.albumArtUri)
+        val restored = restoreOnTarget(legacy).associateBy { it.title }
+        assertEquals("-55", restored.getValue("Drop").songId)
+        assertNull(restored.getValue("Drop").albumArtUri)
+        assertEquals("navidrome_abc", restored.getValue("Chorus").songId)
     }
 
     @Test
