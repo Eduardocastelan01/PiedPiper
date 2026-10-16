@@ -68,6 +68,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.MAX_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.data.preferences.MIN_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.settings.search.LocalSettingsHighlightTarget
 import com.lostf1sh.pixelplayeross.presentation.settings.search.settingHighlight
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
@@ -144,8 +145,12 @@ fun LyricsSettingsScreen(
         }
     }
 
+    // The rows live in separate lazy items, so bring the target's item into composition
+    // first; the row then scrolls itself clear of the bars. Skipped once the highlight was
+    // consumed, so returning here or rotating does not scroll again.
+    val highlightPending = LocalSettingsHighlightTarget.current != null
     LaunchedEffect(highlightKey) {
-        if (!highlightKey.isNullOrBlank()) {
+        if (highlightPending && !highlightKey.isNullOrBlank()) {
             delay(200)
             val targetIndex = when (highlightKey) {
                 "item_lyrics_source_priority", "item_lyrics_reset_imported" -> 1

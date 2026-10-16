@@ -72,6 +72,7 @@ import kotlinx.coroutines.flow.map
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lostf1sh.pixelplayeross.presentation.screens.ExcludedDirectoriesScreen
 import com.lostf1sh.pixelplayeross.presentation.components.ScreenWrapper
+import com.lostf1sh.pixelplayeross.presentation.settings.search.ProvideSettingsHighlight
 
 @OptIn(UnstableApi::class)
 @SuppressLint("UnrememberedGetBackStackEntry")
@@ -264,13 +265,15 @@ fun AppNavigation(
                     val categoryId = backStackEntry.arguments?.getString("categoryId")
                     val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                     if (categoryId != null) {
-                        SettingsCategoryScreen(
-                            categoryId = categoryId,
-                            highlightKey = highlightKey,
-                            navController = navController,
-                            playerViewModel = playerViewModel,
-                            onBackClick = { navController.popBackStack() }
-                        )
+                        ProvideSettingsHighlight(highlightKey) {
+                            SettingsCategoryScreen(
+                                categoryId = categoryId,
+                                highlightKey = highlightKey,
+                                navController = navController,
+                                playerViewModel = playerViewModel,
+                                onBackClick = { navController.popBackStack() }
+                            )
+                        }
                     }
                 }
             }
@@ -315,11 +318,13 @@ fun AppNavigation(
             ) { backStackEntry ->
                 val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    LyricsSettingsScreen(
-                        navController = navController,
-                        playerViewModel = playerViewModel,
-                        highlightKey = highlightKey
-                    )
+                    ProvideSettingsHighlight(highlightKey) {
+                        LyricsSettingsScreen(
+                            navController = navController,
+                            playerViewModel = playerViewModel,
+                            highlightKey = highlightKey
+                        )
+                    }
                 }
             }
             composable(
@@ -549,9 +554,15 @@ fun AppNavigation(
                 exitTransition = { exitTransition() },
                 popEnterTransition = { popEnterTransition() },
                 popExitTransition = { popExitTransition() },
-            ) {
+            ) { backStackEntry ->
+                val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    ArtistSettingsScreen(navController = navController)
+                    ProvideSettingsHighlight(highlightKey) {
+                        ArtistSettingsScreen(
+                            navController = navController,
+                            highlightKey = highlightKey
+                        )
+                    }
                 }
             }
             composable(

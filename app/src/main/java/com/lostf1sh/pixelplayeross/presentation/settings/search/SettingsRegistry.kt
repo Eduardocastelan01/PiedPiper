@@ -3,6 +3,7 @@ package com.lostf1sh.pixelplayeross.presentation.settings.search
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.model.SettingsCategory
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
+import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 
 object SettingsRegistry {
 
@@ -28,6 +29,65 @@ object SettingsRegistry {
                 subscreenRoute = Screen.ArtistSettings.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("artist", "delimiters", "split", "multi artist", "parsing", "separator")
+            ),
+            // Rows of the artist settings page. createRoute(), not .route: the raw route
+            // already ends in "?highlightKey={highlightKey}".
+            SettingSpec(
+                id = "artist_char_delimiters",
+                itemKey = "item_artist_char_delimiters",
+                titleRes = R.string.presentation_batch_g_artist_item_char_delimiters,
+                subtitleRes = R.string.setcat_artists_subtitle,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.ArtistSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "delimiter", "separator", "split artists", "multiple artists", "slash", "semicolon", "comma"
+                )
+            ),
+            SettingSpec(
+                id = "artist_word_delimiters",
+                itemKey = "item_artist_word_delimiters",
+                titleRes = R.string.presentation_batch_g_artist_item_word_delimiters,
+                subtitleRes = R.string.setcat_artists_subtitle,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.ArtistSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("word delimiter", "feat", "featuring", "ft", "split artists")
+            ),
+            // Navigable rather than SWITCH: these toggles live in ArtistSettingsViewModel,
+            // not in SettingsUiState.
+            SettingSpec(
+                id = "artist_extract_from_title",
+                itemKey = "item_artist_extract_from_title",
+                titleRes = R.string.presentation_batch_g_artist_extract_from_title,
+                subtitleRes = R.string.presentation_batch_g_artist_extract_from_title_sub,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.ArtistSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("feat in title", "featured artists", "extract artists", "song title")
+            ),
+            SettingSpec(
+                id = "artist_group_by_album_artist",
+                itemKey = "item_artist_group_by_album_artist",
+                titleRes = R.string.presentation_batch_g_artist_group_by_album_artist,
+                subtitleRes = R.string.presentation_batch_g_artist_group_by_album_artist_sub,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.ArtistSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("album artist", "group albums", "collaborations", "compilation", "organize")
+            ),
+            // An action because the stats route declares no highlightKey argument to append.
+            SettingSpec(
+                id = "listening_stats",
+                itemKey = "item_listening_stats",
+                titleRes = R.string.presentation_batch_g_stats_title,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.Stats.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "stats", "statistics", "listening", "history", "habits", "top songs", "most played", "heavy rotation"
+                ),
+                onAction = { it.navigateSafely(Screen.Stats.route) }
             ),
             SettingSpec(
                 id = "library_min_duration",
