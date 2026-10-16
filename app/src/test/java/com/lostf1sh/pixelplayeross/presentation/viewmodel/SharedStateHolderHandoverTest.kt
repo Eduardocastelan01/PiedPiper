@@ -8,21 +8,25 @@ import android.net.NetworkRequest
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import com.lostf1sh.pixelplayeross.data.model.LyricsSourcePreference
+import com.lostf1sh.pixelplayeross.data.model.SearchResultItem
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.service.SleepTimerSession
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.unmockkConstructor
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -144,6 +148,32 @@ class SharedStateHolderHandoverTest {
             verify(exactly = 1) { musicRepository.searchAll("indian summer", any()) }
             externalPlayerOwner.cancel()
         }
+
+        @Test
+        fun `current owner clearing resumes the current search for the surviving owner`() = runTest {
+            val matches = MutableStateFlow<List<SearchResultItem>>(emptyList())
+            every { musicRepository.searchAll("indian summer", any()) } returns matches
+            val holder = SearchStateHolder(musicRepository)
+            val mainActivityOwner = ownerScope()
+            val externalPlayerOwner = ownerScope()
+            holder.initialize(mainActivityOwner)
+            holder.initialize(externalPlayerOwner)
+            runCurrent()
+            holder.performSearch("indian summer")
+            advanceTimeBy(SEARCH_SETTLE_MS)
+            runCurrent()
+
+            // No new request after the handover: the search screen keeps its query.
+            clear(externalPlayerOwner) { holder.onCleared(it) }
+            advanceTimeBy(SEARCH_SETTLE_MS)
+            runCurrent()
+            val addedToLibrary = SearchResultItem.SongItem(song("indian-summer-live"))
+            matches.value = listOf(addedToLibrary)
+            runCurrent()
+
+            assertEquals(listOf(addedToLibrary), holder.searchResults.value)
+            mainActivityOwner.cancel()
+        }
     }
 
     @Nested
@@ -170,6 +200,41 @@ class SharedStateHolderHandoverTest {
 
             assertEquals(listOf("lyrics-song"), mainCallback.startedSongIds)
             assertTrue(externalCallback.startedSongIds.isEmpty())
+            mainActivityOwner.cancel()
+        }
+
+        @Test
+        fun `current owner clearing restarts a lyrics load it interrupted`() = runTest {
+            val fetchedLyrics = CompletableDeferred<Lyrics?>()
+            val musicRepository = mockk<MusicRepository>(relaxed = true) {
+                coEvery { getLyrics(any(), any(), any()) } coAnswers { fetchedLyrics.await() }
+            }
+            val holder = LyricsStateHolder(
+                musicRepository = musicRepository,
+                userPreferencesRepository = mockk(relaxed = true),
+                songMetadataEditor = mockk(relaxed = true),
+            )
+            val playerState = MutableStateFlow(StablePlayerState())
+            val mainCallback = RecordingLyricsLoadCallback()
+            val externalCallback = RecordingLyricsLoadCallback()
+            val mainActivityOwner = ownerScope()
+            val externalPlayerOwner = ownerScope()
+            holder.initialize(mainActivityOwner, mainCallback, playerState)
+            holder.initialize(externalPlayerOwner, externalCallback, playerState)
+            runCurrent()
+            // ExternalPlayerActivity's view model starts the load, then finishes mid-fetch.
+            holder.loadLyricsForSong(song("lyrics-song"), LyricsSourcePreference.API_FIRST)
+            runCurrent()
+            assertEquals(listOf("lyrics-song"), externalCallback.startedSongIds)
+
+            clear(externalPlayerOwner) { holder.onCleared(it) }
+            runCurrent()
+            assertEquals(listOf("lyrics-song"), mainCallback.startedSongIds)
+            fetchedLyrics.complete(Lyrics(plain = listOf("Restarted lyrics")))
+
+            // The fetch resumes from Dispatchers.IO, so wait for the result.
+            assertEquals(listOf("lyrics-song"), mainCallback.loadedSongIds.first { it.isNotEmpty() })
+            assertTrue(externalCallback.loadedSongIds.value.isEmpty())
             mainActivityOwner.cancel()
         }
     }
@@ -259,12 +324,15 @@ class SharedStateHolderHandoverTest {
 
     private class RecordingLyricsLoadCallback : LyricsLoadCallback {
         val startedSongIds = mutableListOf<String>()
+        val loadedSongIds = MutableStateFlow(emptyList<String>())
 
         override fun onLoadingStarted(songId: String) {
             startedSongIds += songId
         }
 
-        override fun onLyricsLoaded(songId: String, lyrics: Lyrics?) = Unit
+        override fun onLyricsLoaded(songId: String, lyrics: Lyrics?) {
+            loadedSongIds.value += songId
+        }
     }
 
     private fun song(id: String) = Song(
