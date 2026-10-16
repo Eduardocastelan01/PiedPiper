@@ -128,6 +128,21 @@ class PlaybackSpeedControlsTest {
     }
 
     @Test
+    fun tapsHandledBeforeTheNextFrameAreAllCounted() {
+        showControlsWithDelayedEchoes()
+        val increase = increaseButton().fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+
+        // Input events that arrive within one frame are handled together, before the controls
+        // recompose; running the clicks in one main-thread task reproduces that.
+        composeRule.runOnUiThread { repeat(3) { increase() } }
+
+        composeRule.runOnIdle {
+            assertThat(reportedSpeeds).containsExactly(1.05f, 1.1f, 1.15f).inOrder()
+        }
+        composeRule.onNodeWithText(valueLabel(1.15f)).assertIsDisplayed()
+    }
+
+    @Test
     fun anOlderEchoArrivingLateDoesNotRewindQuickTaps() {
         showControlsWithDelayedEchoes()
 

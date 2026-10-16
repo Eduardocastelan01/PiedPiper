@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -82,6 +83,7 @@ fun PlaybackSpeedControls(
     // The snapped slider position while a drag is in progress.
     var dragValue by remember { mutableStateOf<Float?>(null) }
     var showInputDialog by rememberSaveable { mutableStateOf(false) }
+    val currentSpeed by rememberUpdatedState(speed)
 
     LaunchedEffect(speed) {
         val awaited = pending
@@ -92,10 +94,14 @@ fun PlaybackSpeedControls(
     // sheet, shows straight away when nothing is in flight.
     val draft = dragValue ?: pending ?: PlaybackSpeedUtils.normalize(speed)
 
+    // Read when a click is handled rather than captured in [draft]: two quick taps can both land
+    // before the next recomposition, and stepping from the captured value would drop one of them.
+    fun latestSpeed(): Float = dragValue ?: pending ?: PlaybackSpeedUtils.normalize(currentSpeed)
+
     val commit: (Float) -> Unit = { value ->
         val normalized = PlaybackSpeedUtils.normalize(value)
         // Compared with the newest pick rather than [speed], which may still be an older value.
-        if (!PlaybackSpeedUtils.matches(normalized, pending ?: speed)) {
+        if (!PlaybackSpeedUtils.matches(normalized, pending ?: currentSpeed)) {
             pending = normalized
             onSpeedChange(normalized)
         }
@@ -159,7 +165,7 @@ fun PlaybackSpeedControls(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilledTonalIconButton(
-                onClick = { commit(PlaybackSpeedUtils.stepBy(draft, -1)) },
+                onClick = { commit(PlaybackSpeedUtils.stepBy(latestSpeed(), -1)) },
                 enabled = PlaybackSpeedUtils.canStep(draft, -1)
             ) {
                 Icon(
@@ -193,7 +199,7 @@ fun PlaybackSpeedControls(
                     }
             )
             FilledTonalIconButton(
-                onClick = { commit(PlaybackSpeedUtils.stepBy(draft, 1)) },
+                onClick = { commit(PlaybackSpeedUtils.stepBy(latestSpeed(), 1)) },
                 enabled = PlaybackSpeedUtils.canStep(draft, 1)
             ) {
                 Icon(
