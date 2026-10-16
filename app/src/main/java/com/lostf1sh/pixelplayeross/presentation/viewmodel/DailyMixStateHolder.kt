@@ -40,6 +40,7 @@ class DailyMixStateHolder @Inject constructor(
 ) {
     private var scope: CoroutineScope? = null
     private var updateJob: Job? = null
+    private val owners = OwnerStack<CoroutineScope> { it }
 
     private val _dailyMixSongs = MutableStateFlow<ImmutableList<Song>>(persistentListOf())
     val dailyMixSongs: StateFlow<ImmutableList<Song>> = _dailyMixSongs.asStateFlow()
@@ -51,6 +52,7 @@ class DailyMixStateHolder @Inject constructor(
      * Initialize with coroutine scope from ViewModel.
      */
     fun initialize(coroutineScope: CoroutineScope) {
+        owners.push(coroutineScope)
         scope = coroutineScope
     }
 
@@ -158,8 +160,15 @@ class DailyMixStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
-        updateJob?.cancel()
-        scope = null
+    /**
+     * A stale PlayerViewModel clearing leaves the newer binding alone; the current one clearing
+     * hands the holder back to the previous live PlayerViewModel instead of leaving it
+     * scope-less, which would stop Daily Mix updates until process restart.
+     */
+    fun onCleared(owner: CoroutineScope) {
+        owners.remove(owner) { next ->
+            if (next == null) updateJob?.cancel()
+            scope = next
+        }
     }
 }

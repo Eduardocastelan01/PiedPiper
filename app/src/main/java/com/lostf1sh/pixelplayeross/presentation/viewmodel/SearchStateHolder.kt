@@ -56,7 +56,10 @@ class SearchStateHolder @Inject constructor(
     private val _searchHistory = MutableStateFlow<ImmutableList<SearchHistoryItem>>(persistentListOf())
     val searchHistory = _searchHistory.asStateFlow()
 
+    // Replays the latest request so a collector restarted for another PlayerViewModel resumes
+    // the current search; the request id check below drops a replayed query that is stale.
     private val searchRequests = MutableSharedFlow<SearchRequest>(
+        replay = 1,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
@@ -64,11 +67,13 @@ class SearchStateHolder @Inject constructor(
 
     private var scope: CoroutineScope? = null
     private var searchJob: Job? = null
+    private val owners = OwnerStack<CoroutineScope> { it }
 
     /**
      * Initialize with ViewModel scope.
      */
     fun initialize(scope: CoroutineScope) {
+        owners.push(scope)
         this.scope = scope
         observeSearchRequests()
     }
@@ -195,8 +200,16 @@ class SearchStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
-        searchJob?.cancel()
-        scope = null
+    /**
+     * A stale PlayerViewModel clearing leaves the newer binding alone; the current one clearing
+     * moves the search collector to the previous live PlayerViewModel's scope, where it resumes
+     * the current query, so search keeps answering after ExternalPlayerActivity finishes over
+     * MainActivity.
+     */
+    fun onCleared(owner: CoroutineScope) {
+        owners.remove(owner) { next ->
+            scope = next
+            if (next != null) observeSearchRequests() else searchJob?.cancel()
+        }
     }
 }
