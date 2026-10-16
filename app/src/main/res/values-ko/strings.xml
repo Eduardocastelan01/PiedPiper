@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">가사 저장 실패</string>
     <string name="lyrics_saved_successfully">가사가 성공적으로 저장되었습니다</string>
     <string name="lyrics_server_error">서버 오류(코드 %d)가 발생했습니다. 나중에 다시 시도해 주세요.</string>
+    <string name="metadata_edit_write_interrupted">저장이 중단되었습니다. 전체 사본을 보관했으며 나중에 노래를 복원합니다.</string>
+    <string name="metadata_edit_write_still_pending">저장하지 못함: 먼저 노래를 복원해야 합니다. 접근 허용과 공간 확보 후 다시 시도하세요.</string>
+    <string name="metadata_restore_permission_prompt">불완전하게 저장된 노래를 복원하려면 접근을 허용하세요.</string>
+    <string name="metadata_restore_done">불완전하게 저장된 노래를 복원했습니다</string>
+    <string name="metadata_restore_incomplete">일부 노래를 아직 복원하지 못했습니다. 나중에 다시 시도합니다.</string>
+    <string name="metadata_restore_permission_denied">노래를 복원하지 않았습니다. 나중에 또는 노래를 편집할 때 다시 요청합니다.</string>
     <string name="metadata_updated_successfully">메타데이터가 성공적으로 업데이트되었습니다</string>
     <string name="next_track">다음 트랙</string>
     <string name="no_lyrics_to_save">저장할 가사가 없습니다</string>

@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">Gagal menyimpan lirik</string>
     <string name="lyrics_saved_successfully">Lirik berhasil disimpan</string>
     <string name="lyrics_server_error">Kesalahan server (kode %d). Silakan coba lagi nanti.</string>
+    <string name="metadata_edit_write_interrupted">Penyimpanan terputus. Salinan lengkap disimpan dan lagu akan dipulihkan nanti.</string>
+    <string name="metadata_edit_write_still_pending">Tidak disimpan: lagu harus dipulihkan dulu. Izinkan akses, kosongkan ruang, lalu coba lagi.</string>
+    <string name="metadata_restore_permission_prompt">Izinkan akses untuk memulihkan lagu yang tidak tersimpan dengan lengkap.</string>
+    <string name="metadata_restore_done">Lagu yang tidak tersimpan dengan lengkap telah dipulihkan</string>
+    <string name="metadata_restore_incomplete">Beberapa lagu belum dapat dipulihkan. Aplikasi akan mencoba lagi nanti.</string>
+    <string name="metadata_restore_permission_denied">Lagu tidak dipulihkan. Aplikasi akan meminta lagi nanti atau saat Anda mengeditnya.</string>
     <string name="metadata_updated_successfully">Metadata berhasil diperbarui</string>
     <string name="next_track">Trek berikutnya</string>
     <string name="no_lyrics_to_save">Tidak ada lirik yang tersedia untuk disimpan</string>

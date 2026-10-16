@@ -111,6 +111,19 @@ class PlaylistPreferencesRepository @Inject constructor(
         }
     }
 
+    /**
+     * Saves [songIds] as the songs of [playlistId] and leaves the playlist itself alone: unlike
+     * [updatePlaylist], its name, cover and lastModified stay as they are, so a background
+     * write neither reorders date-sorted playlists nor undoes an edit made meanwhile. Meant for
+     * adding songs: the transition rules of tracks it drops aren't deleted.
+     *
+     * @return false when the playlist no longer exists, in which case nothing is written.
+     */
+    suspend fun replacePlaylistSongs(playlistId: String, songIds: List<String>): Boolean {
+        ensureMigratedIfNeeded()
+        return localPlaylistDao.replaceSongsOfExistingPlaylist(playlistId, songIds)
+    }
+
     suspend fun addSongsToPlaylist(playlistId: String, songIdsToAdd: List<String>) {
         ensureMigratedIfNeeded()
         val existing = userPlaylistsFlow.first().find { it.id == playlistId } ?: return

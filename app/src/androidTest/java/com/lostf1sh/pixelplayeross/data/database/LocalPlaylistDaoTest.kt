@@ -47,4 +47,33 @@ class LocalPlaylistDaoTest {
             .containsExactly("intro", "chorus", "chorus", "outro")
             .inOrder()
     }
+
+    @Test
+    fun replacingSongsOfAnExistingPlaylistLeavesItsRowAlone() = runTest {
+        val playlist = PlaylistEntity(
+            id = "playlist-1",
+            name = "Road trip",
+            createdAt = 1_000L,
+            lastModified = 2_000L,
+        )
+        playlistDao.upsertPlaylist(playlist)
+        playlistDao.replacePlaylistSongs("playlist-1", listOf("intro"))
+
+        val replaced = playlistDao.replaceSongsOfExistingPlaylist("playlist-1", listOf("intro", "outro"))
+
+        assertThat(replaced).isTrue()
+        val stored = playlistDao.observePlaylistWithSongs("playlist-1").first()
+        assertThat(stored?.playlist).isEqualTo(playlist)
+        assertThat(stored?.songs?.sortedBy { it.sortOrder }?.map(PlaylistSongEntity::songId))
+            .containsExactly("intro", "outro")
+            .inOrder()
+    }
+
+    @Test
+    fun replacingSongsOfADeletedPlaylistWritesNothing() = runTest {
+        val replaced = playlistDao.replaceSongsOfExistingPlaylist("deleted", listOf("intro"))
+
+        assertThat(replaced).isFalse()
+        assertThat(playlistDao.observePlaylistSongs("deleted").first()).isEmpty()
+    }
 }

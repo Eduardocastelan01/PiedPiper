@@ -145,6 +145,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
+import com.lostf1sh.pixelplayeross.data.database.backupSongIdOfRestoredBookmark
 import com.lostf1sh.pixelplayeross.data.model.Song
 import androidx.compose.material3.ModalBottomSheet
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -536,7 +537,11 @@ fun AudioBookmarkFolderScreen(
                                 onPlay = {
                                     if (isSelecting) {
                                         selectedIds = selection.toggled(bookmark.id)
-                                    } else if (song.id.isNotBlank() && song.id != "-1") {
+                                    } else if (
+                                        song.id.isNotBlank() && song.id != "-1" &&
+                                        // A restored bookmark whose song wasn't found names none.
+                                        backupSongIdOfRestoredBookmark(song.id) == null
+                                    ) {
                                         playerViewModel.playSongAtPosition(song, bookmark.timestampMs)
                                     } else {
                                         Toast.makeText(context, "Audio file not found", Toast.LENGTH_SHORT).show()

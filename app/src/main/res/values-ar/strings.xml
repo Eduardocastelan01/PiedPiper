@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">فشل حفظ كلمات الأغنية</string>
     <string name="lyrics_saved_successfully">تم حفظ كلمات الأغنية بنجاح</string>
     <string name="lyrics_server_error">خطأ في الخادم (رمز %d). يرجى المحاولة مرة أخرى لاحقاً.</string>
+    <string name="metadata_edit_write_interrupted">انقطع الحفظ. تم الاحتفاظ بنسخة كاملة وستتم استعادة الأغنية لاحقًا.</string>
+    <string name="metadata_edit_write_still_pending">لم يُحفظ: يجب استعادة الأغنية أولاً. اسمح بالوصول وأفرغ مساحة ثم أعد المحاولة.</string>
+    <string name="metadata_restore_permission_prompt">اسمح بالوصول لاستعادة الأغاني التي لم تُحفظ بالكامل.</string>
+    <string name="metadata_restore_done">تمت استعادة الأغاني التي لم تُحفظ بالكامل</string>
+    <string name="metadata_restore_incomplete">تعذّرت استعادة بعض الأغاني حتى الآن. سيحاول التطبيق مرة أخرى لاحقًا.</string>
+    <string name="metadata_restore_permission_denied">لم تتم استعادة الأغاني. سيطلب التطبيق ذلك لاحقًا أو عند تعديل إحداها.</string>
     <string name="metadata_updated_successfully">تم تحديث البيانات الوصفية بنجاح</string>
     <string name="next_track">المسار التالي</string>
     <string name="no_lyrics_to_save">لا توجد كلمات أغنية متاحة لحفظها</string>

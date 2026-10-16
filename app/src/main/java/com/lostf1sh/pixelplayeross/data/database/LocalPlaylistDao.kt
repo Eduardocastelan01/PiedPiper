@@ -62,6 +62,19 @@ interface LocalPlaylistDao {
         upsertPlaylistSongs(rows)
     }
 
+    /**
+     * [replacePlaylistSongs], but only while the playlist still exists, so a playlist deleted
+     * meanwhile doesn't get song rows back. The playlist row itself is left as it is.
+     *
+     * @return whether the playlist exists and its songs were replaced.
+     */
+    @Transaction
+    suspend fun replaceSongsOfExistingPlaylist(playlistId: String, songIds: List<String>): Boolean {
+        if (getPlaylistById(playlistId) == null) return false
+        replacePlaylistSongs(playlistId, songIds)
+        return true
+    }
+
     @Transaction
     suspend fun replaceAllPlaylistsTransactional(playlists: List<Pair<PlaylistEntity, List<String>>>) {
         clearAllPlaylistSongs()
