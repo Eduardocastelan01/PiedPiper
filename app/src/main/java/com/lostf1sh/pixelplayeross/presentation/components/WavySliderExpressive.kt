@@ -138,8 +138,13 @@ fun WavySliderExpressive(
         animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "ThumbInteractionAnim"
     )
+    // LinearWavyProgressIndicator animates amplitude changes itself and ignores a new target while
+    // one of those animations is running, so it must get this target rather than the animated value
+    // below: fed the in-between values, it settled on a small non-zero amplitude after a pause, and
+    // its wave offset animation then redrew the paused player every frame.
+    val waveAmplitudeTarget = if (enabled && isPlaying && !isInteracting) 1f else 0f
     val animatedAmplitude by animateFloatAsState(
-        targetValue = if (enabled && isPlaying && !isInteracting) 1f else 0f,
+        targetValue = waveAmplitudeTarget,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
         label = "amplitude"
     )
@@ -254,7 +259,7 @@ fun WavySliderExpressive(
                 trackStroke = stroke,
                 gapSize = 2f * dynamicGapSize.value * (1.0f + 0.1573f * animatedAmplitude * animatedAmplitude),
                 stopSize = 3.dp,
-                amplitude = { progress -> if (progress > 0f) animatedAmplitude else 0f },
+                amplitude = { progress -> if (progress > 0f) waveAmplitudeTarget else 0f },
                 wavelength = wavelength,
                 waveSpeed = waveSpeed
             )
