@@ -13,6 +13,8 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.HomeStatsOverviewState
+import java.time.LocalDate
+import java.time.ZoneId
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,12 +63,21 @@ class StatsOverviewCardTest {
 
     @Test
     fun readyStateShowsTopTrack() {
-        val start = System.currentTimeMillis() - 120_000L
+        // A fixed Wednesday noon keeps the play inside the WEEK range, which starts on Monday
+        // 00:00 local time, whatever day and time the test actually runs.
+        val zoneId = ZoneId.systemDefault()
+        val now = LocalDate.of(2024, 6, 12)
+            .atTime(12, 0)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+        val start = now - 120_000L
         val summary = PlaybackStatsRepository(composeRule.activity.applicationContext)
             .buildSummaryFromEvents(
                 range = StatsTimeRange.WEEK,
                 songs = listOf(song("song-1", title = "Stats Test Track")),
-                nowMillis = start + 120_000L,
+                nowMillis = now,
+                zoneId = zoneId,
                 allEvents = listOf(
                     PlaybackStatsRepository.PlaybackEvent(
                         songId = "song-1",
