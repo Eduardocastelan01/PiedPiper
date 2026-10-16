@@ -22,7 +22,7 @@ import java.nio.ByteOrder
  * - 5.1: FL, FR, FC, LFE, SL, SR
  * - 7.1: FL, FR, FC, LFE, SL, SR, SBL, SBR
  *
- * This processor is only active for 6-channel or 8-channel 16-bit PCM input.
+ * This processor is only active for 6-channel or 8-channel 16-bit or float PCM input.
  * All other formats are passed through without modification.
  */
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -57,6 +57,8 @@ class SurroundDownmixProcessor : AudioProcessor {
 
     private var inputFormat: AudioFormat = AudioFormat.NOT_SET
     private var outputFormat: AudioFormat = AudioFormat.NOT_SET
+    // Retain storage when getOutput() clears the pending output reference.
+    private var reusableBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var inputEnded = false
     private val floatScratch = FloatArray(MAX_SUPPORTED_CHANNELS)
@@ -135,14 +137,12 @@ class SurroundDownmixProcessor : AudioProcessor {
     }
 
     private fun ensureOutputBuffer(requiredCapacity: Int): ByteBuffer {
-        return if (outputBuffer.capacity() < requiredCapacity) {
-            ByteBuffer.allocateDirect(requiredCapacity).order(ByteOrder.nativeOrder()).also {
-                outputBuffer = it
-            }
+        if (reusableBuffer.capacity() < requiredCapacity) {
+            reusableBuffer = ByteBuffer.allocateDirect(requiredCapacity).order(ByteOrder.nativeOrder())
         } else {
-            outputBuffer.clear()
-            outputBuffer
+            reusableBuffer.clear()
         }
+        return reusableBuffer
     }
 
     override fun getOutput(): ByteBuffer {
@@ -164,6 +164,7 @@ class SurroundDownmixProcessor : AudioProcessor {
 
     override fun reset() {
         flush()
+        reusableBuffer = AudioProcessor.EMPTY_BUFFER
         inputFormat = AudioFormat.NOT_SET
         outputFormat = AudioFormat.NOT_SET
     }

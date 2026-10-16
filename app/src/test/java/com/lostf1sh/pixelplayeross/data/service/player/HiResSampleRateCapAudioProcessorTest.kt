@@ -10,6 +10,86 @@ import java.nio.ByteOrder
 class HiResSampleRateCapAudioProcessorTest {
 
     @Test
+    fun queueInput_reusesDrainedPcm16BufferWithoutReturningOldSamples() {
+        val processor = HiResSampleRateCapAudioProcessor()
+        processor.configure(AudioFormat(384_000, 2, C.ENCODING_PCM_16BIT))
+        processor.queueInput(shortBufferOf(100, 200, 300, 400))
+        val first = processor.getOutput()
+        assertThat(readShorts(first)).containsExactly(200, 300).inOrder()
+        first.position(first.limit())
+        assertThat(processor.getOutput().hasRemaining()).isFalse()
+
+        processor.queueInput(shortBufferOf(500, 600, 700, 800))
+        val second = processor.getOutput()
+        assertThat(second).isSameInstanceAs(first)
+        assertThat(readShorts(second)).containsExactly(600, 700).inOrder()
+    }
+
+    @Test
+    fun queueInput_growsFloatBufferThenReusesItForSmallerChunks() {
+        val processor = HiResSampleRateCapAudioProcessor()
+        processor.configure(AudioFormat(384_000, 2, C.ENCODING_PCM_FLOAT))
+        processor.queueInput(floatBufferOf(0.1f, 0.2f, 0.1f, 0.2f))
+        val first = processor.getOutput()
+        first.position(first.limit())
+
+        processor.queueInput(floatBufferOf(0.3f, 0.4f, 0.3f, 0.4f, 0.5f, 0.6f, 0.5f, 0.6f))
+        val grown = processor.getOutput()
+        assertThat(grown).isNotSameInstanceAs(first)
+        assertThat(readFloats(grown)).containsExactly(0.3f, 0.4f, 0.5f, 0.6f).inOrder()
+        grown.position(grown.limit())
+
+        processor.queueInput(floatBufferOf(0.7f, 0.8f, 0.7f, 0.8f))
+        val smaller = processor.getOutput()
+        assertThat(smaller).isSameInstanceAs(grown)
+        assertThat(readFloats(smaller)).containsExactly(0.7f, 0.8f).inOrder()
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun flush_discardsPendingFramesButRetainsStorageUntilReset() {
+        val processor = HiResSampleRateCapAudioProcessor()
+        val format = AudioFormat(384_000, 2, C.ENCODING_PCM_16BIT)
+        processor.configure(format)
+        processor.queueInput(shortBufferOf(100, 200, 300, 400, 900, 1_000))
+        val first = processor.getOutput()
+        first.position(first.limit())
+
+        processor.flush()
+        assertThat(processor.getOutput().hasRemaining()).isFalse()
+        assertThat(processor.isEnded()).isFalse()
+        processor.queueInput(shortBufferOf(500, 600, 700, 800))
+        val afterFlush = processor.getOutput()
+        assertThat(afterFlush).isSameInstanceAs(first)
+        assertThat(readShorts(afterFlush)).containsExactly(600, 700).inOrder()
+        afterFlush.position(afterFlush.limit())
+
+        processor.reset()
+        assertThat(processor.isActive()).isFalse()
+        processor.configure(format)
+        processor.queueInput(shortBufferOf(900, 1_000, 1_100, 1_200))
+        val afterReset = processor.getOutput()
+        assertThat(afterReset).isNotSameInstanceAs(first)
+        assertThat(readShorts(afterReset)).containsExactly(1_000, 1_100).inOrder()
+    }
+
+    @Test
+    fun queueInput_retainsStorageWhileWaitingForPartialFrames() {
+        val processor = HiResSampleRateCapAudioProcessor()
+        processor.configure(AudioFormat(384_000, 2, C.ENCODING_PCM_16BIT))
+        processor.queueInput(shortBufferOf(100, 200, 300, 400))
+        val first = processor.getOutput()
+        first.position(first.limit())
+
+        processor.queueInput(shortBufferOf(500, 600))
+        assertThat(processor.getOutput().hasRemaining()).isFalse()
+        processor.queueInput(shortBufferOf(700, 800))
+        val second = processor.getOutput()
+        assertThat(second).isSameInstanceAs(first)
+        assertThat(readShorts(second)).containsExactly(600, 700).inOrder()
+    }
+
+    @Test
     fun configure_keepsSupportedSampleRatesUntouched() {
         val processor = HiResSampleRateCapAudioProcessor()
         val inputFormat = AudioFormat(192_000, 2, C.ENCODING_PCM_16BIT)
