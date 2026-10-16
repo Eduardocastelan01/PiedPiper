@@ -33,9 +33,13 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -670,6 +674,120 @@ class PlayerViewModelTest {
 
             coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
             coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+        }
+    }
+
+    @Nested
+    @DisplayName("Palette during skip bursts")
+    inner class PaletteSkipBurstTests {
+
+        private val queue = List(5) { index ->
+            Song(
+                id = "palette-$index",
+                title = "Palette Song $index",
+                artist = "Artist",
+                artistId = 1L,
+                album = "Album $index",
+                albumId = index + 1L,
+                path = "/storage/emulated/0/Music/palette-$index.mp3",
+                contentUriString = "content://media/external/audio/media/$index",
+                albumArtUriString = "content://media/external/audio/albumart/$index",
+                duration = 180_000L,
+                mimeType = "audio/mpeg",
+                bitrate = null,
+                sampleRate = null
+            )
+        }
+
+        private fun artworkOf(index: Int): String = queue[index].albumArtUriString!!
+
+        @BeforeEach
+        fun mockUriParsing() {
+            mockkStatic(Uri::class)
+            every { Uri.parse(any()) } returns mockk(relaxed = true)
+        }
+
+        /** Starts playback of [songs] so the view model's playback queue holds them. */
+        private fun TestScope.startPlaybackOf(songs: List<Song>) {
+            mockkObject(MediaItemBuilder)
+            every { MediaItemBuilder.build(any()) } returns MediaItem.Builder()
+                .setMediaId("test")
+                .setUri("file:///tmp/test.mp3")
+                .build()
+            val playbackUri = mockk<Uri>(relaxed = true)
+            every { playbackUri.scheme } returns "file"
+            every { MediaItemBuilder.playbackUri(any<Song>()) } returns playbackUri
+            // Let the controller connection read its (empty) timeline first, or that read lands
+            // after playSongs and clears the queue again.
+            advanceUntilIdle()
+
+            playerViewModel.playSongs(songsToPlay = songs, startSong = songs.first())
+            advanceUntilIdle()
+        }
+
+        private fun moveToQueueIndex(index: Int) {
+            stablePlayerStateFlow.value = StablePlayerState(currentMediaItemIndex = index)
+        }
+
+        @Test
+        fun `skipping past a song cancels its unfinished palette extraction`() = runTest {
+            var skippedExtractionCancelled = false
+            coEvery {
+                mockThemeStateHolder.extractAndGenerateColorScheme(any(), artworkOf(0), any())
+            } coAnswers {
+                try {
+                    awaitCancellation()
+                } finally {
+                    skippedExtractionCancelled = true
+                }
+            }
+            advanceUntilIdle()
+
+            stablePlayerStateFlow.value = StablePlayerState(currentSong = queue[0])
+            runCurrent()
+            stablePlayerStateFlow.value = StablePlayerState(currentSong = queue[1])
+            runCurrent()
+
+            assertTrue(skippedExtractionCancelled)
+            coVerify(exactly = 1) {
+                mockThemeStateHolder.extractAndGenerateColorScheme(any(), artworkOf(1), false)
+            }
+        }
+
+        @Test
+        fun `neighbour palettes are preloaded only once the queue index holds still`() = runTest {
+            startPlaybackOf(queue)
+
+            moveToQueueIndex(2)
+            runCurrent()
+            advanceTimeBy(PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS - 1)
+            runCurrent()
+
+            verify(exactly = 0) { mockThemeStateHolder.ensureAlbumColorScheme(any()) }
+
+            advanceTimeBy(1)
+            runCurrent()
+
+            verify(exactly = 1) { mockThemeStateHolder.ensureAlbumColorScheme(artworkOf(1)) }
+            verify(exactly = 1) { mockThemeStateHolder.ensureAlbumColorScheme(artworkOf(3)) }
+            verify(exactly = 2) { mockThemeStateHolder.ensureAlbumColorScheme(any()) }
+        }
+
+        @Test
+        fun `a burst of skips only preloads the neighbours of the song it lands on`() = runTest {
+            startPlaybackOf(queue)
+
+            listOf(1, 2, 3).forEach { index ->
+                moveToQueueIndex(index)
+                runCurrent()
+                advanceTimeBy(PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS / 2)
+            }
+            advanceTimeBy(PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS)
+            runCurrent()
+
+            verify(exactly = 1) { mockThemeStateHolder.ensureAlbumColorScheme(artworkOf(2)) }
+            verify(exactly = 1) { mockThemeStateHolder.ensureAlbumColorScheme(artworkOf(4)) }
+            verify(exactly = 2) { mockThemeStateHolder.ensureAlbumColorScheme(any()) }
         }
     }
 

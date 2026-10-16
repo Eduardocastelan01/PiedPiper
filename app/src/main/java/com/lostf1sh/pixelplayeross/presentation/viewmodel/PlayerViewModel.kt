@@ -107,6 +107,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -134,6 +135,8 @@ private val LOCAL_PLAYBACK_SCHEMES = setOf("content", "file", "android.resource"
 // attached in batches and the crossfade window is spliced back after each swap, so large queues
 // stay intact.
 private const val SHUFFLE_ALL_SONG_LIMIT = 10_000
+// How long the current queue index has to hold still before the neighbours' palettes are preloaded.
+internal const val PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS = 220L
 
 private fun List<Song>.toPlaybackQueue(): ImmutableList<Song> = when (this) {
     is PersistentList<Song> -> this
@@ -858,12 +861,34 @@ class PlayerViewModel @Inject constructor(
         stablePlayerState
             .map { it.currentSong?.albumArtUriString?.takeIf { uri -> uri.isNotBlank() } }
             .distinctUntilChanged()
-            .onEach { artworkUri ->
+            // mapLatest cancels the in-flight extraction for songs skipped over during a rapid
+            // next/previous burst, so only the latest song's palette is computed. With the
+            // neighbour preload below, that song is usually a cache hit already.
+            .mapLatest { artworkUri ->
                 themeStateHolder.extractAndGenerateColorScheme(
                     albumArtUriAsUri = artworkUri?.toUri(),
                     currentSongUriString = artworkUri,
                     isPreload = false
                 )
+            }
+            .launchIn(viewModelScope)
+
+        // Preload the ±1 queue neighbours' palettes so a skip lands on a cached color scheme and
+        // the color animation starts with the carousel instead of trailing it. The debounce
+        // (mapLatest restarts the delay on every index change) keeps a skip burst from
+        // quantizing every song flicked past. The queue slice is read from _playerUiState rather
+        // than queueFlow so this permanent collector doesn't keep queueFlow subscribed.
+        combine(
+            stablePlayerState.map { it.currentMediaItemIndex }.distinctUntilChanged(),
+            _playerUiState.map { it.currentPlaybackQueue }.distinctUntilChanged()
+        ) { index, queue -> index to queue }
+            .mapLatest { indexAndQueue ->
+                delay(PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS)
+                indexAndQueue
+            }
+            .onEach { (index, queue) ->
+                QueueUtils.neighborArtworkUris(queue, index)
+                    .forEach(themeStateHolder::ensureAlbumColorScheme)
             }
             .launchIn(viewModelScope)
 
