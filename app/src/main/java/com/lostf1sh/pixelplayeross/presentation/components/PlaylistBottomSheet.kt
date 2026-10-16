@@ -203,6 +203,8 @@ fun PlaylistBottomSheet(
                             showCreatePlaylistDialog = false
                             onDismiss()
                             playerViewModel.sendToast(playlistCreatedToast)
+                            // Match the save FAB: leave selection mode once the songs are placed.
+                            playerViewModel.multiSelectionStateHolder.clearSelection()
                         }
                     )
                 }

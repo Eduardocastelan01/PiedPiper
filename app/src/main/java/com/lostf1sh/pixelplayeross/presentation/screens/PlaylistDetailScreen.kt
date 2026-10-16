@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -93,6 +94,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.graphics.painter.Painter
@@ -133,6 +135,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.CloudDownloadsViewMode
 import com.lostf1sh.pixelplayeross.data.offline.CloudOfflineRepository
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel.Companion.FOLDER_PLAYLIST_PREFIX
 import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
 import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistSongsOrderMode
@@ -848,7 +851,8 @@ fun PlaylistDetailScreen(
             onConfirm = { selectedIds ->
                 playlistViewModel.addSongsToPlaylist(currentPlaylist.id, selectedIds.toList())
                 showAddSongsSheet = false
-            }
+            },
+            playerViewModel = playerViewModel
         )
     }
     if (showPlaylistOptionsSheet && !isFolderPlaylist) {
@@ -860,9 +864,11 @@ fun PlaylistDetailScreen(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             tonalElevation = 4.dp,
         ) {
+            // Scrolls so Export stays reachable in landscape and at large font scales.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 12.dp)
             ) {
                 Column(
@@ -884,59 +890,73 @@ fun PlaylistDetailScreen(
                         )
                     }
                 }
-                PlaylistActionItem(
-                    icon = painterResource(R.drawable.rounded_edit_24),
-                    label = editPlaylistLabel,
-                    onClick = {
-                        showPlaylistOptionsSheet = false
-                        showEditPlaylistDialog = true
-                    }
-                )
-                PlaylistActionItem(
-                    icon = painterResource(R.drawable.rounded_delete_24),
-                    label = deletePlaylistLabel,
-                    onClick = {
-                        showPlaylistOptionsSheet = false
-                        showDeleteConfirmation = true
-                    }
-                )
-                PlaylistActionItem(
-                    icon = painterResource(R.drawable.outline_graph_1_24),
-                    label = setDefaultTransitionLabel,
-                    onClick = {
-                        showPlaylistOptionsSheet = false
-                        navController.navigateSafely(Screen.EditTransition.createRoute(playlistId))
-                    }
-                )
-                if (cloudSongsInPlaylist.isNotEmpty()) {
+                // One segmented group: 4dp apart, only the group's outer corners round.
+                val optionCount = if (cloudSongsInPlaylist.isNotEmpty()) 5 else 4
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     PlaylistActionItem(
-                        icon = rememberVectorPainter(Icons.Rounded.CloudDownload),
-                        label = downloadPlaylistLabel,
+                        icon = painterResource(R.drawable.rounded_edit_24),
+                        label = editPlaylistLabel,
+                        shape = getSegmentedItemShape(0, optionCount),
                         onClick = {
                             showPlaylistOptionsSheet = false
-                            cloudDownloadsViewModel.downloadSelected(cloudSongsInPlaylist)
-                            Toast.makeText(
-                                context,
-                                context.getString(
-                                    R.string.cloud_download_selected_started,
-                                    cloudSongsInPlaylist.size,
-                                ),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        },
+                            showEditPlaylistDialog = true
+                        }
+                    )
+                    PlaylistActionItem(
+                        icon = painterResource(R.drawable.rounded_delete_24),
+                        label = deletePlaylistLabel,
+                        shape = getSegmentedItemShape(1, optionCount),
+                        onClick = {
+                            showPlaylistOptionsSheet = false
+                            showDeleteConfirmation = true
+                        }
+                    )
+                    PlaylistActionItem(
+                        icon = painterResource(R.drawable.outline_graph_1_24),
+                        label = setDefaultTransitionLabel,
+                        shape = getSegmentedItemShape(2, optionCount),
+                        onClick = {
+                            showPlaylistOptionsSheet = false
+                            navController.navigateSafely(Screen.EditTransition.createRoute(playlistId))
+                        }
+                    )
+                    if (cloudSongsInPlaylist.isNotEmpty()) {
+                        PlaylistActionItem(
+                            icon = rememberVectorPainter(Icons.Rounded.CloudDownload),
+                            label = downloadPlaylistLabel,
+                            shape = getSegmentedItemShape(3, optionCount),
+                            onClick = {
+                                showPlaylistOptionsSheet = false
+                                cloudDownloadsViewModel.downloadSelected(cloudSongsInPlaylist)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        R.string.cloud_download_selected_started,
+                                        cloudSongsInPlaylist.size,
+                                    ),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                        )
+                    }
+                    PlaylistActionItem(
+                        icon = painterResource(R.drawable.rounded_attach_file_24),
+                        label = exportPlaylistLabel,
+                        shape = getSegmentedItemShape(optionCount - 1, optionCount),
+                        onClick = {
+                            showPlaylistOptionsSheet = false
+                            val sanitizedName = PlaylistViewModel.sanitizeFileName(
+                                currentPlaylist?.name ?: fallbackPlaylistName
+                            )
+                            m3uExportLauncher.launch("$sanitizedName.m3u")
+                        }
                     )
                 }
-                PlaylistActionItem(
-                    icon = painterResource(R.drawable.rounded_attach_file_24),
-                    label = exportPlaylistLabel,
-                    onClick = {
-                        showPlaylistOptionsSheet = false
-                        val sanitizedName = PlaylistViewModel.sanitizeFileName(
-                            currentPlaylist?.name ?: fallbackPlaylistName
-                        )
-                        m3uExportLauncher.launch("$sanitizedName.m3u")
-                    }
-                )
             }
         }
     }
@@ -1170,13 +1190,13 @@ fun PlaylistDetailScreen(
 private fun PlaylistActionItem(
     icon: Painter,
     label: String,
+    shape: Shape,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
