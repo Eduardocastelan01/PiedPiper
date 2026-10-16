@@ -573,6 +573,10 @@ class PlayerViewModel @Inject constructor(
     private var pendingMetadataEdit: PendingMetadataEdit? = null
     private var pendingBatchMetadataEdit: PendingBatchMetadataEdit? = null
     private var pendingLyricsSave: PendingLyricsSave? = null
+    /** A write request for songs left cut off by an interrupted save is waiting for its result. */
+    private var pendingInterruptedSaveRestore = false
+    /** Cut-off songs already asked about, so a denied request is not repeated while this ViewModel lives. */
+    private val askedInterruptedSaveRestoreUris = mutableSetOf<String>()
     private var pendingDeleteSong: Song? = null
     private var pendingDeleteCallback: ((Boolean) -> Unit)? = null
 
@@ -849,6 +853,7 @@ class PlayerViewModel @Inject constructor(
     lateinit var imageCacheManager: com.lostf1sh.pixelplayeross.data.media.ImageCacheManager
 
     init {
+        viewModelScope.launch { offerToRestoreInterruptedSaves() }
         listeningStatsTracker.initialize(viewModelScope)
         dailyMixStateHolder.initialize(viewModelScope)
         lyricsStateHolder.initialize(viewModelScope, lyricsLoadCallback, playbackStateHolder.stablePlayerState)
@@ -4557,7 +4562,11 @@ class PlayerViewModel @Inject constructor(
             return
         }
 
-        val pending = pendingMetadataEdit ?: return
+        val pending = pendingMetadataEdit
+        if (pending == null) {
+            if (pendingInterruptedSaveRestore) onInterruptedSaveRestorePermissionResult(granted)
+            return
+        }
         pendingMetadataEdit = null
         if (!granted) {
             viewModelScope.launch {
@@ -4573,6 +4582,42 @@ class PlayerViewModel @Inject constructor(
                 pending.replayGainTrackGainDb, pending.replayGainAlbumGainDb, pending.coverArtUpdate,
                 pending.customMetadataChanges
             )
+        }
+    }
+
+    /**
+     * Asks the user for write access to songs that an interrupted save left cut off, when the
+     * app can no longer write to them (its write access for the edit ended with the process),
+     * and restores them once it is granted. Each song is asked about once per ViewModel.
+     */
+    private suspend fun offerToRestoreInterruptedSaves() {
+        metadataEditStateHolder.songsAwaitingWriteAccess.collect { uris ->
+            if (uris.all { it.toString() in askedInterruptedSaveRestoreUris }) return@collect
+            // A request emitted while the player sheet is not collecting would be dropped.
+            _writePermissionRequest.subscriptionCount.first { it > 0 }
+            val otherRequestPending = pendingMetadataEdit != null || pendingBatchMetadataEdit != null ||
+                pendingBatchGenreEdit != null || pendingLyricsSave != null
+            if (otherRequestPending) return@collect
+            val intentSender = com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
+                .createWriteRequestIntentSender(context, uris) ?: return@collect
+            uris.mapTo(askedInterruptedSaveRestoreUris) { it.toString() }
+            pendingInterruptedSaveRestore = true
+            _toastEvents.emit(context.getString(R.string.metadata_restore_permission_prompt))
+            _writePermissionRequest.emit(intentSender)
+        }
+    }
+
+    private fun onInterruptedSaveRestorePermissionResult(granted: Boolean) {
+        pendingInterruptedSaveRestore = false
+        viewModelScope.launch {
+            val message = if (!granted) {
+                R.string.metadata_restore_permission_denied
+            } else if (metadataEditStateHolder.resumeInterruptedWriteBacks().stillPending == 0) {
+                R.string.metadata_restore_done
+            } else {
+                R.string.metadata_restore_incomplete
+            }
+            _toastEvents.emit(context.getString(message))
         }
     }
 

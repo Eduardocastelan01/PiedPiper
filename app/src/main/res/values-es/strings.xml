@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">Error al guardar las letras</string>
     <string name="lyrics_saved_successfully">Letras guardadas correctamente</string>
     <string name="lyrics_server_error">Error del servidor (código %d). Inténtalo de nuevo más tarde.</string>
+    <string name="metadata_edit_write_interrupted">Guardado interrumpido. Se conservó una copia y la canción se restaurará más tarde.</string>
+    <string name="metadata_edit_write_still_pending">No se guardó: hay que restaurar la canción. Permite el acceso, libera espacio y reintenta.</string>
+    <string name="metadata_restore_permission_prompt">Permite el acceso para restaurar canciones guardadas de forma incompleta.</string>
+    <string name="metadata_restore_done">Se restauraron las canciones guardadas de forma incompleta</string>
+    <string name="metadata_restore_incomplete">Algunas canciones aún no se pudieron restaurar. La app lo reintentará más tarde.</string>
+    <string name="metadata_restore_permission_denied">Canciones no restauradas. La app volverá a preguntar más tarde o al editar una.</string>
     <string name="metadata_updated_successfully">Metadatos actualizados correctamente</string>
     <string name="next_track">Pista siguiente</string>
     <string name="no_lyrics_to_save">No hay letras disponibles para guardar</string>

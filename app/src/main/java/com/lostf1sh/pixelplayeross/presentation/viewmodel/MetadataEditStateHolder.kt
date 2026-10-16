@@ -5,6 +5,7 @@ import android.net.Uri
 import com.lostf1sh.pixelplayeross.data.media.CoverArtUpdate
 import com.lostf1sh.pixelplayeross.data.media.CustomMetadataChanges
 import com.lostf1sh.pixelplayeross.data.media.ImageCacheManager
+import com.lostf1sh.pixelplayeross.data.media.InterruptedSaveResumeResult
 import com.lostf1sh.pixelplayeross.data.media.MetadataEditError
 import com.lostf1sh.pixelplayeross.data.media.SongMetadataEditor
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
@@ -14,6 +15,7 @@ import com.lostf1sh.pixelplayeross.utils.FileDeletionUtils
 import com.lostf1sh.pixelplayeross.utils.LyricsUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -48,10 +50,20 @@ class MetadataEditStateHolder @Inject constructor(
                 MetadataEditError.TIMEOUT -> "The operation took too long and was cancelled."
                 MetadataEditError.FILE_CORRUPTED -> "The file appears to be corrupted or in an unsupported format."
                 MetadataEditError.IO_ERROR -> "An error occurred while accessing the file. Please try again."
+                // SongMetadataEditor always resolves this message from a string resource.
+                MetadataEditError.WRITE_INTERRUPTED -> errorMessage ?: "Saving was interrupted before the song file was fully written."
                 MetadataEditError.UNKNOWN, null -> errorMessage ?: "An unknown error occurred while editing metadata."
             }
         }
     }
+
+    /** MediaStore URIs of songs left cut off by an interrupted save that need write access to be restored. */
+    val songsAwaitingWriteAccess: Flow<List<Uri>>
+        get() = songMetadataEditor.songsAwaitingWriteAccess
+
+    /** Restores the songs left cut off by interrupted saves that can be written now. */
+    suspend fun resumeInterruptedWriteBacks(): InterruptedSaveResumeResult =
+        songMetadataEditor.resumeInterruptedWriteBacks()
 
     suspend fun saveMetadata(
         song: Song,

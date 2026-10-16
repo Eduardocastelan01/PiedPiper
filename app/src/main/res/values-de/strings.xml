@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">Lyrics konnten nicht gespeichert werden</string>
     <string name="lyrics_saved_successfully">Lyrics gespeichert</string>
     <string name="lyrics_server_error">Serverfehler (Code %d) – später nochmal versuchen.</string>
+    <string name="metadata_edit_write_interrupted">Speichern unterbrochen. Der Song wird später aus einer Kopie wiederhergestellt.</string>
+    <string name="metadata_edit_write_still_pending">Nicht gespeichert. Erlaube Zugriff und schaffe Platz, damit der Song wiederhergestellt wird.</string>
+    <string name="metadata_restore_permission_prompt">Erlaube den Zugriff, um unvollständig gespeicherte Songs wiederherzustellen.</string>
+    <string name="metadata_restore_done">Unvollständig gespeicherte Songs wurden wiederhergestellt</string>
+    <string name="metadata_restore_incomplete">Einige Songs sind noch nicht wiederhergestellt. Die App versucht es später erneut.</string>
+    <string name="metadata_restore_permission_denied">Songs nicht wiederhergestellt. Die App fragt später erneut oder wenn du einen bearbeitest.</string>
     <string name="metadata_updated_successfully">Metadaten aktualisiert</string>
     <string name="next_track">Nächster Titel</string>
     <string name="no_lyrics_to_save">Keine Lyrics zum Speichern</string>
