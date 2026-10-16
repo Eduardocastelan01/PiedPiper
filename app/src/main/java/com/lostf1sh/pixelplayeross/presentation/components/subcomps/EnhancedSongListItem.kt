@@ -320,6 +320,9 @@ fun EnhancedSongListItem(
                 },
             shape = surfaceShape,
             color = containerColor,
+            // The animated container is rarely an exact theme colour, so the default
+            // contentColorFor() would fall back to the parent's LocalContentColor.
+            contentColor = contentColor,
         ) {
             Row(
                 modifier = Modifier

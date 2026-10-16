@@ -220,7 +220,15 @@ fun AudioBookmarksScreen(
             label = "BookmarkKeepTopBarSurfaceFraction"
         )
 
+        // Only jump to the top when the query or sort actually changes. A plain
+        // LaunchedEffect(query, sortMode) also runs when the screen re-enters composition after
+        // returning from a bookmark folder, which wiped the restored scroll position.
+        var appliedQuery by rememberSaveable { mutableStateOf(query) }
+        var appliedSortMode by rememberSaveable { mutableStateOf(sortMode) }
         LaunchedEffect(query, sortMode) {
+            if (query == appliedQuery && sortMode == appliedSortMode) return@LaunchedEffect
+            appliedQuery = query
+            appliedSortMode = sortMode
             if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
                 listState.scrollToItem(0)
             }
@@ -236,6 +244,12 @@ fun AudioBookmarksScreen(
         }
         val isSelecting = selection.isNotEmpty()
         var confirmDeleteSelection by remember { mutableStateOf(false) }
+
+        // Back collapses the FAB menu before leaving the screen. Registered before the
+        // selection handler so clearing a selection still wins when both could apply.
+        BackHandler(enabled = fabMenuExpanded && !isSelecting) {
+            fabMenuExpanded = false
+        }
 
         BackHandler(enabled = isSelecting) {
             selectedSongIds = emptySet()
