@@ -4,6 +4,8 @@ import com.lostf1sh.pixelplayeross.data.backup.module.BackupSongMetadata
 import com.lostf1sh.pixelplayeross.data.backup.module.BackupSongResolver
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkDao
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
+import com.lostf1sh.pixelplayeross.data.database.backupSongIdOfRestoredBookmark
+import com.lostf1sh.pixelplayeross.data.database.restoredBookmarkSongId
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,9 +37,11 @@ class AudioBookmarkRepositoryImpl @Inject constructor(
 
     /**
      * Song ids are MediaStore ids, so a bookmark loses its song when the file is re-indexed
-     * under a new id, or when a backup is restored before the library has been scanned. Points
-     * each bookmark whose song is gone at the library song with its stored title and artist, if
-     * exactly one matches. Bookmarks without a confident match are left alone.
+     * under a new id. A restored bookmark whose song wasn't found is kept under a
+     * [restoredBookmarkSongId], which names no song. Points each such bookmark at its song: the
+     * one holding its id (a restored bookmark's backup id) if that song has the stored title and
+     * artist, or else the only library song that has them. Bookmarks without a confident match
+     * are left alone.
      */
     override suspend fun relinkOrphanedBookmarks() {
         val bookmarks = audioBookmarkDao.getAllBookmarksOnce()
@@ -49,8 +53,9 @@ class AudioBookmarkRepositoryImpl @Inject constructor(
         val library = songResolver.library()
         val relinked = orphans.groupBy { it.songId }.flatMap { (songId, group) ->
             val sample = group.first()
-            val meta = BackupSongMetadata(sample.songTitle, sample.artistName, album = "", duration = 0L)
-            val newId = library.resolve(songId, meta) ?: return@flatMap emptyList()
+            val backupSongId = backupSongIdOfRestoredBookmark(songId) ?: songId
+            val newId = matchSong(library, backupSongId, sample.songTitle, sample.artistName)
+                ?: return@flatMap emptyList()
             group.map { it.copy(songId = newId) }
         }
         if (relinked.isEmpty()) return
@@ -62,5 +67,27 @@ class AudioBookmarkRepositoryImpl @Inject constructor(
                 songs[bookmark.songId]?.let { bookmark.copy(albumArtUri = it.albumArtUriString) } ?: bookmark
             }
         )
+    }
+
+    /**
+     * The id of the library song titled [songTitle] by [artistName], or null without a confident
+     * match. Bookmarks store the display artist, which joins a multi-artist song's artists with
+     * ", " where the library's artist column keeps the tag as written ("A feat. B"). So when the
+     * title and artist match nothing, the songs with that title are checked by display artist.
+     */
+    private suspend fun matchSong(
+        library: BackupSongResolver.Library,
+        songId: String,
+        songTitle: String,
+        artistName: String
+    ): String? {
+        val meta = BackupSongMetadata(songTitle, artistName, album = "", duration = 0L)
+        library.resolve(songId, meta)?.let { return it }
+        val titled = library.songIdsTitled(songTitle)
+        if (titled.isEmpty()) return null
+        return songResolver.songsFor(titled).values
+            .filter { songResolver.sameTag(it.displayArtist, artistName) }
+            .singleOrNull()
+            ?.id
     }
 }

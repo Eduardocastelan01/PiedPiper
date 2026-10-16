@@ -187,6 +187,12 @@
     <string name="player_permission_denied_save_lyrics">Permission denied – cannot save lyrics</string>
     <string name="player_permission_denied_edit_this_file">Permission denied – cannot edit this file</string>
     <string name="metadata_updated_successfully">Metadata updated successfully</string>
+    <string name="metadata_edit_write_interrupted">Save interrupted. A full copy was kept and the song will be restored later.</string>
+    <string name="metadata_edit_write_still_pending">Not saved: the song must be restored first. Allow access, free up space, then retry.</string>
+    <string name="metadata_restore_permission_prompt">Allow access to restore songs an interrupted save left incomplete.</string>
+    <string name="metadata_restore_done">Restored the songs an interrupted save left incomplete</string>
+    <string name="metadata_restore_incomplete">Some songs could not be restored yet. The app will try again later.</string>
+    <string name="metadata_restore_permission_denied">Songs not restored. The app will ask again later or when you edit one.</string>
     <string name="player_updating_n_songs">Updating %1$d songs…</string>
     <string name="player_batch_genre_updated_all">Successfully updated %1$d songs!</string>
     <string name="player_batch_genre_updated_partial">Updated %1$d songs. Failed: %2$d</string>

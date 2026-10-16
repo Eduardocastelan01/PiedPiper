@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">Impossibile salvare il testo</string>
     <string name="lyrics_saved_successfully">Testo salvato correttamente</string>
     <string name="lyrics_server_error">Errore server (codice %d). Riprova più tardi.</string>
+    <string name="metadata_edit_write_interrupted">Salvataggio interrotto. Conservata una copia: il brano verrà ripristinato più tardi.</string>
+    <string name="metadata_edit_write_still_pending">Non salvato: prima va ripristinato il brano. Consenti l\'accesso, libera spazio e riprova.</string>
+    <string name="metadata_restore_permission_prompt">Consenti l\'accesso per ripristinare i brani salvati in modo incompleto.</string>
+    <string name="metadata_restore_done">I brani salvati in modo incompleto sono stati ripristinati</string>
+    <string name="metadata_restore_incomplete">Non è ancora stato possibile ripristinare alcuni brani. L\'app riproverà più tardi.</string>
+    <string name="metadata_restore_permission_denied">Brani non ripristinati. L\'app lo chiederà di nuovo più tardi o quando ne modificherai uno.</string>
     <string name="metadata_updated_successfully">Metadati aggiornati correttamente</string>
     <string name="next_track">Traccia successiva</string>
     <string name="no_lyrics_to_save">Nessun testo disponibile da salvare</string>

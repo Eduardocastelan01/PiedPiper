@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PlaylistPreferencesRepositoryTest {
@@ -140,6 +141,17 @@ class PlaylistPreferencesRepositoryTest {
         repository.updatePlaylist(playlist(songIds = listOf("a", "b", "c")))
 
         coVerify(exactly = 0) { transitionDao.deleteRulesForTrack(any(), any()) }
+    }
+
+    @Test
+    fun `replacing a playlist's songs leaves its name and date alone`() = runTest {
+        val repository = repository(storedIds = listOf("a"))
+        coEvery { playlistDao.replaceSongsOfExistingPlaylist(PLAYLIST_ID, listOf("a", "b")) } returns true
+
+        assertTrue(repository.replacePlaylistSongs(PLAYLIST_ID, listOf("a", "b")))
+
+        coVerify(exactly = 1) { playlistDao.replaceSongsOfExistingPlaylist(PLAYLIST_ID, listOf("a", "b")) }
+        coVerify(exactly = 0) { playlistDao.upsertPlaylist(any()) }
     }
 
     private fun playlist(songIds: List<String>) = Playlist(id = PLAYLIST_ID, name = "Mix", songIds = songIds)

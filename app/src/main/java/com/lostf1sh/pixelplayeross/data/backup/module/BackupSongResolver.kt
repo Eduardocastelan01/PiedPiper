@@ -49,10 +49,24 @@ class BackupSongResolver @Inject constructor(private val musicDao: MusicDao) {
     /** A snapshot of the current library to resolve many ids against. */
     suspend fun library(): Library = Library(musicDao.getAllLocalSongSummaries())
 
+    /**
+     * Whether two titles, or two artists, are the same as far as matching goes: case and outer
+     * whitespace are ignored.
+     */
+    fun sameTag(a: String, b: String): Boolean = normalize(a) == normalize(b)
+
     class Library internal constructor(summaries: List<SongSummary>) {
         private val byId = summaries.associateBy { it.id.toString() }
         private val byTitleArtist: Map<String, List<SongSummary>> =
             summaries.groupBy { matchKey(it.title, it.artistName) }
+        private val byTitle: Map<String, List<SongSummary>> = summaries.groupBy { normalize(it.title) }
+
+        /**
+         * The ids of the songs titled [title], whatever their artist. For callers that only know
+         * the display artist, which [resolve] can't match against the library's artist column.
+         */
+        fun songIdsTitled(title: String): List<String> =
+            byTitle[normalize(title)].orEmpty().map { it.id.toString() }
 
         /**
          * The current id of the song a backup called [backupSongId], or null without a confident
@@ -78,17 +92,6 @@ class BackupSongResolver @Inject constructor(private val musicDao: MusicDao) {
                 kotlin.math.abs(it.duration - meta.duration) <= DURATION_TOLERANCE_MS
             }
             return durationMatch.singleOrNull()?.id?.toString()
-        }
-
-        /**
-         * Whether [backupSongId] names a song in this library whose title isn't [meta]'s: the id
-         * was reused for another song (another device, or a rescan). Only the title is compared,
-         * because callers may only know the display artist, which joins multiple artists
-         * differently from the library's artist column.
-         */
-        fun namesAnotherSong(backupSongId: String, meta: BackupSongMetadata): Boolean {
-            val song = byId[backupSongId] ?: return false
-            return normalize(song.title) != normalize(meta.title)
         }
 
         private fun metadataMatches(meta: BackupSongMetadata, song: SongSummary): Boolean =

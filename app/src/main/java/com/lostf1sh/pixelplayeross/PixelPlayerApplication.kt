@@ -14,6 +14,7 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.lostf1sh.pixelplayeross.data.diagnostics.AdvancedPerformanceDiagnosticsController
+import com.lostf1sh.pixelplayeross.data.media.SongMetadataEditor
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.playlist.M3uSyncCoordinator
 import com.lostf1sh.pixelplayeross.data.repository.ArtistImageRepository
@@ -78,6 +79,9 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     @Inject
     lateinit var updateCheckScheduler: dagger.Lazy<com.lostf1sh.pixelplayeross.data.update.UpdateCheckScheduler>
 
+    @Inject
+    lateinit var songMetadataEditor: dagger.Lazy<SongMetadataEditor>
+
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
@@ -89,6 +93,10 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
             libraryStateHolder.get().restoreAfterTrimIfNeeded()
             m3uSyncCoordinator.get().onAppForeground()
             advancedPerformanceDiagnosticsController.get().onAppForeground()
+            // Gives songs cut off by an interrupted tag save (a failed write-back, or the app
+            // being killed mid-write) their edited audio back, and lists the ones the app can no
+            // longer write to so the player can ask the user for access.
+            startupScope.launch { songMetadataEditor.get().resumeInterruptedWriteBacks() }
         }
 
         override fun onResume(owner: LifecycleOwner) {

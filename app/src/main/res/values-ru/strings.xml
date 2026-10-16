@@ -105,6 +105,12 @@
     <string name="lyrics_save_failed">Не удалось сохранить текст песни</string>
     <string name="lyrics_saved_successfully">Текст песни успешно сохранён</string>
     <string name="lyrics_server_error">Ошибка сервера (код %d). Повторите попытку позже.</string>
+    <string name="metadata_edit_write_interrupted">Сохранение прервано. Копия сохранена, песня будет восстановлена позже.</string>
+    <string name="metadata_edit_write_still_pending">Не сохранено: песню нужно восстановить. Дайте доступ, освободите место, повторите.</string>
+    <string name="metadata_restore_permission_prompt">Дайте доступ, чтобы восстановить не полностью сохранённые песни.</string>
+    <string name="metadata_restore_done">Не полностью сохранённые песни восстановлены</string>
+    <string name="metadata_restore_incomplete">Некоторые песни пока не восстановлены. Приложение попробует позже.</string>
+    <string name="metadata_restore_permission_denied">Песни не восстановлены. Приложение спросит снова позже или при изменении одной из них.</string>
     <string name="metadata_updated_successfully">Метаданные успешно обновлены</string>
     <string name="next_track">Следующий трек</string>
     <string name="no_lyrics_to_save">Нет текста песни для сохранения</string>
