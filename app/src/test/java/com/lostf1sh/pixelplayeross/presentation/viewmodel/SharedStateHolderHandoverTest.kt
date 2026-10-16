@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.presentation.viewmodel
 
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.media.AudioDeviceCallback
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkRequest
@@ -201,6 +202,15 @@ class SharedStateHolderHandoverTest {
     @Nested
     inner class Connectivity {
         private val connectivityManager = mockk<ConnectivityManager>(relaxed = true)
+        private val registeredAudioDeviceCallbacks = mutableSetOf<AudioDeviceCallback>()
+        private val audioManager = mockk<AudioManager>(relaxed = true) {
+            every { registerAudioDeviceCallback(any(), any()) } answers {
+                registeredAudioDeviceCallbacks += firstArg<AudioDeviceCallback>()
+            }
+            every { unregisterAudioDeviceCallback(any()) } answers {
+                registeredAudioDeviceCallbacks -= firstArg<AudioDeviceCallback>()
+            }
+        }
         private val context = mockk<Context>(relaxed = true).also { context ->
             every { context.applicationContext } returns context
             every { context.getSystemService(Context.CONNECTIVITY_SERVICE) } returns connectivityManager
@@ -208,7 +218,7 @@ class SharedStateHolderHandoverTest {
             every { context.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockk<BluetoothManager>(relaxed = true) {
                 every { adapter } returns null
             }
-            every { context.getSystemService(Context.AUDIO_SERVICE) } returns mockk<AudioManager>(relaxed = true)
+            every { context.getSystemService(Context.AUDIO_SERVICE) } returns audioManager
         }
 
         init {
@@ -244,6 +254,20 @@ class SharedStateHolderHandoverTest {
             verify(exactly = 1) {
                 connectivityManager.unregisterNetworkCallback(any<ConnectivityManager.NetworkCallback>())
             }
+        }
+
+        @Test
+        fun `an owner arriving after a full teardown leaves one audio device callback registered`() = runTest {
+            val holder = ConnectivityStateHolder(context)
+            val firstOwner = ownerScope()
+            holder.initialize(firstOwner)
+            clear(firstOwner) { holder.onCleared(it) }
+
+            val nextOwner = ownerScope()
+            holder.initialize(nextOwner)
+
+            assertEquals(1, registeredAudioDeviceCallbacks.size)
+            nextOwner.cancel()
         }
     }
 
