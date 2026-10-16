@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">دوامة كونية</string>
+    <string name="collage_pattern_honeycomb_groove">إيقاع خلية النحل</string>
+    <string name="collage_pattern_vinyl_stack">كومة أسطوانات</string>
+    <string name="collage_pattern_pixel_mosaic">فسيفساء البكسلات</string>
+    <string name="collage_pattern_stardust_scatter">نثار غبار النجوم</string>
+    <string name="collage_pattern_soft_orbit">مدار ناعم</string>
+    <string name="collage_pattern_arrow_fanfare">مهرجان الأسهم</string>
+    <string name="collage_pattern_sunny_bloom">تفتّح مشمس</string>
+    <string name="collage_pattern_pixel_cookie">بسكويت البكسل</string>
+    <string name="collage_pattern_heart_garden">حديقة القلوب</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="zero">لا توجد أغانٍ سحابية لتجهيزها للتشغيل دون اتصال</item>
+        <item quantity="one">جارٍ تجهيز أغنية سحابية واحدة للتشغيل دون اتصال</item>
+        <item quantity="two">جارٍ تجهيز أغنيتين سحابيتين للتشغيل دون اتصال</item>
+        <item quantity="few">جارٍ تجهيز %1$d أغانٍ سحابية للتشغيل دون اتصال</item>
+        <item quantity="many">جارٍ تجهيز %1$d أغنيةً سحابيةً للتشغيل دون اتصال</item>
+        <item quantity="other">جارٍ تجهيز %1$d أغنية سحابية للتشغيل دون اتصال</item>
+    </plurals>
+</resources>

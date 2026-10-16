@@ -91,6 +91,7 @@ enum class MoodProfile(
             "fast", "hype", "pump", "power", "aggressive", "agresivo", "metal", "electronic",
             "electronica", "dance", "upbeat", "intense", "intenso", "heavy", "entrenar",
             "ejercicio", "entrenamiento", "energia", "motivacion", "adrenalina", "beast",
+            "runner", "jog", "trotar", "treadmill",
         ),
         phrases = setOf(
             "lift weights", "lifting weights", "work out", "working out", "hit the gym",

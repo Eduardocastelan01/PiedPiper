@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
 import android.animation.ValueAnimator
+import android.os.Build
 import android.widget.Toast
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
@@ -65,7 +66,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -128,6 +128,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.lostf1sh.pixelplayeross.data.preferences.dataStore
+import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_FONT_SIZE_SP
+import com.lostf1sh.pixelplayeross.data.preferences.LYRICS_FONT_SIZE_SP_KEY
+import com.lostf1sh.pixelplayeross.data.preferences.sanitizeLyricsFontSize
 
 import kotlin.math.abs
 import kotlin.math.pow
@@ -143,6 +146,9 @@ import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayingEqIco
 import com.lostf1sh.pixelplayeross.utils.MultiLangRomanizer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.produceState
 
 internal data class LyricsSheetColors(
     val container: Color,
@@ -223,6 +229,13 @@ private fun linearizedChannel(channel: Int): Double {
         ((value + 0.055) / 1.055).pow(2.4)
     }
 }
+
+/**
+ * Corner radius of the lyrics sheet for a predictive-back [progress] (0f = full-screen,
+ * 1f = fully dismissed). Returns null at rest so the full-screen surface stays square.
+ */
+internal fun lyricsSheetCornerRadius(progress: Float): Dp? =
+    if (progress > 0f) 32.dp * progress else null
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -349,6 +362,32 @@ fun LyricsSheet(
     }
     val animatedLyricsBlurStrength by animatedLyricsBlurStrengthFlow.collectAsStateWithLifecycle(initialValue = 2.5f)
 
+    val lyricsFontSizeFlow = remember(context) {
+        context.dataStore.data.map {
+            sanitizeLyricsFontSize(it[LYRICS_FONT_SIZE_SP_KEY] ?: DEFAULT_LYRICS_FONT_SIZE_SP)
+        }
+    }
+    val lyricsFontSizeSp by lyricsFontSizeFlow.collectAsStateWithLifecycle(initialValue = DEFAULT_LYRICS_FONT_SIZE_SP)
+    val sizedLyricsTextStyle = remember(lyricsTextStyle, lyricsFontSizeSp) {
+        lyricsTextStyle.withLyricsFontSize(lyricsFontSizeSp)
+    }
+
+    // Plain lyrics are stored without romanization; derive it off the main thread only
+    // while the romanization toggle is on.
+    val shouldRomanizePlainLyrics = showLyricsRomanization && hasRomanizedLyrics
+    val plainLyricsRomanization by produceState<List<String?>?>(
+        initialValue = null,
+        lyrics?.plain,
+        shouldRomanizePlainLyrics
+    ) {
+        val plainLines = lyrics?.plain
+        value = if (!shouldRomanizePlainLyrics || plainLines.isNullOrEmpty()) {
+            null
+        } else {
+            withContext(Dispatchers.Default) { romanizePlainLyrics(plainLines) }
+        }
+    }
+
     val keepScreenOnFlow = remember(context) {
         context.dataStore.data.map { it[booleanPreferencesKey("keep_screen_on_lyrics")] ?: false }
     }
@@ -373,29 +412,6 @@ fun LyricsSheet(
             }
         }
 
-        if (keepScreenOn) {
-            view.keepScreenOn = true
-        }
-
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            view.keepScreenOn = false
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    DisposableEffect(keepScreenOn, lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP && keepScreenOn) {
-                keepScreenOn = false
-                coroutineScope.launch {
-                    context.dataStore.edit { prefs ->
-                        prefs[booleanPreferencesKey("keep_screen_on_lyrics")] = false
-                    }
-                }
-            }
-        }
-        
         if (keepScreenOn) {
             view.keepScreenOn = true
         }
@@ -483,9 +499,9 @@ fun LyricsSheet(
         label = "fontScale"
     )
     
-    val scaledTextStyle = lyricsTextStyle.copy(
-        fontSize = lyricsTextStyle.fontSize * fontScale,
-        lineHeight = lyricsTextStyle.lineHeight * fontScale
+    val scaledTextStyle = sizedLyricsTextStyle.copy(
+        fontSize = sizedLyricsTextStyle.fontSize * fontScale,
+        lineHeight = sizedLyricsTextStyle.lineHeight * fontScale
     )
 
     fun resetImmersiveTimer() {
@@ -592,8 +608,15 @@ fun LyricsSheet(
                 scaleX = scale
                 scaleY = scale
                 translationY = lerp(0f, size.height * 0.08f, p)
+                // The 32dp radius belongs to the shrunken predictive-back card. Applying it
+                // at rest rounded the corners of a surface that fills the screen, so the
+                // layer behind showed through. Grow it with the gesture and stay square
+                // while full-screen.
+                lyricsSheetCornerRadius(p)?.let { radius ->
+                    clip = true
+                    shape = RoundedCornerShape(radius)
+                }
             }
-            .clip(RoundedCornerShape(32.dp))
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = {
@@ -714,22 +737,24 @@ fun LyricsSheet(
                             item(key = "loader_or_empty") {
                                 Box(
                                     modifier = Modifier
-                                        .fillParentMaxSize(),
-                                    contentAlignment = Alignment.Center
+                                        .fillParentMaxSize()
+                                        .padding(top = 48.dp),
+                                    contentAlignment = when (lyricsAlignment) {
+                                        "center" -> Alignment.TopCenter
+                                        "right" -> Alignment.TopEnd
+                                        else -> Alignment.TopStart
+                                    }
                                 ) {
                                     if (isLoadingLyrics) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                text = context.resources.getString(R.string.loading_lyrics),
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            LinearWavyProgressIndicator(
-                                                trackColor = accentColor.copy(alpha = 0.4f),
-                                                color = accentColor,
-                                                modifier = Modifier.width(100.dp)
-                                            )
-                                        }
+                                        LyricsLoadingPlaceholder(
+                                            contentColor = contentColor,
+                                            accentColor = lyricHighlightColor,
+                                            horizontalAlignment = when (lyricsAlignment) {
+                                                "center" -> Alignment.CenterHorizontally
+                                                "right" -> Alignment.End
+                                                else -> Alignment.Start
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -806,10 +831,11 @@ fun LyricsSheet(
                                 itemsIndexed(
                                     items = plain,
                                     key = { index, line -> "$index-$line" }
-                                ) { _, line ->
+                                ) { index, line ->
                                     PlainLyricsLine(
                                         line = line,
-                                        style = lyricsTextStyle,
+                                        style = sizedLyricsTextStyle,
+                                        romanization = plainLyricsRomanization?.getOrNull(index),
                                         lyricsAlignment = lyricsAlignment,
                                         showTranslation = if (hasTranslatedLyrics) showLyricsTranslation else true,
                                         showRomanization = if (hasRomanizedLyrics) showLyricsRomanization else true,
@@ -1414,6 +1440,7 @@ fun LyricLineRow(
         animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
         label = "lineBlur"
     )
+    val lineBlurEffectCache = remember { BlurEffectCache() }
 
     // Keep line height stable while the visual focus moves. Scaling happens in a graphics layer,
     // so neither the word pulse nor the active-line transition can make the lazy list jump.
@@ -1442,8 +1469,13 @@ fun LyricLineRow(
                     },
                     pivotFractionY = 0.5f
                 )
+                // Read the animated blur here, in the draw phase, so the transition doesn't
+                // recompose every visible line each frame. The radius is quantized to whole
+                // pixels and the RenderEffect (API 31+) is cached between frames.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    renderEffect = lineBlurEffectCache.get(blurRadius.toPx().roundToInt().toFloat())
+                }
             }
-            .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier)
     } else baseModifier
 
     val translationText = line.translation
@@ -1636,6 +1668,7 @@ private fun LyricWordSpan(
 fun PlainLyricsLine(
     line: String,
     style: TextStyle,
+    romanization: String? = null,
     lyricsAlignment: String = "left",
     showTranslation: Boolean = true,
     showRomanization: Boolean = true,
@@ -1660,7 +1693,7 @@ fun PlainLyricsLine(
         } else ""
     }
 
-    val romanizationText = remember(sanitizedLines, primaryText, isRomanizedScript) {
+    val embeddedRomanizationText = remember(sanitizedLines, primaryText, isRomanizedScript) {
          if (sanitizedLines.size > 1) {
             val firstExtra = sanitizedLines[1]
             val isLatin = firstExtra.any { it.code in 32..126 } 
@@ -1669,6 +1702,7 @@ fun PlainLyricsLine(
             if (isFirstRomanization) sanitizeLyricLineText(firstExtra) else ""
         } else ""
     }
+    val romanizationText = romanization?.takeIf { it.isNotBlank() } ?: embeddedRomanizationText
     val textAlign = when (lyricsAlignment) {
         "center" -> TextAlign.Center
         "right" -> TextAlign.Right
@@ -1715,6 +1749,35 @@ fun PlainLyricsLine(
         }
     }
 }
+
+private val KanaRange = '\u3040'..'\u30FF'
+
+/** Romanizes each plain lyric line; null entries mean the line needs no romanization. */
+private fun romanizePlainLyrics(lines: List<String>): List<String?> {
+    val entireLyricsHasKana = lines.any { line -> line.any { it in KanaRange } }
+    return lines.map { line ->
+        val primary = sanitizeLyricLineText(line.substringBefore('\n'))
+        if (MultiLangRomanizer.isScriptThatNeedsRomanization(primary)) {
+            MultiLangRomanizer.romanizeLine(primary, entireLyricsHasKana)
+        } else {
+            null
+        }
+    }
+}
+
+private fun TextStyle.withLyricsFontSize(fontSizeSp: Float): TextStyle {
+    val lineHeightRatio = if (fontSize.isSp && lineHeight.isSp && fontSize.value > 0f) {
+        lineHeight.value / fontSize.value
+    } else {
+        DEFAULT_LYRICS_LINE_HEIGHT_RATIO
+    }
+    return copy(
+        fontSize = fontSizeSp.sp,
+        lineHeight = (fontSizeSp * lineHeightRatio).sp
+    )
+}
+
+private const val DEFAULT_LYRICS_LINE_HEIGHT_RATIO = 1.18f
 
 private val LeadingTagRegex = Regex("^v\\d+:\\s*", RegexOption.IGNORE_CASE)
 

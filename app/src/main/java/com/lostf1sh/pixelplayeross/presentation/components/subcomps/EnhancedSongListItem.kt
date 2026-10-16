@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -39,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
@@ -49,7 +53,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp as lerpDp
 import coil.size.Size
@@ -68,6 +74,32 @@ private data class EnhancedSongAnimationTarget(
 
 private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
     return start + (stop - start) * fraction
+}
+
+/**
+ * Morphs the corners of a segmented [base] shape into a fully rounded container as
+ * [progress] goes from 0 to 1. Corner sizes are resolved per-measure, so percent-based
+ * corners and any item height morph correctly.
+ */
+private class HighlightMorphShape(
+    private val base: CornerBasedShape,
+    private val progress: Float,
+) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val full = size.minDimension / 2f
+        fun corner(cornerSize: CornerSize): CornerSize =
+            CornerSize(lerpFloat(cornerSize.toPx(size, density), full, progress))
+        return base.copy(
+            topStart = corner(base.topStart),
+            topEnd = corner(base.topEnd),
+            bottomEnd = corner(base.bottomEnd),
+            bottomStart = corner(base.bottomStart),
+        ).createOutline(size, layoutDirection, density)
+    }
 }
 
 /**
@@ -140,16 +172,21 @@ fun EnhancedSongListItem(
         if (state.isSelected) 1f else 0f
     }
 
-    val animatedCornerRadius = lerpDp(22.dp, 50.dp, highlightProgress)
+    val animatedCornerRadius = lerpDp(24.dp, 50.dp, highlightProgress)
     val animatedAlbumCornerRadius = lerpDp(10.dp, 50.dp, highlightProgress)
     val selectionScale = lerpFloat(1f, 0.98f, selectionScaleProgress)
     val selectionBorderWidth = lerpDp(0.dp, 2.5.dp, selectionVisualProgress)
 
-    val surfaceShape = remember(animatedCornerRadius, customShape, isHighlighted) {
-        if (customShape != null && !isHighlighted) {
-            customShape
-        } else {
-            RoundedCornerShape(animatedCornerRadius)
+    val surfaceShape = remember(animatedCornerRadius, customShape, highlightProgress) {
+        when {
+            customShape == null -> RoundedCornerShape(animatedCornerRadius)
+            // Segmented list corners relax towards a fully rounded container while the
+            // song is highlighted, and return to the segment's own corners afterwards.
+            customShape is CornerBasedShape && highlightProgress > 0f ->
+                HighlightMorphShape(customShape, highlightProgress)
+            customShape is CornerBasedShape -> customShape
+            isHighlighted -> RoundedCornerShape(animatedCornerRadius)
+            else -> customShape
         }
     }
 
@@ -283,6 +320,9 @@ fun EnhancedSongListItem(
                 },
             shape = surfaceShape,
             color = containerColor,
+            // The animated container is rarely an exact theme colour, so the default
+            // contentColorFor() would fall back to the parent's LocalContentColor.
+            contentColor = contentColor,
         ) {
             Row(
                 modifier = Modifier

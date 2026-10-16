@@ -190,6 +190,55 @@ class LyricsUtilsTest {
         assertEquals(7_530, first.time)
         assertEquals("Yeah, I bet", first.line)
         assertEquals(listOf("Yeah,", "I", "bet"), requireNotNull(first.words).map { it.word })
+        assertEquals(listOf(true, true, true), requireNotNull(first.words).map { it.startsNewWord })
+    }
+
+    @Test
+    fun parseLyrics_plainText_doesNotAppendAutomaticRomanization() {
+        val plain = "こんにちは\nПривет"
+
+        val lyrics = LyricsUtils.parseLyrics(plain)
+
+        assertEquals(listOf("こんにちは", "Привет"), lyrics.plain)
+        assertTrue(lyrics.synced.isNullOrEmpty())
+    }
+
+    @Test
+    fun parseLyrics_convertsSmilRootedTtmlAfterXmlDeclaration() {
+        val ttml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <smil xmlns="http://www.w3.org/ns/SMIL">
+              <body>
+                <p begin="00:01.000" end="00:03.000">Hello world</p>
+              </body>
+            </smil>
+        """.trimIndent()
+
+        val synced = requireNotNull(LyricsUtils.parseLyrics(ttml).synced)
+
+        assertEquals(1, synced.size)
+        assertEquals(1_000, synced.single().time)
+        assertEquals("Hello world", synced.single().line)
+    }
+
+    @Test
+    fun parseLyrics_convertsNamespacedTtRootAfterXmlDeclaration() {
+        val ttml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <tt:tt xmlns:tt="http://www.w3.org/ns/ttml">
+              <tt:body>
+                <tt:div>
+                  <tt:p begin="00:02.000" end="00:04.000">Second line</tt:p>
+                </tt:div>
+              </tt:body>
+            </tt:tt>
+        """.trimIndent()
+
+        val synced = requireNotNull(LyricsUtils.parseLyrics(ttml).synced)
+
+        assertEquals(1, synced.size)
+        assertEquals(2_000, synced.single().time)
+        assertEquals("Second line", synced.single().line)
     }
 
     @Test
@@ -373,6 +422,29 @@ class LyricsUtilsTest {
         assertEquals("To fall", synced.single().line)
         assertEquals(listOf("To", "fall"), words.map { it.word })
         assertEquals(listOf(true, true), words.map { it.startsNewWord })
+    }
+
+    @Test
+    fun parseLyrics_kugouWordTokensWithoutSpaces_areSeparateVisualWords() {
+        val kugou = "[1000,3000]<0,500,0>Never<500,500,0>gonna<1000,500,0>give<1500,500,0>you<2000,500,0>up"
+
+        val lyrics = LyricsUtils.parseLyrics(kugou)
+        val synced = requireNotNull(lyrics.synced)
+        val words = requireNotNull(synced.single().words)
+
+        assertEquals(listOf("Never", "gonna", "give", "you", "up"), words.map { it.word })
+        assertEquals(listOf(true, true, true, true, true), words.map { it.startsNewWord })
+    }
+
+    @Test
+    fun parseLyrics_kugouCjkTokensWithoutSpaces_doNotGainArtificialGaps() {
+        val kugou = "[1000,2000]<0,500,0>你<500,500,0>好<1000,500,0>世<1500,500,0>界"
+
+        val lyrics = LyricsUtils.parseLyrics(kugou)
+        val words = requireNotNull(requireNotNull(lyrics.synced).single().words)
+
+        assertEquals(listOf("你", "好", "世", "界"), words.map { it.word })
+        assertEquals(listOf(true, false, false, false), words.map { it.startsNewWord })
     }
 
     @Test

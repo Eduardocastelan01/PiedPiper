@@ -153,6 +153,8 @@
     <string name="search_playlists_hint">搜索歌单…</string>
 
     <string name="multi_selection_playlists_count_upper">%1$d 个歌单</string>
+    <string name="multi_selection_genres_count_upper">%1$d 个流派</string>
+    <string name="multi_selection_genres_queue_hint">对这些流派中的所有歌曲进行批量操作。</string>
     <string name="cd_export_all">全部导出</string>
     <string name="cd_merge_all">全部合并</string>
     <string name="cd_share_all">全部分享</string>
@@ -163,6 +165,10 @@
     <string name="reorder_tabs_reset_dialog_title">恢复默认顺序</string>
     <string name="reorder_tabs_reset_dialog_body">确定将标签顺序重置为默认吗？</string>
     <string name="reorder_tabs_reordering">正在调整标签顺序…</string>
+    <string name="reorder_tabs_visible_title">已显示的标签</string>
+    <string name="reorder_tabs_hidden_title">已隐藏的标签</string>
+    <string name="reorder_tabs_hide_action">隐藏标签</string>
+    <string name="reorder_tabs_show_action">显示标签</string>
     <string name="cd_drag_handle">拖拽把手</string>
     <string name="cd_reset">重置</string>
     <string name="action_done">完成</string>

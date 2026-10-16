@@ -1,6 +1,8 @@
 package com.lostf1sh.pixelplayeross.data.service.player
 
+import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
 import java.util.Locale
@@ -13,6 +15,17 @@ internal object AudioDecoderPolicy {
         MimeTypes.AUDIO_EXOPLAYER_MIDI,
         AUDIO_MIDI
     )
+
+    /**
+     * True when the item exposes audio but no audio track can be decoded by any renderer
+     * (FFmpeg included), so ExoPlayer would advance a silent clock.
+     */
+    fun hasUnsupportedAudio(tracks: Tracks): Boolean {
+        val audio = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        return audio.isNotEmpty() && audio.none { group ->
+            (0 until group.length).any(group::isTrackSupported)
+        }
+    }
 
     fun shouldUseExtensionRenderer(mimeType: String, outputMode: AudioOutputMode): Boolean {
         // Some platform FLAC decoders produce corrupt audio when Media3 requests PCM_FLOAT

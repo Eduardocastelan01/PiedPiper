@@ -188,4 +188,19 @@ object QueueUtils {
         
         return order
     }
+
+    /**
+     * Album art URIs of the songs within [radius] of [index] in [queue], without the song at
+     * [index] itself. Positions outside the queue and songs without artwork are skipped, and
+     * neighbours that share an album only appear once.
+     */
+    fun neighborArtworkUris(queue: List<Song>, index: Int, radius: Int = 1): List<String> {
+        if (index !in queue.indices) return emptyList()
+        return (index - radius..index + radius)
+            .asSequence()
+            .filter { it != index && it in queue.indices }
+            .mapNotNull { queue[it].albumArtUriString?.takeIf { uri -> uri.isNotBlank() } }
+            .distinct()
+            .toList()
+    }
 }

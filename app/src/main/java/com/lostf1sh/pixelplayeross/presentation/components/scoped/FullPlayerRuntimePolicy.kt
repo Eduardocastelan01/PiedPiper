@@ -20,25 +20,25 @@ internal data class FullPlayerRuntimePolicy(
  * changes only when crossing the 0.985 / 0.95 thresholds. This avoids per-frame
  * recomposition of the caller during gestures.
  *
- * [currentSheetState] and [bottomSheetOpenFraction] are used as `remember` keys
- * because they change infrequently (state transitions / queue sheet interactions).
+ * [currentSheetState] and [isQueueOccludingPlayer] are used as `remember` keys because they
+ * only flip on sheet state transitions or when the queue crosses its occlusion threshold. The
+ * queue's open fraction itself follows the finger, so it must not be passed in here.
  */
 @Composable
 internal fun rememberFullPlayerRuntimePolicy(
     currentSheetState: PlayerSheetState,
     expansionFraction: Animatable<Float, AnimationVector1D>,
-    bottomSheetOpenFraction: Float
+    isQueueOccludingPlayer: Boolean
 ): FullPlayerRuntimePolicy {
-    val allowRealtimeUpdates by remember(currentSheetState, bottomSheetOpenFraction) {
+    val allowRealtimeUpdates by remember(currentSheetState, isQueueOccludingPlayer) {
         derivedStateOf {
             val ef = expansionFraction.value
             val alpha = (ef - 0.25f).coerceIn(0f, 0.75f) / 0.75f
-            val isOccluded = bottomSheetOpenFraction >= 0.08f
 
             currentSheetState == PlayerSheetState.EXPANDED &&
                 ef >= 0.985f &&
                 alpha >= 0.95f &&
-                !isOccluded
+                !isQueueOccludingPlayer
         }
     }
 

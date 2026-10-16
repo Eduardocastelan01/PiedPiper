@@ -24,9 +24,11 @@ class TransitionRepositoryImpl @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun resolveTransitionSettings(
         playlistId: String,
-        fromTrackId: String,
-        toTrackId: String
+        fromTrackId: String?,
+        toTrackId: String?
     ): Flow<TransitionResolution> {
+        // Chain the lookups according to priority: specific -> playlist -> global
+        if (fromTrackId == null || toTrackId == null) return resolvePlaylistDefault(playlistId)
         return transitionDao.getSpecificRule(playlistId, fromTrackId, toTrackId)
             .flatMapLatest { specificRule ->
                 if (specificRule != null) {
@@ -37,26 +39,30 @@ class TransitionRepositoryImpl @Inject constructor(
                         )
                     )
                 } else {
-                    transitionDao.getPlaylistDefaultRule(playlistId).flatMapLatest { playlistRule ->
-                        if (playlistRule != null) {
-                            flowOf(
-                                TransitionResolution(
-                                    settings = playlistRule.settings,
-                                    source = TransitionSource.PLAYLIST_DEFAULT,
-                                )
-                            )
-                        } else {
-                            userPreferences.globalTransitionSettingsFlow.map { settings ->
-                                TransitionResolution(
-                                    settings = settings,
-                                    source = TransitionSource.GLOBAL_DEFAULT,
-                                )
-                            }
-                        }
-                    }
+                    resolvePlaylistDefault(playlistId)
                 }
             }
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun resolvePlaylistDefault(playlistId: String): Flow<TransitionResolution> =
+        transitionDao.getPlaylistDefaultRule(playlistId).flatMapLatest { playlistRule ->
+            if (playlistRule != null) {
+                flowOf(
+                    TransitionResolution(
+                        settings = playlistRule.settings,
+                        source = TransitionSource.PLAYLIST_DEFAULT,
+                    )
+                )
+            } else {
+                userPreferences.globalTransitionSettingsFlow.map { settings ->
+                    TransitionResolution(
+                        settings = settings,
+                        source = TransitionSource.GLOBAL_DEFAULT,
+                    )
+                }
+            }
+        }
 
     override fun getAllRulesForPlaylist(playlistId: String): Flow<List<TransitionRule>> {
         return transitionDao.getAllRulesForPlaylist(playlistId).map { entities ->

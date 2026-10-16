@@ -59,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextGeometricTransform
@@ -67,10 +68,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.view.HapticFeedbackConstantsCompat
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.backup.model.BackupSection
 import com.lostf1sh.pixelplayeross.data.backup.model.ModuleRestoreDetail
 import com.lostf1sh.pixelplayeross.data.backup.model.RestorePlan
+import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
+import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -475,8 +479,21 @@ private fun BackupSectionSelectableCardShared(
         label = "backup_section_icon_tint"
     )
 
+    val view = LocalView.current
+    val appHapticsConfig = LocalAppHapticsConfig.current
+    val handleToggle = {
+        if (enabled) {
+            performAppCompatHapticFeedback(
+                view,
+                appHapticsConfig,
+                HapticFeedbackConstantsCompat.GESTURE_START
+            )
+            onToggle()
+        }
+    }
+
     Surface(
-        onClick = onToggle,
+        onClick = handleToggle,
         enabled = enabled,
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -538,7 +555,7 @@ private fun BackupSectionSelectableCardShared(
 
                 Switch(
                     checked = selected,
-                    onCheckedChange = { onToggle() },
+                    onCheckedChange = { handleToggle() },
                     enabled = enabled,
                     thumbContent = {
                         AnimatedContent(

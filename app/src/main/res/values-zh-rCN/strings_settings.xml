@@ -61,6 +61,10 @@
     <string name="setcat_external_lyrics_subtitle">本地无歌词时允许从 lrclib.net 搜索、手动获取歌词</string>
     <string name="setcat_external_artist_images_title">来自 Deezer 的歌手封面</string>
     <string name="setcat_external_artist_images_subtitle">歌手图片缺失时从 Deezer 获取并缓存到本地</string>
+    <string name="setcat_smart_mix_history_title">Smart Mix 历史记录</string>
+    <string name="setcat_smart_mix_history_subtitle">最近的请求，以及用于避免新混音与上次重复的记忆。</string>
+    <string name="setcat_smart_mix_history_action">清除历史记录</string>
+    <string name="setcat_smart_mix_history_cleared">Smart Mix 历史记录已清除</string>
     <string name="setcat_lyrics_management">歌词管理</string>
     <string name="setcat_lyrics_source_priority_label">歌词来源优先级</string>
     <string name="setcat_lyrics_source_priority_desc">获取歌词时选择优先尝试的来源</string>
@@ -69,6 +73,13 @@
     <string name="setcat_lyrics_local_first">优先本地(.lrc)歌词</string>
     <string name="setcat_reset_imported_lyrics_title">重置导入的歌词</string>
     <string name="setcat_reset_imported_lyrics_subtitle">清除数据库内全部导入的歌词</string>
+    <string name="setcat_lyrics_title">歌词</string>
+    <string name="setcat_lyrics_subtitle">文字大小、模糊效果与歌词来源</string>
+    <string name="setcat_lyrics_readability_section">可读性与动效</string>
+    <string name="setcat_lyrics_font_size_title">歌词字号</string>
+    <string name="setcat_lyrics_font_size_subtitle">同步歌词与纯文本歌词的文字大小</string>
+    <string name="setcat_lyrics_font_size_value">%1$.0f sp</string>
+    <string name="setcat_lyrics_blur_requires_animated">请在实验性功能中开启动画歌词以使用此效果。</string>
 
     <string name="setcat_global_theme">全局主题</string>
     <string name="setcat_app_language_label">应用语言</string>
@@ -76,11 +87,17 @@
     <string name="setcat_language_system">系统默认</string>
     <string name="setcat_app_theme_label">应用主题</string>
     <string name="setcat_app_theme_desc">在浅色、深色、跟随系统之间切换</string>
+    <string name="setcat_theme_preset_label">主题预设</string>
+    <string name="setcat_theme_preset_desc">默认跟随壁纸配色。AMOLED 使用纯黑背景，并始终保持深色。</string>
+    <string name="setcat_theme_preset_default">默认</string>
+    <string name="setcat_theme_preset_amoled">AMOLED</string>
     <string name="setcat_theme_light">浅色主题</string>
     <string name="setcat_theme_dark">深色主题</string>
     <string name="setcat_theme_follow_system">跟随系统</string>
     <string name="setcat_smooth_corners_title">使用圆润圆角</string>
     <string name="setcat_smooth_corners_subtitle">使用高级圆角样式提升观感，低端设备可能出现性能下降</string>
+    <string name="setcat_show_scrollbar_title">显示滚动条</string>
+    <string name="setcat_show_scrollbar_subtitle">在音乐列表中显示侧边滚动条，便于快速滚动。</string>
     <string name="setcat_now_playing">正在播放</string>
     <string name="setcat_player_theme_label">播放器主题</string>
     <string name="setcat_player_theme_desc">选择悬浮播放器界面样式</string>
@@ -129,6 +146,10 @@
     <string name="setcat_background_playback">后台播放</string>
     <string name="setcat_keep_playing_label">划掉后台后继续播放</string>
     <string name="setcat_keep_playing_desc">关闭此项，从最近任务划除应用就会停止播放</string>
+    <string name="setcat_battery_optimization_title">电池优化</string>
+    <string name="setcat_battery_optimization_subtitle">禁用电池优化以防止播放中断。</string>
+    <string name="setcat_toast_battery_already_disabled">电池优化已被禁用</string>
+    <string name="setcat_toast_battery_settings_unavailable">无法打开电池设置</string>
     <string name="setcat_replaygain_section">音量标准化(ReplayGain)</string>
     <string name="setcat_replaygain_enable_title">启用 ReplayGain</string>
     <string name="setcat_replaygain_enable_subtitle">读取音频文件元数据，统一各歌曲播放音量</string>
@@ -165,6 +186,8 @@
     <string name="setcat_player_gestures">播放器手势</string>
     <string name="setcat_tap_bg_closes_title">点击背景关闭播放器</string>
     <string name="setcat_tap_bg_closes_subtitle">点击模糊背景区域收起播放器弹窗</string>
+    <string name="setcat_mini_player_swipe_to_skip_title">滑动切换歌曲</string>
+    <string name="setcat_mini_player_swipe_to_skip_subtitle">在迷你播放器上向左滑动切到下一首，向右滑动切到上一首。改为向下滑动关闭迷你播放器。</string>
     <string name="setcat_haptics">震动反馈</string>
     <string name="setcat_haptic_feedback_title">开启震动反馈</string>
     <string name="setcat_haptic_feedback_subtitle">应用内操作触发震动</string>
@@ -328,4 +351,19 @@
     <string name="updates_notification_text">PixelPlayerOSS %1$s 已可安装。</string>
     <string name="updates_notification_confirm_title">完成 PixelPlayerOSS 更新</string>
     <string name="updates_notification_confirm_text">点击以确认安装。</string>
+    <string name="setcat_playback_behavior">播放</string>
+    <string name="setcat_autoplay_on_skip_title">跳过时自动播放</string>
+    <string name="setcat_autoplay_on_skip_subtitle">暂停时切换到其他歌曲后自动开始播放。</string>
+    <string name="playback_speed_description">音调保持不变。适用于播放的所有内容。</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s 倍</string>
+    <string name="playback_speed_decrease">降低播放速度</string>
+    <string name="playback_speed_increase">提高播放速度</string>
+    <string name="playback_speed_presets">预设</string>
+    <string name="playback_speed_custom_action">输入精确速度</string>
+    <string name="playback_speed_custom_title">精确播放速度</string>
+    <string name="playback_speed_custom_field_label">速度</string>
+    <string name="playback_speed_custom_supporting">%1$s× 至 %2$s×，最多两位小数</string>
+    <string name="playback_speed_custom_error">请输入 %1$s× 至 %2$s× 之间的速度</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

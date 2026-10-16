@@ -27,4 +27,40 @@
     <plurals name="sleep_timer_play_count_times">
         <item quantity="other">%d회</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="other">활동일 %d일</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="other">아티스트 %d명</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="other">%d일</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="other">%d회 재생</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="other">세션 %d회</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="other">트랙 %d곡</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="other">플레이리스트 %d개를 삭제하시겠습니까?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="other">플레이리스트 %d개를 정말 삭제하시겠습니까?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="other">%d곡</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="other">%d분 전</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="other">%d시간 전</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="other">%d일 전</item>
+    </plurals>
 </resources>

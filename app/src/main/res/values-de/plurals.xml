@@ -36,4 +36,52 @@
         <item quantity="one">%d Mal</item>
         <item quantity="other">%d Mal</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d aktiver Tag</item>
+        <item quantity="other">%d aktive Tage</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d Künstler</item>
+        <item quantity="other">%d Künstler</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d Wiedergabe</item>
+        <item quantity="other">%d Wiedergaben</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d Sitzung</item>
+        <item quantity="other">%d Sitzungen</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d Titel</item>
+        <item quantity="other">%d Titel</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">%d Playlist löschen?</item>
+        <item quantity="other">%d Playlists löschen?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">%d Playlist wirklich löschen?</item>
+        <item quantity="other">%d Playlists wirklich löschen?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d Song</item>
+        <item quantity="other">%d Songs</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">Vor %d Minute</item>
+        <item quantity="other">Vor %d Minuten</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">Vor %d Stunde</item>
+        <item quantity="other">Vor %d Stunden</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">Vor %d Tag</item>
+        <item quantity="other">Vor %d Tagen</item>
+    </plurals>
 </resources>

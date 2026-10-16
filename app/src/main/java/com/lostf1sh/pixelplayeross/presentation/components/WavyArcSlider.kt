@@ -20,12 +20,26 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.view.HapticFeedbackConstantsCompat
+import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
+import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import kotlin.math.*
+
+/** Haptic resolution of [WavyArcSlider]: one tick per 1% of the value range. */
+private const val HAPTIC_STEPS_PER_RANGE = 100f
+
+/**
+ * Maps [value] onto a 0..100 step index within [range] so haptics tick at most once per 1% of the
+ * range, independent of how wide the range is (the EQ knobs span 0..1000).
+ */
+internal fun wavyArcHapticStep(value: Float, range: ClosedFloatingPointRange<Float>): Int {
+    val span = range.endInclusive - range.start
+    if (span <= 0f) return 0
+    return (((value - range.start) / span) * HAPTIC_STEPS_PER_RANGE).roundToInt()
+}
 
 @Composable
 fun WavyArcSlider(
@@ -45,8 +59,9 @@ fun WavyArcSlider(
     sweepAngle: Float = 270f
 ) {
     val density = LocalDensity.current
-    val hapticFeedback = LocalHapticFeedback.current
     val view = LocalView.current
+    // pointerInput below is not keyed on the config, so read the latest value inside the gesture.
+    val appHapticsConfig by rememberUpdatedState(LocalAppHapticsConfig.current)
     
     val trackThicknessPx = with(density) { trackThickness.toPx() }
     val thumbSizePx = with(density) { thumbSize.toPx() }
@@ -64,7 +79,7 @@ fun WavyArcSlider(
         label = "ThumbScale"
     )
 
-    var lastHapticValue by remember { mutableIntStateOf(value.roundToInt()) }
+    var lastHapticStep by remember(valueRange) { mutableIntStateOf(wavyArcHapticStep(value, valueRange)) }
 
     BoxWithConstraints(
         modifier = modifier,
@@ -110,10 +125,14 @@ fun WavyArcSlider(
                         fun dispatchValue(point: Offset, forceHaptic: Boolean = false) {
                             val newValue = mapTouchToValue(point)
                             onValueChange(newValue)
-                            val newInt = newValue.roundToInt()
-                            if (forceHaptic || newInt != lastHapticValue) {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                lastHapticValue = newInt
+                            val newStep = wavyArcHapticStep(newValue, valueRange)
+                            if (forceHaptic || newStep != lastHapticStep) {
+                                performAppCompatHapticFeedback(
+                                    view,
+                                    appHapticsConfig,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK
+                                )
+                                lastHapticStep = newStep
                             }
                         }
 

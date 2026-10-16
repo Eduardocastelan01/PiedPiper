@@ -3,11 +3,28 @@ package com.lostf1sh.pixelplayeross.presentation.components
 import androidx.compose.ui.unit.dp
 import com.lostf1sh.pixelplayeross.data.model.SyncedLine
 import com.lostf1sh.pixelplayeross.data.model.SyncedWord
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class LyricsSheetLogicTest {
+
+    @Test
+    fun lyricsSheetCornerRadius_staysSquareAtRest() {
+        assertNull(lyricsSheetCornerRadius(0f))
+    }
+
+    @Test
+    fun lyricsSheetCornerRadius_staysSquareWhenEnterSpringOvershootsBelowZero() {
+        assertNull(lyricsSheetCornerRadius(-0.05f))
+    }
+
+    @Test
+    fun lyricsSheetCornerRadius_growsWithPredictiveBackProgress() {
+        assertEquals(16.dp, lyricsSheetCornerRadius(0.5f))
+        assertEquals(32.dp, lyricsSheetCornerRadius(1f))
+    }
 
     @Test
     fun sanitizeSyncedWords_removesLeadingTags_preventsOverlap() {

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Heutigen Mix anpassen</string>
+    <string name="mix_daily_subtitle">Sieh dir eine Änderung an, bevor du sie heute übernimmst</string>
+    <string name="mix_library_subtitle">Erstelle einen Mix aus deiner Musikbibliothek</string>
+    <string name="mix_close">Mix schließen</string>
+    <string name="mix_request_label">Was möchtest du hören?</string>
+    <string name="mix_request_placeholder">Ein Künstler, Genre, eine Stimmung oder Aktivität</string>
+    <string name="mix_suggest_recent">Letzte Anfrage: %1$s</string>
+    <string name="mix_suggest_rediscover">%1$s neu entdecken</string>
+    <string name="mix_back">Zurück zu deiner Anfrage</string>
+    <string name="mix_done">Fertig</string>
+    <string name="mix_thinking">Denke nach…</string>
+    <string name="mix_refine">Mix verfeinern</string>
+    <string name="mix_length">Playlist-Länge</string>
+    <string name="mix_auto">Auto</string>
+    <string name="mix_up_to">Bis zu %1$d</string>
+    <string name="mix_energy">Energie</string>
+    <string name="mix_energy_calm">Ruhig</string>
+    <string name="mix_energy_steady">Ausgeglichen</string>
+    <string name="mix_energy_energetic">Energiegeladen</string>
+    <string name="mix_refine_hint">Auto richtet sich nach deiner Anfrage. Eine Energiestufe fügt eine Bedingung hinzu; dadurch passen eventuell weniger Songs.</string>
+    <string name="mix_selection_summary">Länge: %1$s · Energie: %2$s</string>
+    <string name="mix_edit_request">Anfrage bearbeiten</string>
+    <string name="mix_playlist_name">Playlist-Name</string>
+    <string name="mix_short_result">Deine Bibliothek hat weniger passende Songs als gewünscht. Deine Vorgaben wurden beibehalten.</string>
+    <string name="mix_preview_action">Mix-Vorschau</string>
+    <string name="mix_play">Abspielen</string>
+    <string name="mix_use_today">Für heute übernehmen</string>
+    <string name="mix_save">Playlist speichern</string>
+    <string name="mix_saved_action">Gespeichert</string>
+    <string name="mix_saved">Als %1$s gespeichert</string>
+    <string name="mix_save_failed">Playlist konnte nicht gespeichert werden. Deine Vorschau ist noch da – versuch es nochmal.</string>
+    <string name="mix_no_matches">Keine passenden Songs gefunden. Passe deine Anfrage an oder setze die Energie auf Auto.</string>
+    <string name="mix_daily_updated">Daily Mix aktualisiert</string>
+    <string name="mix_undo">Rückgängig</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d passender Song · %2$d Min.</item>
+        <item quantity="other">%1$d passende Songs · %2$d Min.</item>
+    </plurals>
+</resources>

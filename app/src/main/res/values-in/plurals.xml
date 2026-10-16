@@ -36,4 +36,40 @@
         <item quantity="one">%d kali</item>
         <item quantity="other">%d kali</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="other">%d hari aktif</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="other">%d artis</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="other">%d hari</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="other">%d putaran</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="other">%d sesi</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="other">%d lagu</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="other">Hapus %d playlist?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="other">Apakah Anda yakin ingin menghapus %d playlist?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="other">%d Lagu</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="other">%d menit yang lalu</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="other">%d jam yang lalu</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="other">%d hari yang lalu</item>
+    </plurals>
 </resources>

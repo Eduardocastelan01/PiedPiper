@@ -54,4 +54,76 @@
         <item quantity="many">%d раз</item>
         <item quantity="other">%d раз</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d активный день</item>
+        <item quantity="few">%d активных дня</item>
+        <item quantity="many">%d активных дней</item>
+        <item quantity="other">%d активного дня</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d исполнитель</item>
+        <item quantity="few">%d исполнителя</item>
+        <item quantity="many">%d исполнителей</item>
+        <item quantity="other">%d исполнителя</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d прослушивание</item>
+        <item quantity="few">%d прослушивания</item>
+        <item quantity="many">%d прослушиваний</item>
+        <item quantity="other">%d прослушивания</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d сеанс</item>
+        <item quantity="few">%d сеанса</item>
+        <item quantity="many">%d сеансов</item>
+        <item quantity="other">%d сеанса</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d трек</item>
+        <item quantity="few">%d трека</item>
+        <item quantity="many">%d треков</item>
+        <item quantity="other">%d трека</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Удалить %d плейлист?</item>
+        <item quantity="few">Удалить %d плейлиста?</item>
+        <item quantity="many">Удалить %d плейлистов?</item>
+        <item quantity="other">Удалить %d плейлиста?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Вы уверены, что хотите удалить %d плейлист?</item>
+        <item quantity="few">Вы уверены, что хотите удалить %d плейлиста?</item>
+        <item quantity="many">Вы уверены, что хотите удалить %d плейлистов?</item>
+        <item quantity="other">Вы уверены, что хотите удалить %d плейлиста?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d песня</item>
+        <item quantity="few">%d песни</item>
+        <item quantity="many">%d песен</item>
+        <item quantity="other">%d песни</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d минуту назад</item>
+        <item quantity="few">%d минуты назад</item>
+        <item quantity="many">%d минут назад</item>
+        <item quantity="other">%d минуты назад</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d час назад</item>
+        <item quantity="few">%d часа назад</item>
+        <item quantity="many">%d часов назад</item>
+        <item quantity="other">%d часа назад</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d день назад</item>
+        <item quantity="few">%d дня назад</item>
+        <item quantity="many">%d дней назад</item>
+        <item quantity="other">%d дня назад</item>
+    </plurals>
 </resources>

@@ -93,6 +93,7 @@ import androidx.navigation.NavController
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveTopBarContent
+import com.lostf1sh.pixelplayeross.presentation.settings.search.settingHighlight
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ArtistSettingsViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -103,6 +104,7 @@ import kotlinx.collections.immutable.persistentListOf
 @Composable
 fun ArtistSettingsScreen(
     navController: NavController,
+    highlightKey: String? = null,
     viewModel: ArtistSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -225,6 +227,7 @@ fun ArtistSettingsScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
+                            modifier = Modifier.settingHighlight("item_artist_char_delimiters", highlightKey),
                             onClick = {
                                 navController.navigateSafely("delimiter_config")
                             }
@@ -256,6 +259,7 @@ fun ArtistSettingsScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
+                            modifier = Modifier.settingHighlight("item_artist_word_delimiters", highlightKey),
                             onClick = {
                                 navController.navigateSafely("word_delimiter_config")
                             }
@@ -272,7 +276,8 @@ fun ArtistSettingsScreen(
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
-                            }
+                            },
+                            modifier = Modifier.settingHighlight("item_artist_extract_from_title", highlightKey)
                         )
                     }
                 }
@@ -301,7 +306,8 @@ fun ArtistSettingsScreen(
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
-                            }
+                            },
+                            modifier = Modifier.settingHighlight("item_artist_group_by_album_artist", highlightKey)
                         )
                     }
                 }

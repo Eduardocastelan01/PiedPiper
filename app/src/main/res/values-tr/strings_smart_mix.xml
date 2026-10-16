@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Bugünün miksini ayarla</string>
+    <string name="mix_daily_subtitle">Bugün kullanmadan önce değişikliği önizleyin</string>
+    <string name="mix_library_subtitle">Müzik kitaplığınızdan bir miks oluşturun</string>
+    <string name="mix_close">Miksi kapat</string>
+    <string name="mix_request_label">Ne dinlemek istersiniz?</string>
+    <string name="mix_request_placeholder">Bir sanatçı, tür, ruh hali veya etkinlik</string>
+    <string name="mix_suggest_recent">Son istek: %1$s</string>
+    <string name="mix_suggest_rediscover">Yeniden keşfet: %1$s</string>
+    <string name="mix_back">İsteğinize geri dönün</string>
+    <string name="mix_done">Tamam</string>
+    <string name="mix_thinking">Düşünülüyor…</string>
+    <string name="mix_refine">Miksinizi ayarlayın</string>
+    <string name="mix_length">Çalma listesi uzunluğu</string>
+    <string name="mix_auto">Otomatik</string>
+    <string name="mix_up_to">En fazla %1$d</string>
+    <string name="mix_energy">Enerji</string>
+    <string name="mix_energy_calm">Sakin</string>
+    <string name="mix_energy_steady">Dengeli</string>
+    <string name="mix_energy_energetic">Enerjik</string>
+    <string name="mix_refine_hint">Otomatik, isteğinizi takip eder. Enerji seçmek bir koşul ekler; daha az şarkı eşleşebilir.</string>
+    <string name="mix_selection_summary">Uzunluk: %1$s · Enerji: %2$s</string>
+    <string name="mix_edit_request">İsteği düzenle</string>
+    <string name="mix_playlist_name">Çalma listesi adı</string>
+    <string name="mix_short_result">Kitaplığınızda istenenden daha az eşleşen şarkı var. Koşullarınızı koruduk.</string>
+    <string name="mix_preview_action">Miksi önizle</string>
+    <string name="mix_play">Oynat</string>
+    <string name="mix_use_today">Bugün için kullan</string>
+    <string name="mix_save">Çalma listesini kaydet</string>
+    <string name="mix_saved_action">Kaydedildi</string>
+    <string name="mix_saved">%1$s olarak kaydedildi</string>
+    <string name="mix_save_failed">Bu çalma listesi kaydedilemedi. Önizlemeniz hâlâ burada; tekrar kaydetmeyi deneyin.</string>
+    <string name="mix_no_matches">Eşleşen şarkı bulunamadı. İsteğinizi düzenleyin veya enerjiyi Otomatik olarak ayarlayın.</string>
+    <string name="mix_daily_updated">Günlük Miks güncellendi</string>
+    <string name="mix_undo">Geri al</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d eşleşen şarkı · %2$d dk</item>
+        <item quantity="other">%1$d eşleşen şarkı · %2$d dk</item>
+    </plurals>
+</resources>

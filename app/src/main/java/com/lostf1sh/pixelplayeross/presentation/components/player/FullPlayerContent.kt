@@ -101,8 +101,10 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Speaker
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AudioBookmarksViewModel
 import androidx.compose.material3.Slider
@@ -237,6 +239,7 @@ fun FullPlayerContent(
     var showLyricsSheet by remember { mutableStateOf(false) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     var showSaveBookmarkDialog by rememberSaveable { mutableStateOf(false) }
+    var showAudioOutputSheet by rememberSaveable { mutableStateOf(false) }
     val bookmarksViewModel: AudioBookmarksViewModel = hiltViewModel()
     
     val lyricsSearchUiState by playerViewModel.lyricsSearchUiState.collectAsStateWithLifecycle()
@@ -755,6 +758,26 @@ fun FullPlayerContent(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val bluetoothOutputName = bluetoothName?.takeIf { isBluetoothEnabled }
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
+                                    .clickable { showAudioOutputSheet = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (bluetoothOutputName != null) {
+                                        Icons.Rounded.Bluetooth
+                                    } else {
+                                        Icons.Rounded.Speaker
+                                    },
+                                    contentDescription = bluetoothOutputName
+                                        ?: stringResource(R.string.player_audio_output_title),
+                                    tint = playerAccentColor
+                                )
+                            }
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
@@ -883,6 +906,13 @@ fun FullPlayerContent(
                 playerViewModel.triggerArtistNavigationFromPlayer(artist.id)
                 showArtistPicker = false
             }
+        )
+    }
+
+    if (showAudioOutputSheet) {
+        AudioOutputBottomSheet(
+            sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
+            onDismiss = { showAudioOutputSheet = false }
         )
     }
 }

@@ -53,6 +53,19 @@ interface TransitionDao {
     @Query("DELETE FROM transition_rules WHERE playlistId = :playlistId AND fromTrackId IS NULL AND toTrackId IS NULL")
     suspend fun deletePlaylistDefaultRule(playlistId: String)
 
+    /**
+     * Deletes every rule (default and specific) that belongs to a playlist.
+     */
+    @Query("DELETE FROM transition_rules WHERE playlistId = :playlistId")
+    suspend fun deleteRulesForPlaylist(playlistId: String)
+
+    /**
+     * Deletes the rules in a playlist that start or end at the given track.
+     * The playlist's default rule is never matched.
+     */
+    @Query("DELETE FROM transition_rules WHERE playlistId = :playlistId AND (fromTrackId = :trackId OR toTrackId = :trackId)")
+    suspend fun deleteRulesForTrack(playlistId: String, trackId: String)
+
     @Query("SELECT * FROM transition_rules")
     suspend fun getAllRulesOnce(): List<TransitionRuleEntity>
 

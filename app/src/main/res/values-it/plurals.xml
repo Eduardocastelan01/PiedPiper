@@ -36,4 +36,64 @@
         <item quantity="one">%d volta</item>
         <item quantity="other">%d volte</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d giorno attivo</item>
+        <item quantity="many">%d giorni attivi</item>
+        <item quantity="other">%d giorni attivi</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d artista</item>
+        <item quantity="many">%d artisti</item>
+        <item quantity="other">%d artisti</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d giorno</item>
+        <item quantity="many">%d giorni</item>
+        <item quantity="other">%d giorni</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d ascolto</item>
+        <item quantity="many">%d ascolti</item>
+        <item quantity="other">%d ascolti</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d sessione</item>
+        <item quantity="many">%d sessioni</item>
+        <item quantity="other">%d sessioni</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d brano</item>
+        <item quantity="many">%d brani</item>
+        <item quantity="other">%d brani</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Eliminare %d playlist?</item>
+        <item quantity="many">Eliminare %d playlist?</item>
+        <item quantity="other">Eliminare %d playlist?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Sei sicuro di voler eliminare %d playlist?</item>
+        <item quantity="many">Sei sicuro di voler eliminare %d playlist?</item>
+        <item quantity="other">Sei sicuro di voler eliminare %d playlist?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d brano</item>
+        <item quantity="many">%d brani</item>
+        <item quantity="other">%d brani</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d minuto fa</item>
+        <item quantity="many">%d minuti fa</item>
+        <item quantity="other">%d minuti fa</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d ora fa</item>
+        <item quantity="many">%d ore fa</item>
+        <item quantity="other">%d ore fa</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d giorno fa</item>
+        <item quantity="many">%d giorni fa</item>
+        <item quantity="other">%d giorni fa</item>
+    </plurals>
 </resources>

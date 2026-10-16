@@ -5,7 +5,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class QueueItem(
     val id: Long,
-    val albumArtUri: String? = null
+    val albumArtUri: String? = null,
+    val title: String = "",
+    val artist: String = "",
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -15,6 +17,8 @@ data class QueueItem(
 
         if (id != other.id) return false
         if (albumArtUri != other.albumArtUri) return false
+        if (title != other.title) return false
+        if (artist != other.artist) return false
 
         return true
     }
@@ -22,6 +26,8 @@ data class QueueItem(
     override fun hashCode(): Int {
         var result = id.hashCode()
         result = 31 * result + (albumArtUri?.hashCode() ?: 0)
+        result = 31 * result + title.hashCode()
+        result = 31 * result + artist.hashCode()
         return result
     }
 }

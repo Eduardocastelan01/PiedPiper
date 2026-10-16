@@ -16,7 +16,7 @@ class VibeVectorTest {
 
     @Test
     fun `chill query ranks a wrongly-tagged song with a chill vibe above an untagged high-energy song`() {
-        // Neither song has a usable genre tag, so the genre-string heuristic sees nothing
+        // Neither song has a usable genre tag, so the old genre-string heuristic sees nothing
         // to go on for either one. Only the measured vibe vector should distinguish them.
         val hiddenChill = song(id = "hidden_chill", title = "Untitled Session", artist = "Unknown", genre = null)
         val loudUntagged = song(id = "loud_untagged", title = "Track Two", artist = "Nobody", genre = "")

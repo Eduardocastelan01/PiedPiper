@@ -3,7 +3,9 @@ package com.lostf1sh.pixelplayeross.data.media
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import androidx.annotation.VisibleForTesting
 import com.kyant.taglib.TagLib
+import com.lostf1sh.pixelplayeross.data.diagnostics.PerformanceMetrics
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.flac.FlacTag
@@ -68,6 +70,15 @@ object AudioMetadataReader {
 
     private const val TAG = "AudioMetadataReader"
 
+    /**
+     * Per-file diagnostic logging (TagLib property maps, parsed fields, fallback hits) runs on
+     * the library-scan hot path, and each line interpolates the file name and, in one case, the
+     * whole TagLib property-key set. The templates are built before Timber checks whether the
+     * line is loggable, so it is gated off entirely. Flip to true only when actively diagnosing
+     * tag parsing.
+     */
+    private const val VERBOSE_LOGGING = false
+
     fun read(context: Context, uri: Uri): AudioMetadata? {
         val tempFile = createTempAudioFileFromUri(context, uri) ?: run {
             Timber.tag(TAG).w("Unable to create temp file for uri: $uri")
@@ -90,6 +101,7 @@ object AudioMetadataReader {
         readArtwork: Boolean = true,
         readCustomMetadata: Boolean = false
     ): AudioMetadata? {
+        val startNanos = System.nanoTime()
         return try {
             ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 val audioProperties = TagLib.getAudioProperties(fd.dup().detachFd())
@@ -100,7 +112,9 @@ object AudioMetadataReader {
                 val metadata = TagLib.getMetadata(fd.dup().detachFd(), readPictures = false)
                 val propertyMap = metadata?.propertyMap ?: emptyMap()
 
-                Timber.tag(TAG).w("TagLib propertyMap keys for ${file.name}: ${propertyMap.keys}")
+                if (VERBOSE_LOGGING) {
+                    Timber.tag(TAG).d("TagLib propertyMap keys for ${file.name}: ${propertyMap.keys}")
+                }
 
                 val title = propertyMap["TITLE"]?.firstOrNull()?.takeIf { it.isNotBlank() }
                 val artists = normalizeArtistMetadataValues(propertyMap["ARTIST"]?.asIterable())
@@ -144,7 +158,9 @@ object AudioMetadataReader {
                     emptyList()
                 }
 
-                Timber.tag(TAG).w("TagLib result for ${file.name}: title=$title, artist=$artist, album=$album, genre=$genre")
+                if (VERBOSE_LOGGING) {
+                    Timber.tag(TAG).d("TagLib result for ${file.name}: title=$title, artist=$artist, album=$album, genre=$genre")
+                }
 
                 val artwork = if (readArtwork) {
                     val pictures = TagLib.getPictures(fd.detachFd())
@@ -160,11 +176,21 @@ object AudioMetadataReader {
                     null
                 }
 
-                val fallback = if (
-                    title == null || artist == null || (readArtwork && artwork == null) || readCustomMetadata
-                ) {
-                    Timber.tag(TAG).w("TagLib incomplete for ${file.name}, trying JAudioTagger fallback...")
-                    readWithJAudioTagger(file, readCustomMetadata = readCustomMetadata)
+                // Custom metadata always goes through JAudioTagger, but only a TagLib gap counts as
+                // a fallback in the performance report.
+                val tagLibIncomplete = title == null || artist == null || (readArtwork && artwork == null)
+                val fallback = if (tagLibIncomplete || readCustomMetadata) {
+                    if (tagLibIncomplete) {
+                        if (VERBOSE_LOGGING) {
+                            Timber.tag(TAG).d("TagLib incomplete for ${file.name}, trying JAudioTagger fallback...")
+                        }
+                        PerformanceMetrics.increment(PerformanceMetrics.Counters.METADATA_FALLBACK_JAUDIOTAGGER)
+                    }
+                    readWithJAudioTagger(
+                        file,
+                        readArtwork = readArtwork,
+                        readCustomMetadata = readCustomMetadata
+                    )
                 } else null
 
                 val resolvedArtists = artists.ifEmpty { fallback?.artists.orEmpty() }
@@ -194,15 +220,24 @@ object AudioMetadataReader {
         } catch (error: Exception) {
             Timber.tag(TAG).e(error, "Unable to read metadata from file: ${file.absolutePath}")
             null
+        } finally {
+            PerformanceMetrics.recordTiming(
+                PerformanceMetrics.Timings.METADATA_READ,
+                (System.nanoTime() - startNanos) / 1_000_000
+            )
         }
     }
 
     /**
      * Fallback reader using JAudioTagger for files where TagLib can't map ID3 frames.
-     * Called when TagLib leaves key metadata or requested artwork unresolved.
+     * Called when TagLib leaves key metadata or requested artwork unresolved, or when custom
+     * metadata is requested. Artwork is decoded only when [readArtwork] is set, so library scans
+     * do not allocate multi-megabyte covers for poorly tagged files.
      */
-    private fun readWithJAudioTagger(
+    @VisibleForTesting
+    internal fun readWithJAudioTagger(
         file: File,
+        readArtwork: Boolean,
         readCustomMetadata: Boolean = false
     ): AudioMetadata? {
         return try {
@@ -212,8 +247,10 @@ object AudioMetadataReader {
             val tag = audioFile.tag
             val header = audioFile.audioHeader
 
-            Timber.tag(TAG).w("JAudioTagger: tag class=${tag?.javaClass?.simpleName}, " +
-                    "header=${header?.format}, sampleRate=${header?.sampleRateAsNumber}")
+            if (VERBOSE_LOGGING) {
+                Timber.tag(TAG).d("JAudioTagger: tag class=${tag?.javaClass?.simpleName}, " +
+                        "header=${header?.format}, sampleRate=${header?.sampleRateAsNumber}")
+            }
 
             val title = tag?.getFirst(FieldKey.TITLE)?.takeIf { it.isNotBlank() }
             val artists = normalizeArtistMetadataValues(
@@ -255,17 +292,23 @@ object AudioMetadataReader {
             val bitrate = header?.bitRateAsNumber?.takeIf { it > 0 }?.toInt()?.let { it * 1000 }
             val sampleRate = header?.sampleRateAsNumber?.takeIf { it > 0 }
 
-            val artwork = tag?.firstArtwork?.let { art ->
-                art.binaryData?.takeIf { it.isNotEmpty() && isValidImageData(it) }?.let { data ->
-                    AudioMetadataArtwork(
-                        bytes = data,
-                        mimeType = art.mimeType?.takeIf { it.isNotBlank() } ?: guessImageMimeType(data)
-                    )
+            val artwork = if (readArtwork) {
+                tag?.firstArtwork?.let { art ->
+                    art.binaryData?.takeIf { it.isNotEmpty() && isValidImageData(it) }?.let { data ->
+                        AudioMetadataArtwork(
+                            bytes = data,
+                            mimeType = art.mimeType?.takeIf { it.isNotBlank() } ?: guessImageMimeType(data)
+                        )
+                    }
                 }
+            } else {
+                null
             }
 
-            Timber.tag(TAG).w("JAudioTagger result for ${file.name}: title=$title, artist=$artist, " +
-                    "album=$album, genre=$genre, artwork=${artwork != null}")
+            if (VERBOSE_LOGGING) {
+                Timber.tag(TAG).d("JAudioTagger result for ${file.name}: title=$title, artist=$artist, " +
+                        "album=$album, genre=$genre, artwork=${artwork != null}")
+            }
 
             AudioMetadata(
                 title = title,

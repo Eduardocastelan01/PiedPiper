@@ -21,7 +21,7 @@ object NlpLexicon {
         "this", "my", "me", "i", "you", "it", "is", "are", "want", "wanna", "gonna",
         // Spanish function words
         "de", "la", "el", "y", "en", "para", "con", "por", "un", "una", "lo", "los", "las",
-        "que", "mi", "mis", "es", "algo", "del", "al",
+        "que", "mi", "mis", "es", "algo", "del", "al", "o", "pero",
         // Generic music-request filler (both languages)
         "music", "song", "playlist", "songs", "tracks", "track", "cancion", "canciones",
         "musica", "reproducir", "play", "list", "lista", "temas", "tema", "quiero",
@@ -35,21 +35,36 @@ object NlpLexicon {
     /** Full-year decade markers like `1990`, `1980s`, `2010`. Group 1 is the four-digit year. */
     val FULL_DECADE = "^(\\d{4})s?$".toRegex()
 
+    /**
+     * Spelled-out decades, normalized, mapped to the decade's first year. The digit forms are
+     * handled by [SHORT_DECADE]/[FULL_DECADE], but people write the word at least as often
+     * ("nineties rock", "rock de los noventa"), and without this the word is just an ordinary
+     * content term that matches nothing in the library.
+     */
+    val spelledDecades: Map<String, Int> = mapOf(
+        "fifties" to 1950, "cincuenta" to 1950, "cincuentas" to 1950,
+        "sixties" to 1960, "sesenta" to 1960, "sesentas" to 1960,
+        "seventies" to 1970, "setenta" to 1970, "setentas" to 1970,
+        "eighties" to 1980, "ochenta" to 1980, "ochentas" to 1980,
+        "nineties" to 1990, "noventa" to 1990, "noventas" to 1990,
+    ).mapKeys { NlpText.normalize(it.key) }
+
+    /** The first year of the decade a spelled-out token names, or null if it names none. */
+    fun spelledDecadeStart(normalizedToken: String): Int? = spelledDecades[normalizedToken]
+
     /** True if a normalized token is a stopword and should be dropped from the query. */
     fun isStopWord(normalizedToken: String): Boolean = normalizedToken in stopWords
 
     /**
-     * Tokens that negate the *following* content term ("rock without metal", "sin reggaeton",
-     * "no sad songs"). Stored normalized. Matched against normalized tokens during parsing,
-     * before stemming, so the word after one of these is routed to the negated slot instead of
-     * the positive one.
+     * Cues that open a negated list or phrase, through the next positive clause boundary.
+     * Stored normalized and matched before stemming.
      */
     val negationCues: Set<String> = setOf(
         "no", "not", "without", "except", "excluding", "avoid", "skip",
         "sin", "menos", "excepto", "salvo", "nada",
     ).mapTo(HashSet()) { NlpText.normalize(it) }
 
-    /** True if a normalized token negates the content term that follows it. */
+    /** True if a normalized token opens a negated scope. */
     fun isNegationCue(normalizedToken: String): Boolean = normalizedToken in negationCues
 
     /**

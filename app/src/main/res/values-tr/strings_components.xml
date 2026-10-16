@@ -109,6 +109,8 @@
     <string name="lyrics_more_show_romanization">Romanizasyonu göster</string>
     <string name="lyrics_more_show_translations">Çevirileri göster</string>
     <string name="multi_selection_playlists_count_upper">%1$d ÇALMA LİSTESİ</string>
+    <string name="multi_selection_genres_count_upper">%1$d TÜR</string>
+    <string name="multi_selection_genres_queue_hint">Bu türlerdeki tüm şarkılarda toplu işlemler gerçekleştirin.</string>
     <string name="multi_selection_selected">seçildi</string>
     <string name="multi_selection_songs_count_upper">%1$d ŞARKI</string>
     <string name="no_internet_dialog_message">Bu içerik için internet bağlantısı gereklidir. Lütfen ağ ayarlarınızı kontrol edip tekrar deneyin.</string>
@@ -127,6 +129,10 @@
     <string name="reorder_tabs_reset_dialog_body">Sekme sırası varsayılana sıfırlansın mı?</string>
     <string name="reorder_tabs_reset_dialog_title">Sırayı sıfırla</string>
     <string name="reorder_tabs_sheet_title">Kitaplık sekmelerini yeniden sırala</string>
+    <string name="reorder_tabs_visible_title">Görünen sekmeler</string>
+    <string name="reorder_tabs_hidden_title">Gizli sekmeler</string>
+    <string name="reorder_tabs_hide_action">Sekmeyi gizle</string>
+    <string name="reorder_tabs_show_action">Sekmeyi göster</string>
     <string name="search_playlists_hint">Çalma listelerini ara…</string>
     <string name="song_field_album">Albüm</string>
     <string name="song_field_album_artist">Albüm sanatçısı</string>

@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import androidx.compose.material.icons.rounded.Tune
@@ -126,7 +127,9 @@ fun LyricsFloatingToolbar(
                 inactiveContentColor = onBackgroundColor,
                 activeCornerRadius = 50.dp,
                 onClick = { onShowSyncedLyricsChange(true) },
-                text = stringResource(R.string.presentation_batch_g_lyrics_mode_synced)
+                text = stringResource(R.string.presentation_batch_g_lyrics_mode_synced),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             ToggleSegmentButton(
@@ -139,7 +142,9 @@ fun LyricsFloatingToolbar(
                 inactiveContentColor = onBackgroundColor,
                 activeCornerRadius = 50.dp,
                 onClick = { onShowSyncedLyricsChange(false) },
-                text = stringResource(R.string.presentation_batch_g_lyrics_mode_static)
+                text = stringResource(R.string.presentation_batch_g_lyrics_mode_static),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
         

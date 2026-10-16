@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Настроить сегодняшний микс</string>
+    <string name="mix_daily_subtitle">Оцените изменения, прежде чем применить их сегодня</string>
+    <string name="mix_library_subtitle">Создайте микс из своей медиатеки</string>
+    <string name="mix_close">Закрыть микс</string>
+    <string name="mix_request_label">Что хотите послушать?</string>
+    <string name="mix_request_placeholder">Исполнитель, жанр, настроение или занятие</string>
+    <string name="mix_suggest_recent">Недавний запрос: %1$s</string>
+    <string name="mix_suggest_rediscover">Открыть заново: %1$s</string>
+    <string name="mix_back">Назад к запросу</string>
+    <string name="mix_done">Готово</string>
+    <string name="mix_thinking">Подбираем…</string>
+    <string name="mix_refine">Уточните микс</string>
+    <string name="mix_length">Длина плейлиста</string>
+    <string name="mix_auto">Авто</string>
+    <string name="mix_up_to">До %1$d</string>
+    <string name="mix_energy">Энергия</string>
+    <string name="mix_energy_calm">Спокойная</string>
+    <string name="mix_energy_steady">Умеренная</string>
+    <string name="mix_energy_energetic">Энергичная</string>
+    <string name="mix_refine_hint">«Авто» следует вашему запросу. Выбор энергии добавляет условие — подходящих треков может оказаться меньше.</string>
+    <string name="mix_selection_summary">Длина: %1$s · Энергия: %2$s</string>
+    <string name="mix_edit_request">Изменить запрос</string>
+    <string name="mix_playlist_name">Название плейлиста</string>
+    <string name="mix_short_result">В вашей медиатеке меньше подходящих треков, чем запрошено. Мы сохранили ваши условия.</string>
+    <string name="mix_preview_action">Предпросмотр микса</string>
+    <string name="mix_play">Воспроизвести</string>
+    <string name="mix_use_today">Использовать сегодня</string>
+    <string name="mix_save">Сохранить плейлист</string>
+    <string name="mix_saved_action">Сохранено</string>
+    <string name="mix_saved">Сохранено как «%1$s»</string>
+    <string name="mix_save_failed">Не удалось сохранить плейлист. Предпросмотр никуда не делся — попробуйте сохранить ещё раз.</string>
+    <string name="mix_no_matches">Подходящих треков не найдено. Измените запрос или выберите для энергии значение «Авто».</string>
+    <string name="mix_daily_updated">Daily Mix обновлён</string>
+    <string name="mix_undo">Отменить</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d подходящий трек · %2$d мин</item>
+        <item quantity="few">%1$d подходящих трека · %2$d мин</item>
+        <item quantity="many">%1$d подходящих треков · %2$d мин</item>
+        <item quantity="other">%1$d подходящего трека · %2$d мин</item>
+    </plurals>
+</resources>

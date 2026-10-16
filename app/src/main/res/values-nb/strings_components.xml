@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">Vis romanisering</string>
     <string name="lyrics_more_show_translations">Vis oversettelser</string>
     <string name="multi_selection_playlists_count_upper">%1$d SPILLELISTER</string>
+    <string name="multi_selection_genres_count_upper">%1$d SJANGERE</string>
+    <string name="multi_selection_genres_queue_hint">Utfør gruppehandlinger på alle sanger i disse sjangerne.</string>
     <string name="multi_selection_selected">valgt</string>
     <string name="multi_selection_songs_count_upper">%1$d SANGER</string>
     <string name="no_internet_dialog_message">Dette innholdet krever internettforbindelse. Vennligst sjekk nettverksinnstillingene dine og prøv igjen.</string>
@@ -117,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">Tilbakestill fanerekkefølgen til standard?</string>
     <string name="reorder_tabs_reset_dialog_title">Tilbakestill rekkefølge</string>
     <string name="reorder_tabs_sheet_title">Endre rekkefølge på bibliotekfaner</string>
+    <string name="reorder_tabs_visible_title">Synlige faner</string>
+    <string name="reorder_tabs_hidden_title">Skjulte faner</string>
+    <string name="reorder_tabs_hide_action">Skjul fane</string>
+    <string name="reorder_tabs_show_action">Vis fane</string>
     <string name="search_playlists_hint">Søk etter spillelister…</string>
     <string name="song_field_album">Album</string>
     <string name="song_field_album_artist">Albumartist</string>

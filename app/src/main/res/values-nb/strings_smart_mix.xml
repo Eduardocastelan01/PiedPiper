@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Juster dagens miks</string>
+    <string name="mix_daily_subtitle">Forhåndsvis en endring før du bruker den i dag</string>
+    <string name="mix_library_subtitle">Lag en miks fra musikkbiblioteket ditt</string>
+    <string name="mix_close">Lukk miks</string>
+    <string name="mix_request_label">Hva vil du høre på?</string>
+    <string name="mix_request_placeholder">En artist, sjanger, stemning eller aktivitet</string>
+    <string name="mix_suggest_recent">Nylig forespørsel: %1$s</string>
+    <string name="mix_suggest_rediscover">Gjenoppdag %1$s</string>
+    <string name="mix_back">Tilbake til forespørselen</string>
+    <string name="mix_done">Ferdig</string>
+    <string name="mix_thinking">Tenker…</string>
+    <string name="mix_refine">Finjuster miksen</string>
+    <string name="mix_length">Lengde på spilleliste</string>
+    <string name="mix_auto">Auto</string>
+    <string name="mix_up_to">Opptil %1$d</string>
+    <string name="mix_energy">Energi</string>
+    <string name="mix_energy_calm">Rolig</string>
+    <string name="mix_energy_steady">Jevn</string>
+    <string name="mix_energy_energetic">Energisk</string>
+    <string name="mix_refine_hint">Auto følger forespørselen din. Å velge energi legger til et krav; færre sanger kan passe.</string>
+    <string name="mix_selection_summary">Lengde: %1$s · Energi: %2$s</string>
+    <string name="mix_edit_request">Rediger forespørsel</string>
+    <string name="mix_playlist_name">Navn på spilleliste</string>
+    <string name="mix_short_result">Biblioteket ditt har færre passende sanger enn forespurt. Vi beholdt kravene dine.</string>
+    <string name="mix_preview_action">Forhåndsvis miks</string>
+    <string name="mix_play">Spill av</string>
+    <string name="mix_use_today">Bruk i dag</string>
+    <string name="mix_save">Lagre spilleliste</string>
+    <string name="mix_saved_action">Lagret</string>
+    <string name="mix_saved">Lagret som %1$s</string>
+    <string name="mix_save_failed">Kunne ikke lagre denne spillelisten. Forhåndsvisningen er fortsatt her; prøv å lagre på nytt.</string>
+    <string name="mix_no_matches">Fant ingen passende sanger. Rediger forespørselen eller sett energi til Auto.</string>
+    <string name="mix_daily_updated">Daily Mix oppdatert</string>
+    <string name="mix_undo">Angre</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d passende sang · %2$d min</item>
+        <item quantity="other">%1$d passende sanger · %2$d min</item>
+    </plurals>
+</resources>

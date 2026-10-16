@@ -32,6 +32,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -49,9 +50,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.times
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+/**
+ * How long after the wave's amplitude target drops to 0 the indicator is certainly flat.
+ * LinearWavyProgressIndicator fades amplitude over 500 ms, and it can start that fade up to 500 ms
+ * late because it ignores a new target until a running amplitude animation (say, from a resume just
+ * before the pause) finishes. The rest is slack for the frames it takes to pick the target up and
+ * for dropped frames.
+ */
+private const val WaveFlattenMillis = 1_500L
 
 /**
  * Normalizes [value] into 0..1. Non-finite input is treated as 0 so a single bad value can never
@@ -138,8 +149,32 @@ fun WavySliderExpressive(
         animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "ThumbInteractionAnim"
     )
+    // LinearWavyProgressIndicator animates amplitude changes itself and ignores a new target while
+    // one of those animations is running, so it must get this target rather than the animated value
+    // below: fed the in-between values, it settled on a small non-zero amplitude after a pause, and
+    // its wave offset animation then redrew the paused player every frame.
+    val waveAmplitudeTarget = if (enabled && isPlaying && !isInteracting) 1f else 0f
+
+    // While waveSpeed is above zero the indicator runs its wave offset animation every frame, even
+    // after the wave has gone flat, which kept a paused player waking the main thread at the display
+    // refresh rate. Stop it once the indicator's own amplitude fade must be over. A zero speed snaps
+    // the wave phase back to 0, which can't be seen on a flat wave but would jump a visible one.
+    var isWaveStopped by remember { mutableStateOf(waveAmplitudeTarget == 0f) }
+    LaunchedEffect(waveAmplitudeTarget) {
+        if (waveAmplitudeTarget > 0f) {
+            isWaveStopped = false
+        } else if (!isWaveStopped) {
+            val durationScale = coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f
+            delay((WaveFlattenMillis * durationScale).toLong())
+            isWaveStopped = true
+        }
+    }
+    // Restarts in the same composition that raises the amplitude target, so the wave never grows
+    // back while frozen.
+    val indicatorWaveSpeed = if (waveAmplitudeTarget > 0f || !isWaveStopped) waveSpeed else 0.dp
+
     val animatedAmplitude by animateFloatAsState(
-        targetValue = if (enabled && isPlaying && !isInteracting) 1f else 0f,
+        targetValue = waveAmplitudeTarget,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
         label = "amplitude"
     )
@@ -254,9 +289,9 @@ fun WavySliderExpressive(
                 trackStroke = stroke,
                 gapSize = 2f * dynamicGapSize.value * (1.0f + 0.1573f * animatedAmplitude * animatedAmplitude),
                 stopSize = 3.dp,
-                amplitude = { progress -> if (progress > 0f) animatedAmplitude else 0f },
+                amplitude = { progress -> if (progress > 0f) waveAmplitudeTarget else 0f },
                 wavelength = wavelength,
-                waveSpeed = waveSpeed
+                waveSpeed = indicatorWaveSpeed
             )
         } else {
             Spacer(modifier = Modifier.fillMaxWidth().height(containerHeight))

@@ -59,7 +59,7 @@ class MultiMoodTest {
     }
 
     @Test
-    fun `several matched moods cannot out-score a strong structural match past the mood bonus cap`() {
+    fun `several matched moods cannot override an explicit decade filter`() {
         // "my favorites" + "surprise me" both trigger at full phrase strength (1.0 each); their
         // *uncapped* sum (35 + 35 = 70) would outscore the structural song's fixed bonuses below,
         // but the cap (45) must keep it from doing so. Both songs sit in the same genre family
@@ -93,6 +93,6 @@ class MultiMoodTest {
             random = Random(0),
         )
 
-        assertThat(result).containsExactly("structural", "multi_mood").inOrder()
+        assertThat(result).containsExactly("structural")
     }
 }

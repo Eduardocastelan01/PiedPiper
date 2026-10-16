@@ -96,4 +96,5 @@
     <string name="presentation_batch_d_view_grid">Grid</string>
     <string name="presentation_batch_d_view_list">List</string>
     <string name="presentation_batch_d_view_section_view">Tampilan</string>
+    <string name="presentation_batch_d_view_section_layout">Tata letak</string>
 </resources>

@@ -22,6 +22,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,12 +96,15 @@ class ConnectivityStateHolder @Inject constructor(
     private var audioDeviceCallback: android.media.AudioDeviceCallback? = null
 
     private var isInitialized = false
+    private val owners = OwnerStack<CoroutineScope> { it }
     private val discoveredBluetoothAudioDevices = linkedMapOf<String, BluetoothAudioDeviceState>()
 
     /**
-     * Initialize connectivity monitoring. Should be called once from ViewModel.
+     * Initialize connectivity monitoring for the PlayerViewModel that owns [owner]. Monitoring
+     * starts with the first owner and keeps running until the last one is cleared.
      */
-    fun initialize() {
+    fun initialize(owner: CoroutineScope) {
+        owners.push(owner)
         if (isInitialized) return
         isInitialized = true
 
@@ -506,18 +510,29 @@ class ConnectivityStateHolder @Inject constructor(
     }
 
     /**
-     * Cleanup resources. Should be called from ViewModel's onCleared.
+     * Cleanup resources once the last PlayerViewModel is cleared. Tearing down while another
+     * one is still alive (MainActivity's under a finishing ExternalPlayerActivity) would leave
+     * it without connectivity updates until process restart.
      */
-    fun onCleared() {
+    fun onCleared(owner: CoroutineScope) {
+        owners.remove(owner) {}
+        if (!owners.isEmpty) return
         networkCallback?.let { 
             runCatching { connectivityManager.unregisterNetworkCallback(it) }
         }
+        networkCallback = null
         wifiStateReceiver?.let { 
             runCatching { context.unregisterReceiver(it) }
         }
+        wifiStateReceiver = null
         bluetoothStateReceiver?.let { 
             runCatching { context.unregisterReceiver(it) }
         }
+        bluetoothStateReceiver = null
+        audioDeviceCallback?.let {
+            runCatching { audioManager.unregisterAudioDeviceCallback(it) }
+        }
+        audioDeviceCallback = null
         if (hasBluetoothScanPermission()) {
             bluetoothAdapter?.takeIf { isBluetoothDiscoveryActive(it) }?.let {
                 cancelBluetoothDiscovery(it)

@@ -26,6 +26,10 @@ sealed class Screen(val route: String) {
         fun createRoute(highlightKey: String? = null) =
             if (highlightKey != null) "experimental_settings?highlightKey=$highlightKey" else "experimental_settings"
     }
+    object LyricsSettings : Screen("lyrics_settings?highlightKey={highlightKey}") {
+        fun createRoute(highlightKey: String? = null) =
+            if (highlightKey != null) "lyrics_settings?highlightKey=$highlightKey" else "lyrics_settings"
+    }
     object NavBarCrRad : Screen("nav_bar_corner_radius?highlightKey={highlightKey}") {
         fun createRoute(highlightKey: String? = null) =
             if (highlightKey != null) "nav_bar_corner_radius?highlightKey=$highlightKey" else "nav_bar_corner_radius"
@@ -59,6 +63,7 @@ sealed class Screen(val route: String) {
     }
 
     object About : Screen("about")
+    object Licenses : Screen("licenses")
     object EasterEgg : Screen("easter_egg")
 
     object ArtistSettings : Screen("artist_settings?highlightKey={highlightKey}") {
@@ -67,6 +72,7 @@ sealed class Screen(val route: String) {
     }
     object DelimiterConfig : Screen("delimiter_config")
     object WordDelimiterConfig : Screen("word_delimiter_config")
+    object ExcludedDirectories : Screen("excluded_directories")
     object Equalizer : Screen("equalizer?highlightKey={highlightKey}") {
         fun createRoute(highlightKey: String? = null) =
             if (highlightKey != null) "equalizer?highlightKey=$highlightKey" else "equalizer"

@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -27,6 +28,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -45,10 +47,12 @@ import com.lostf1sh.pixelplayeross.data.diagnostics.AdvancedPerformanceDiagnosti
 import com.lostf1sh.pixelplayeross.data.model.PlayerInfo
 import com.lostf1sh.pixelplayeross.data.model.PlaybackQueueItemSnapshot
 import com.lostf1sh.pixelplayeross.data.model.PlaybackQueueSnapshot
+import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.EqualizerPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
+import com.lostf1sh.pixelplayeross.data.service.player.AudioDecoderPolicy
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.service.player.TransitionController
 import com.lostf1sh.pixelplayeross.data.service.player.selectCanonicalCloudPlaybackUri
@@ -109,6 +113,27 @@ internal fun shouldContinuePlaybackAfterTaskRemoved(
     keepPlayingInBackground: Boolean
 ): Boolean {
     return hasForegroundPlaybackIntent && keepPlayingInBackground
+}
+
+/**
+ * A start only needs the temporary foreground placeholder when Android demands one:
+ * an explicit startForegroundService() fallback (forced extra or a marked pending
+ * start), or a media-button start that onCreate has not already promoted while
+ * playback is not foreground yet. Plain startService() widget actions never do, so
+ * they neither flash the placeholder nor stop the service afterwards.
+ */
+internal fun requiresTemporaryForegroundForStart(
+    forcedForegroundStart: Boolean,
+    pendingTemporaryForegroundStart: Boolean,
+    isMediaButtonIntent: Boolean,
+    startedTemporaryForegroundInOnCreate: Boolean,
+    serviceAlreadyForeground: Boolean
+): Boolean {
+    return forcedForegroundStart ||
+        pendingTemporaryForegroundStart ||
+        (isMediaButtonIntent &&
+            !startedTemporaryForegroundInOnCreate &&
+            !serviceAlreadyForeground)
 }
 
 suspend fun loadArtworkBytesViaCoil(context: Context, uri: Uri): ByteArray? {
@@ -177,6 +202,8 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var listeningStatsTracker: ListeningStatsTracker
     @Inject
+    lateinit var sleepTimerSession: SleepTimerSession
+    @Inject
     @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -201,10 +228,13 @@ class MusicService : MediaSessionService() {
     private var isManualShuffleEnabled = false
     private var persistentShuffleEnabled = false
     private var previousMainThreadExceptionHandler: Thread.UncaughtExceptionHandler? = null
-    private val playbackTimerController by lazy {
-        PlaybackTimerController(
-            playerProvider = { mediaSession?.player ?: engine.masterPlayer },
+    private val sleepTimerController by lazy {
+        SleepTimerController(
+            engine = engine,
+            session = sleepTimerSession,
+            scope = serviceScope,
             alarmScheduler = AlarmManagerSleepTimerScheduler(this),
+            sessionPlayer = { mediaSession?.player ?: engine.masterPlayer },
         )
     }
     private var playbackSnapshotPersistJob: Job? = null
@@ -234,7 +264,7 @@ class MusicService : MediaSessionService() {
         private const val MEDIA_SESSION_BUTTON_DEBOUNCE_MS = 250L
         private const val DEFERRED_SERVICE_STARTUP_WORK_DELAY_MS = 1_000L
         private const val PAUSED_RESTORE_PREPARE_QUEUE_LIMIT = 50
-        private val pendingMediaButtonForegroundStarts = AtomicInteger(0)
+        private val pendingTemporaryForegroundStarts = AtomicInteger(0)
 
         private const val APP_PACKAGE_PREFIX = "com.lostf1sh.pixelplayeross"
         private const val DEFAULT_STREAM_BUFFER_SIZE = 8 * 1024
@@ -242,25 +272,25 @@ class MusicService : MediaSessionService() {
         private const val WIDGET_QUEUE_PREVIEW_LIMIT = 4
         private const val HEADSET_RECONNECT_RESUME_WINDOW_MS = 15_000L
 
-        fun markPendingMediaButtonForegroundStart() {
-            pendingMediaButtonForegroundStarts.incrementAndGet()
+        fun markPendingTemporaryForegroundStart() {
+            pendingTemporaryForegroundStarts.incrementAndGet()
         }
 
-        fun unmarkPendingMediaButtonForegroundStart() {
+        fun unmarkPendingTemporaryForegroundStart() {
             while (true) {
-                val currentCount = pendingMediaButtonForegroundStarts.get()
+                val currentCount = pendingTemporaryForegroundStarts.get()
                 if (currentCount <= 0) return
-                if (pendingMediaButtonForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
+                if (pendingTemporaryForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
                     return
                 }
             }
         }
 
-        private fun consumePendingMediaButtonForegroundStart(): Boolean {
+        private fun consumePendingTemporaryForegroundStart(): Boolean {
             while (true) {
-                val currentCount = pendingMediaButtonForegroundStarts.get()
+                val currentCount = pendingTemporaryForegroundStarts.get()
                 if (currentCount <= 0) return false
-                if (pendingMediaButtonForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
+                if (pendingTemporaryForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
                     return true
                 }
             }
@@ -377,13 +407,12 @@ class MusicService : MediaSessionService() {
             }
         }
 
-        // Only promote to foreground here when a media-button start is actually
-        // pending. Promoting unconditionally made every service creation — including
-        // plain in-app binds when the user opens the app — flash the "Processing
-        // playback action…" placeholder notification. Started paths that require
-        // foreground (widget actions, media buttons) are promoted in onStartCommand,
-        // which runs right after onCreate and well within the FGS grace window.
-        temporaryForegroundStartedInOnCreate = consumePendingMediaButtonForegroundStart()
+        // Marked foreground-service starts (media buttons, and the widget's
+        // startForegroundService() fallback) are promoted here, before super.onCreate(),
+        // so Hilt injection and MediaSession setup cannot use up Android's FGS deadline.
+        // Plain binds and plain startService() starts are never marked, so opening the
+        // app does not flash the temporary placeholder notification.
+        temporaryForegroundStartedInOnCreate = consumePendingTemporaryForegroundStart()
         if (temporaryForegroundStartedInOnCreate) {
             startTemporaryForegroundForCommand()
         }
@@ -405,6 +434,7 @@ class MusicService : MediaSessionService() {
         engine.addTransitionFinishedListener(transitionFinishedListener)
 
         controller.initialize()
+        sleepTimerController.attach()
         registerHeadsetReconnectMonitor()
 
         serviceScope.launch {
@@ -569,27 +599,27 @@ class MusicService : MediaSessionService() {
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_COUNTED_PLAY -> {
                         val count = args.getInt("count", 1)
-                        playbackTimerController.startCountedPlay(count)
+                        sleepTimerController.startCountedPlay(count)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_CANCEL_COUNTED_PLAY -> {
-                        playbackTimerController.stopCountedPlay()
+                        sleepTimerController.stopCountedPlay()
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_SET_SLEEP_TIMER_DURATION -> {
                         val minutes = args.getInt(
                             MusicNotificationProvider.EXTRA_SLEEP_TIMER_MINUTES,
                             0
                         )
-                        playbackTimerController.setDurationSleepTimer(minutes)
+                        sleepTimerController.setDurationTimer(minutes)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_SET_SLEEP_TIMER_END_OF_TRACK -> {
                         val enabled = args.getBoolean(
                             MusicNotificationProvider.EXTRA_END_OF_TRACK_ENABLED,
                             true
                         )
-                        playbackTimerController.setEndOfTrackSleepTimer(enabled)
+                        sleepTimerController.setEndOfTrackTimer(enabled)
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_CANCEL_SLEEP_TIMER -> {
-                        playbackTimerController.cancelSleepTimers()
+                        sleepTimerController.cancelTimer()
                     }
                     MusicNotificationProvider.CUSTOM_COMMAND_TOGGLE_SHUFFLE -> {
                         val enabled = !isManualShuffleEnabled
@@ -748,7 +778,6 @@ class MusicService : MediaSessionService() {
         )
             .setSmallIcon(R.drawable.monochrome_player)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.service_processing_action))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(getOpenAppPendingIntent())
             .setOnlyAlertOnce(true)
@@ -771,8 +800,8 @@ class MusicService : MediaSessionService() {
     /**
      * Media3's notification provider posts under its own id, so promoting the real
      * media notification does not replace the temporary placeholder — without an
-     * explicit cancel the "Processing playback action…" notification stays behind
-     * forever once the session notification takes over the foreground.
+     * explicit cancel the placeholder stays behind forever once the session
+     * notification takes over the foreground.
      */
     private fun clearTemporaryForegroundNotification() {
         if (!temporaryForegroundNotificationVisible) return
@@ -799,25 +828,17 @@ class MusicService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val startedTemporaryForegroundInOnCreate = temporaryForegroundStartedInOnCreate
         temporaryForegroundStartedInOnCreate = false
-        val pendingMediaButtonForegroundStart = consumePendingMediaButtonForegroundStart()
+        val pendingTemporaryForegroundStart = consumePendingTemporaryForegroundStart()
         val forcedForegroundStart =
             intent?.getBooleanExtra(EXTRA_FORCE_FOREGROUND_ON_START, false) == true
         val isMediaButtonIntent = intent?.action == Intent.ACTION_MEDIA_BUTTON
-        val needsTemporaryForeground = forcedForegroundStart ||
-            pendingMediaButtonForegroundStart ||
-            (isMediaButtonIntent &&
-                !startedTemporaryForegroundInOnCreate &&
-                !isServiceAlreadyForeground()) ||
-            when (intent?.action) {
-                PlayerActions.PLAY_PAUSE,
-                PlayerActions.NEXT,
-                PlayerActions.PREVIOUS,
-                PlayerActions.FAVORITE,
-                PlayerActions.PLAY_FROM_QUEUE,
-                PlayerActions.SHUFFLE,
-                PlayerActions.REPEAT -> true
-                else -> false
-            }
+        val needsTemporaryForeground = requiresTemporaryForegroundForStart(
+            forcedForegroundStart = forcedForegroundStart,
+            pendingTemporaryForegroundStart = pendingTemporaryForegroundStart,
+            isMediaButtonIntent = isMediaButtonIntent,
+            startedTemporaryForegroundInOnCreate = startedTemporaryForegroundInOnCreate,
+            serviceAlreadyForeground = isServiceAlreadyForeground()
+        )
         if (needsTemporaryForeground && !startedTemporaryForegroundInOnCreate) {
             startTemporaryForegroundForCommand()
         }
@@ -893,8 +914,8 @@ class MusicService : MediaSessionService() {
                     requestWidgetFullUpdate(force = true)
                 }
                 ACTION_SLEEP_TIMER_EXPIRED -> {
-                    Timber.tag(TAG).d("Sleep timer expired action received. Pausing player.")
-                    playbackTimerController.onDurationSleepTimerExpired()
+                    Timber.tag(TAG).d("Sleep timer backstop alarm received.")
+                    sleepTimerController.onDurationExpired()
                 }
             }
         }
@@ -948,6 +969,7 @@ class MusicService : MediaSessionService() {
         unregisterHeadsetReconnectMonitor()
         replayGainProcessor.cancel()
 
+        sleepTimerController.release()
         engine.removePlayerSwapListener(playerSwapListener)
         engine.removeTransitionDisplayPlayerListener(transitionDisplayPlayerListener)
         engine.removeTransitionFinishedListener(transitionFinishedListener)
@@ -1091,7 +1113,7 @@ class MusicService : MediaSessionService() {
                     }
                 }
 
-                playbackTimerController.clearEndOfTrackTimer()
+                sleepTimerController.onPlaybackEnded()
                 reportNavidromePlayback("stopped")
                 stopNavidromePlaybackReporting()
             } else {
@@ -1155,6 +1177,7 @@ class MusicService : MediaSessionService() {
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            unsupportedFormatWarnedMediaId = null
             AdvancedPerformanceDiagnostics.recordEventIfEnabled(
                 type = AdvancedPerformanceDiagnostics.EventTypes.PLAYBACK,
                 name = "media_item_transition",
@@ -1172,7 +1195,7 @@ class MusicService : MediaSessionService() {
                 stopNavidromePlaybackReporting()
             }
 
-            playbackTimerController.handleMediaItemTransition(mediaItem, reason)
+            sleepTimerController.onMediaItemTransition(mediaItem, reason)
             replayGainProcessor.apply(mediaSession?.player?.currentMediaItem)
             val player = engine.masterPlayer
             val nextIndex = player.nextMediaItemIndex
@@ -1191,6 +1214,10 @@ class MusicService : MediaSessionService() {
             replayGainProcessor.onMediaMetadataChanged(activePlayer.currentMediaItem)
         }
 
+        override fun onTracksChanged(tracks: Tracks) {
+            warnIfNoDecodableAudioTrack(tracks)
+        }
+
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             Timber.tag("MusicService")
                 .d("playerListener.onShuffleModeEnabledChanged: $shuffleModeEnabled")
@@ -1200,6 +1227,7 @@ class MusicService : MediaSessionService() {
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
+            sleepTimerController.onRepeatModeChanged(repeatMode)
             requestWidgetFullUpdate(force = true)
             mediaSession?.let { refreshMediaSessionUi(it) }
             schedulePlaybackSnapshotPersist()
@@ -1225,6 +1253,43 @@ class MusicService : MediaSessionService() {
                 consecutivePlaybackErrors = 0
             }
         }
+    }
+
+    /** MediaId already reported by [warnIfNoDecodableAudioTrack], to avoid repeat toasts. */
+    private var unsupportedFormatWarnedMediaId: String? = null
+
+    /**
+     * Tells the user when no renderer (platform or FFmpeg) can decode the current item's audio.
+     * The engine's [com.lostf1sh.pixelplayeross.data.service.player.UnsupportedAudioListener]
+     * pauses the player so ExoPlayer does not advance a silent clock.
+     */
+    private fun warnIfNoDecodableAudioTrack(tracks: Tracks) {
+        if (!AudioDecoderPolicy.hasUnsupportedAudio(tracks)) return
+        val mediaItem = (mediaSession?.player ?: engine.masterPlayer).currentMediaItem ?: return
+        // onTracksChanged fires repeatedly for the same item; warn once per track.
+        if (unsupportedFormatWarnedMediaId == mediaItem.mediaId) return
+        unsupportedFormatWarnedMediaId = mediaItem.mediaId
+
+        val format = tracks.groups
+            .filter { it.type == C.TRACK_TYPE_AUDIO }
+            .firstNotNullOfOrNull { group ->
+                (0 until group.length).firstNotNullOfOrNull { group.getTrackFormat(it).sampleMimeType }
+            }
+        val trackTitle = mediaItem.mediaMetadata.title?.toString()?.takeIf(String::isNotBlank)
+            ?: getString(R.string.unknown_song_title)
+        Timber.tag(TAG).e(
+            "No renderer can decode the audio track of '%s' (format=%s); playback paused",
+            trackTitle, format
+        )
+        Toast.makeText(
+            this,
+            getString(
+                R.string.player_unsupported_format,
+                trackTitle,
+                format ?: getString(R.string.player_unsupported_format_unknown)
+            ),
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     /** Applies the user's playback speed to [player], preserving pitch (time-stretch). */
@@ -1338,13 +1403,20 @@ class MusicService : MediaSessionService() {
         playWhenReadyOverride: Boolean? = null
     ): PlaybackQueueSnapshot? {
         val player = engine.masterPlayer
-        val mediaItemCount = player.mediaItemCount
+        // A crossfade prepares the incoming player with only a window of the queue. If we
+        // persist while that player is master, its timeline is not the queue; persisting it
+        // would shrink the restored queue to the window. Use the engine's full queue instead.
+        val isWindowed = engine.isUsingWindowedQueue()
+        val fullQueue = if (isWindowed) engine.getFullQueue() else null
+        val mediaItemCount = fullQueue?.size ?: player.mediaItemCount
         if (mediaItemCount <= 0) {
             return null
         }
 
         val snapshotItems = playbackSnapshotItemCache.getOrBuild {
-            buildPlaybackSnapshotItems(player, mediaItemCount)
+            buildPlaybackSnapshotItems(mediaItemCount) { index ->
+                fullQueue?.get(index) ?: player.getMediaItemAt(index)
+            }
         }
 
         if (snapshotItems.isEmpty()) {
@@ -1356,9 +1428,12 @@ class MusicService : MediaSessionService() {
             ?.let { id -> snapshotItems.indexOfFirst { it.mediaId == id } }
             ?.takeIf { it >= 0 }
 
+        // player.currentMediaItemIndex is window-relative while a crossfade window is in
+        // place, so only trust it when the timeline really is the whole queue.
+        val playerIndex = if (isWindowed) engine.getCurrentAbsoluteIndex() else player.currentMediaItemIndex
         val safeCurrentIndex = when {
             indexFromMediaId != null -> indexFromMediaId
-            player.currentMediaItemIndex in snapshotItems.indices -> player.currentMediaItemIndex
+            playerIndex in snapshotItems.indices -> playerIndex
             else -> 0
         }
 
@@ -1381,12 +1456,12 @@ class MusicService : MediaSessionService() {
     }
 
     private fun buildPlaybackSnapshotItems(
-        player: Player,
         mediaItemCount: Int,
+        mediaItemAt: (Int) -> MediaItem,
     ): List<PlaybackQueueItemSnapshot> {
         val snapshotItems = ArrayList<PlaybackQueueItemSnapshot>(mediaItemCount)
         for (index in 0 until mediaItemCount) {
-            val mediaItem = player.getMediaItemAt(index)
+            val mediaItem = mediaItemAt(index)
             val metadata = mediaItem.mediaMetadata
             val playerUri = mediaItem.localConfiguration?.uri?.toString()
             val originalContentUri = metadata.extras
@@ -1406,6 +1481,7 @@ class MusicService : MediaSessionService() {
                 durationMs = metadata.extras
                     ?.getLong(MediaItemBuilder.EXTERNAL_EXTRA_DURATION)
                     ?.takeIf { it > 0L },
+                playlistId = MediaItemBuilder.playlistIdOf(mediaItem),
             )
         }
         return snapshotItems
@@ -1530,6 +1606,9 @@ class MusicService : MediaSessionService() {
             snapshotItem.durationMs?.takeIf { it > 0L }?.let {
                 putLong(MediaItemBuilder.EXTERNAL_EXTRA_DURATION, it)
             }
+            snapshotItem.playlistId?.takeIf { it.isNotBlank() }?.let {
+                putString(MediaItemBuilder.EXTRA_PLAYLIST_ID, it)
+            }
         }
         metadataBuilder.setExtras(extras)
 
@@ -1614,16 +1693,18 @@ class MusicService : MediaSessionService() {
         var repeatMode = Player.REPEAT_MODE_OFF
         var currentPosition = 0L
         var totalDuration = 0L
-        var snapshotWindowIndex = 0
         var snapshotTimeline: Timeline = Timeline.EMPTY
+        var snapshotNextWindowIndex = C.INDEX_UNSET
+        var snapshotShuffleModeEnabled = false
         withContext(Dispatchers.Main) {
             currentItem = player.currentMediaItem
             isPlaying = player.isPlaying
             repeatMode = player.repeatMode
             currentPosition = player.currentPosition
             totalDuration = player.duration.coerceAtLeast(0)
-            snapshotWindowIndex = player.currentMediaItemIndex
             snapshotTimeline = player.currentTimeline
+            snapshotNextWindowIndex = player.nextMediaItemIndex
+            snapshotShuffleModeEnabled = player.shuffleModeEnabled
         }
 
         var shuffleEnabled = isManualShuffleEnabled
@@ -1709,33 +1790,61 @@ class MusicService : MediaSessionService() {
         }
         val isFavorite = isSongFavorite(mediaId)
         val queueItems = mutableListOf<com.lostf1sh.pixelplayeross.data.model.QueueItem>()
+        // Follow the player's actual navigation order so shuffle and repeat-all previews match.
         if (!snapshotTimeline.isEmpty) {
             val window = Timeline.Window()
-
-            val startIndex = if (snapshotWindowIndex + 1 < snapshotTimeline.windowCount) snapshotWindowIndex + 1 else 0
-
-            val endIndex = (startIndex + 4).coerceAtMost(snapshotTimeline.windowCount)
-            for (i in startIndex until endIndex) {
-                snapshotTimeline.getWindow(i, window)
-                val mediaItem = window.mediaItem
-                val songId = mediaItem.mediaId.toLongOrNull()
-                if (songId != null) {
-                    val initialQueueArtworkUri = resolveWidgetArtworkUriCandidates(mediaItem.mediaMetadata)
-                        .firstOrNull()
-                    val queueArtworkUri = when {
-                        initialQueueArtworkUri == null -> resolveRepositoryArtworkUri(mediaItem.mediaId)
-                        initialQueueArtworkUri.scheme?.lowercase() == "content" &&
-                            initialQueueArtworkUri.authority == "$packageName.provider" ->
-                            resolveRepositoryArtworkUri(mediaItem.mediaId) ?: initialQueueArtworkUri
-                        else -> initialQueueArtworkUri
-                    }
-                    queueItems.add(
-                        com.lostf1sh.pixelplayeross.data.model.QueueItem(
-                            id = songId,
-                            albumArtUri = queueArtworkUri?.toString()
+            val previewIndices = widgetQueuePreviewIndices(
+                firstIndex = snapshotNextWindowIndex,
+                limit = 4,
+                nextIndex = { currentIndex ->
+                    if (currentIndex !in 0 until snapshotTimeline.windowCount) {
+                        C.INDEX_UNSET
+                    } else {
+                        snapshotTimeline.getNextWindowIndex(
+                            currentIndex,
+                            repeatMode,
+                            snapshotShuffleModeEnabled,
                         )
-                    )
+                    }
+                },
+            )
+
+            for (index in previewIndices) {
+                if (index !in 0 until snapshotTimeline.windowCount) continue
+                snapshotTimeline.getWindow(index, window)
+                val mediaItem = window.mediaItem
+                val metadataTitle = mediaItem.mediaMetadata.title?.toString()?.trim().orEmpty()
+                val metadataArtist = mediaItem.mediaMetadata.artist?.toString()?.trim().orEmpty()
+                val initialQueueArtworkUri = resolveWidgetArtworkUriCandidates(mediaItem.mediaMetadata)
+                    .firstOrNull()
+                val isProviderArtwork = initialQueueArtworkUri?.scheme?.lowercase() == "content" &&
+                    initialQueueArtworkUri.authority == "$packageName.provider"
+                val needsRepositoryFallback = metadataTitle.isBlank() ||
+                    metadataArtist.isBlank() ||
+                    initialQueueArtworkUri == null ||
+                    isProviderArtwork
+                val repositorySong = if (needsRepositoryFallback) {
+                    runCatching {
+                        withContext(Dispatchers.IO) {
+                            musicRepository.getSong(mediaItem.mediaId).first()
+                        }
+                    }.getOrNull()
+                } else {
+                    null
                 }
+                val queueArtworkUri = when {
+                    initialQueueArtworkUri == null -> repositoryArtworkUri(repositorySong)
+                    isProviderArtwork -> repositoryArtworkUri(repositorySong) ?: initialQueueArtworkUri
+                    else -> initialQueueArtworkUri
+                }
+
+                mediaItem.toWidgetQueueItem(
+                    fallbackTitle = repositorySong?.title
+                        .orEmpty()
+                        .ifBlank { getString(R.string.unknown_song_title) },
+                    fallbackArtist = repositorySong?.displayArtist.orEmpty(),
+                    fallbackArtworkUri = queueArtworkUri?.toString(),
+                )?.let(queueItems::add)
             }
         }
 
@@ -1914,8 +2023,12 @@ class MusicService : MediaSessionService() {
         val songId = mediaId?.takeIf { it.isNotBlank() } ?: return null
         val song = withContext(Dispatchers.IO) {
             musicRepository.getSong(songId).first()
-        } ?: return null
+        }
+        return repositoryArtworkUri(song)
+    }
 
+    private fun repositoryArtworkUri(song: Song?): Uri? {
+        song ?: return null
         return MediaItemBuilder.artworkUri(song.albumArtUriString)
             ?: song.albumArtUriString
                 ?.takeIf { it.isNotBlank() }
@@ -2132,7 +2245,8 @@ class MusicService : MediaSessionService() {
         val player = sessionToRelease?.player ?: engine.masterPlayer
 
         clearHeadsetReconnectResume()
-        playbackTimerController.release()
+        sleepTimerController.cancelTimer()
+        sleepTimerController.stopCountedPlay(restoreRepeatMode = false)
 
         if (preservePlaybackSnapshot) {
             persistPlaybackSnapshotOnUnload()
@@ -2265,6 +2379,12 @@ class MusicService : MediaSessionService() {
         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
     }
 
+    /**
+     * @param exposeInternalArtwork the request comes from this app's own controller. Its items
+     *   also keep their playlist tag: the rebuilt items come from the library and would
+     *   otherwise drop it, turning off the playlist's transitions. Only the app itself is
+     *   trusted to set it.
+     */
     private suspend fun resolveMediaItemsByIds(
         requestedItems: List<MediaItem>,
         exposeInternalArtwork: Boolean = false,
@@ -2273,7 +2393,7 @@ class MusicService : MediaSessionService() {
         val songs = musicRepository.getSongsByIds(songIds).first()
         val songMap = songs.associateBy { it.id }
 
-        return resolveMediaItemsWithTrustedArtworkGrants(requestedItems) { mediaId ->
+        val resolution = resolveMediaItemsWithTrustedArtworkGrants(requestedItems) { mediaId ->
             songMap[mediaId]?.let { song ->
                 if (exposeInternalArtwork) {
                     MediaItemBuilder.build(song)
@@ -2282,6 +2402,16 @@ class MusicService : MediaSessionService() {
                 }
             }
         }
+        if (!exposeInternalArtwork) return resolution
+        // One resolved item per requested item, in order.
+        return resolution.copy(
+            mediaItems = resolution.mediaItems.mapIndexed { index, item ->
+                MediaItemBuilder.withPlaylistId(
+                    item,
+                    requestedItems.getOrNull(index)?.let(MediaItemBuilder::playlistIdOf)
+                )
+            }.toMutableList()
+        )
     }
 
     /**

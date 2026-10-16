@@ -23,6 +23,7 @@ import com.lostf1sh.pixelplayeross.data.model.TransitionSettings
 import com.lostf1sh.pixelplayeross.data.equalizer.EqualizerPreset
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
 import com.lostf1sh.pixelplayeross.data.update.UpdateChannel
+import com.lostf1sh.pixelplayeross.utils.PlaybackSpeedUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.text.get
@@ -94,6 +95,9 @@ constructor(
         // Describes this device's artwork cache, not a user choice — restoring another
         // device's value would misreport what the local cache was built from.
         PreferencesKeys.FOLDER_ALBUM_ART_CACHE_STATE.name,
+        // Describes which text repair this install's library database went through, not a user
+        // choice — restoring another device's value could skip or repeat the repair here.
+        PreferencesKeys.METADATA_CHARSET_REPAIR_VERSION.name,
         "listenbrainz_token",
         "lastfm_session_key",
         // Update settings describe this install (F-Droid vs. GitHub signed), not user taste;
@@ -139,6 +143,7 @@ constructor(
 
         val GLOBAL_TRANSITION_SETTINGS = stringPreferencesKey("global_transition_settings_json")
         val LIBRARY_TABS_ORDER = stringPreferencesKey("library_tabs_order")
+        val LIBRARY_TABS_FOLDERS_MIGRATED = booleanPreferencesKey("library_tabs_folders_migrated")
         val IS_FOLDER_FILTER_ACTIVE = booleanPreferencesKey("is_folder_filter_active")
         val IS_FOLDERS_PLAYLIST_VIEW = booleanPreferencesKey("is_folders_playlist_view")
         val HIDE_LOCAL_MEDIA = booleanPreferencesKey("hide_local_media")
@@ -211,6 +216,7 @@ constructor(
         val DIRECTORY_RULES_VERSION = intPreferencesKey("directory_rules_version")
         val LAST_APPLIED_DIRECTORY_RULES_VERSION =
             intPreferencesKey("last_applied_directory_rules_version")
+        val METADATA_CHARSET_REPAIR_VERSION = intPreferencesKey("metadata_charset_repair_version")
 
         val LYRICS_SYNC_OFFSETS = stringPreferencesKey("lyrics_sync_offsets_json")
 
@@ -224,6 +230,8 @@ constructor(
         val USE_FOLDER_ALBUM_ART = booleanPreferencesKey("use_folder_album_art")
         val FOLDER_ALBUM_ART_CACHE_STATE = booleanPreferencesKey("folder_album_art_cache_state")
         val TAP_BACKGROUND_CLOSES_PLAYER = booleanPreferencesKey("tap_background_closes_player")
+        val MINI_PLAYER_SWIPE_TO_SKIP = booleanPreferencesKey("mini_player_swipe_to_skip")
+        val AUTOPLAY_ON_SKIP = booleanPreferencesKey("autoplay_on_skip")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val ADVANCED_PERFORMANCE_DIAGNOSTICS_ENABLED =
             booleanPreferencesKey("advanced_performance_diagnostics_enabled")
@@ -240,9 +248,12 @@ constructor(
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
 
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
+        val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
+        val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
 
         val COLLAGE_PATTERN = stringPreferencesKey("collage_pattern")
         val COLLAGE_AUTO_ROTATE = booleanPreferencesKey("collage_auto_rotate")
+        val SIDEBAR_SHORTCUTS = stringSetPreferencesKey("sidebar_shortcuts")
 
         val LAST_PLAYLIST_ID = stringPreferencesKey("last_playlist_id")
         val LAST_PLAYLIST_NAME = stringPreferencesKey("last_playlist_name")
@@ -355,14 +366,20 @@ constructor(
         }
     }
 
+    /**
+     * Normalized to hundredths on read and write, so legacy noisy values such as 0.74999994f,
+     * NaN or backup imports outside the range come back as a clean, supported speed.
+     */
     val playbackSpeedFlow: Flow<Float> =
             dataStore.data.map { preferences ->
-                (preferences[PreferencesKeys.PLAYBACK_SPEED] ?: 1.0f).coerceIn(0.25f, 3.0f)
-            }
+                PlaybackSpeedUtils.normalize(
+                    preferences[PreferencesKeys.PLAYBACK_SPEED] ?: PlaybackSpeedUtils.DEFAULT_SPEED
+                )
+            }.distinctUntilChanged()
 
     suspend fun setPlaybackSpeed(speed: Float) {
         dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PLAYBACK_SPEED] = speed.coerceIn(0.25f, 3.0f)
+            preferences[PreferencesKeys.PLAYBACK_SPEED] = PlaybackSpeedUtils.normalize(speed)
         }
     }
 
@@ -570,6 +587,18 @@ constructor(
 
     suspend fun getLastAppliedDirectoryRulesVersion(): Int {
         return lastAppliedDirectoryRulesVersionFlow.first()
+    }
+
+    /**
+     * Version of the metadata text repair the stored library was synced with. Bumping
+     * `SyncWorker.CURRENT_METADATA_CHARSET_REPAIR_VERSION` makes the next sync re-check every
+     * song once.
+     */
+    suspend fun getMetadataCharsetRepairVersion(): Int =
+        dataStore.data.first()[PreferencesKeys.METADATA_CHARSET_REPAIR_VERSION] ?: 0
+
+    suspend fun setMetadataCharsetRepairVersion(version: Int) {
+        dataStore.edit { it[PreferencesKeys.METADATA_CHARSET_REPAIR_VERSION] = version }
     }
 
     suspend fun setLastSyncTimestamp(timestamp: Long) {
@@ -780,6 +809,40 @@ constructor(
     suspend fun setAlbumsListView(isList: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_ALBUMS_LIST_VIEW] = isList
+        }
+    }
+
+    /** Grid layout for the Playlists tab and the Folders tab's playlist view. */
+    val isPlaylistsGridViewFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_PLAYLISTS_GRID_VIEW] ?: false
+        }
+
+    suspend fun setPlaylistsGridView(isGrid: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_PLAYLISTS_GRID_VIEW] = isGrid
+        }
+    }
+
+    val showScrollbarFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLLBAR] ?: true
+        }
+
+    suspend fun setShowScrollbar(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLLBAR] = enabled
+        }
+    }
+
+    val sidebarShortcutsFlow: Flow<Set<String>> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SIDEBAR_SHORTCUTS] ?: SidebarShortcutKeys.DEFAULT
+        }
+
+    suspend fun setSidebarShortcuts(shortcuts: Set<String>) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SIDEBAR_SHORTCUTS] = shortcuts
         }
     }
 
@@ -1480,6 +1543,18 @@ constructor(
         }
     }
 
+    val lyricsFontSizeFlow: Flow<Float> = dataStore.data
+        .map { preferences ->
+            sanitizeLyricsFontSize(preferences[LYRICS_FONT_SIZE_SP_KEY] ?: DEFAULT_LYRICS_FONT_SIZE_SP)
+        }
+        .distinctUntilChanged()
+
+    suspend fun setLyricsFontSize(fontSizeSp: Float) {
+        dataStore.edit { preferences ->
+            preferences[LYRICS_FONT_SIZE_SP_KEY] = sanitizeLyricsFontSize(fontSizeSp)
+        }
+    }
+
     val libraryTabsOrderFlow: Flow<String?> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
@@ -1493,23 +1568,27 @@ constructor(
         dataStore.edit { preferences -> preferences.remove(PreferencesKeys.LIBRARY_TABS_ORDER) }
     }
 
+    /**
+     * One-shot backfill of the Folders tab for orders saved before it existed.
+     *
+     * The stored order doubles as the list of *visible* tabs, so this must never run more
+     * than once: re-adding FOLDERS on every launch would undo a user who deliberately hid
+     * that tab.
+     */
     suspend fun migrateTabOrder() {
         dataStore.edit { preferences ->
-            val orderJson = preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
-            if (orderJson != null) {
-                try {
-                    val order = json.decodeFromString<MutableList<String>>(orderJson)
-                    if (!order.contains("FOLDERS")) {
-                        val likedIndex = order.indexOf("LIKED")
-                        if (likedIndex != -1) {
-                            order.add(likedIndex + 1, "FOLDERS")
-                        } else {
-                            order.add("FOLDERS")
-                        }
-                        preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
-                    }
-                } catch (e: Exception) {
-                }
+            if (preferences[PreferencesKeys.LIBRARY_TABS_FOLDERS_MIGRATED] == true) return@edit
+            preferences[PreferencesKeys.LIBRARY_TABS_FOLDERS_MIGRATED] = true
+
+            val orderJson = preferences[PreferencesKeys.LIBRARY_TABS_ORDER] ?: return@edit
+            val order = runCatching {
+                json.decodeFromString<MutableList<String>>(orderJson)
+            }.getOrNull() ?: return@edit // Abort on malformed data; don't overwrite user data.
+
+            if ("FOLDERS" !in order) {
+                val insertAfter = order.indexOf("LIKED").takeIf { it != -1 } ?: order.lastIndex
+                order.add(insertAfter + 1, "FOLDERS")
+                preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
             }
         }
     }
@@ -1705,6 +1784,36 @@ constructor(
     suspend fun setTapBackgroundClosesPlayer(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TAP_BACKGROUND_CLOSES_PLAYER] = enabled
+        }
+    }
+
+    /**
+     * Whether horizontal swipes on the mini player change track, moving dismissal to a downward
+     * swipe. Off by default, where short swipes change track and long swipes dismiss.
+     */
+    val miniPlayerSwipeToSkipFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] ?: false
+        }
+
+    suspend fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] = enabled
+        }
+    }
+
+    /**
+     * Whether skipping to another song from the app's own controls while paused starts
+     * playback. On by default.
+     */
+    val autoplayOnSkipFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.AUTOPLAY_ON_SKIP] ?: true
+        }.distinctUntilChanged()
+
+    suspend fun setAutoplayOnSkip(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTOPLAY_ON_SKIP] = enabled
         }
     }
 

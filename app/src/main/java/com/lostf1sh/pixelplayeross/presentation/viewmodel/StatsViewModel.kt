@@ -3,13 +3,18 @@ package com.lostf1sh.pixelplayeross.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.data.repository.ArtistImageRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackStatsSummary
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +30,8 @@ import kotlinx.collections.immutable.toImmutableList
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val playbackStatsRepository: PlaybackStatsRepository,
-    private val musicRepository: MusicRepository
+    private val musicRepository: MusicRepository,
+    private val artistImageRepository: ArtistImageRepository
 ) : ViewModel() {
 
     data class StatsUiState(
@@ -42,8 +48,12 @@ class StatsViewModel @Inject constructor(
     private val _weeklyOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
     val weeklyOverview: StateFlow<PlaybackStatsSummary?> = _weeklyOverview.asStateFlow()
 
-    private val _homeOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
-    val homeOverview: StateFlow<PlaybackStatsSummary?> = _homeOverview.asStateFlow()
+    private val _homeOverviewState =
+        MutableStateFlow<HomeStatsOverviewState>(HomeStatsOverviewState.Loading)
+    val homeOverviewState: StateFlow<HomeStatsOverviewState> = _homeOverviewState.asStateFlow()
+
+    /** Only the latest home refresh may publish, so an older result never overwrites a newer one. */
+    private var homeOverviewJob: Job? = null
 
     @Volatile
     private var cachedSongs: List<Song>? = null
@@ -86,24 +96,29 @@ class StatsViewModel @Inject constructor(
     }
 
     fun refreshHomeOverview() {
-        viewModelScope.launch {
-            runCatching {
+        homeOverviewJob?.cancel()
+        homeOverviewJob = viewModelScope.launch {
+            val summary = try {
                 withContext(Dispatchers.IO) {
                     val songs = loadSongs()
-                    for (range in HomeOverviewRanges) {
-                        val summary = playbackStatsRepository.loadSummary(range, songs)
-                        if (summary.hasListeningActivity()) {
-                            return@withContext summary
-                        }
+                    firstSummaryWithActivity(HomeOverviewRanges) { range ->
+                        playbackStatsRepository.loadSummary(range, songs)
                     }
-                    null
                 }
-            }.onSuccess { summary ->
-                _homeOverview.value = summary
-            }.onFailure { throwable ->
+            } catch (cancellation: CancellationException) {
+                // A newer refresh replaced this one; it publishes the result instead.
+                throw cancellation
+            } catch (throwable: Exception) {
                 Timber.e(throwable, "Failed to load home stats overview")
-                _homeOverview.value = null
+                // Keep showing the last good summary rather than flashing the empty state.
+                if (_homeOverviewState.value !is HomeStatsOverviewState.Ready) {
+                    _homeOverviewState.value = HomeStatsOverviewState.Empty
+                }
+                return@launch
             }
+            _homeOverviewState.value = summary
+                ?.let { HomeStatsOverviewState.Ready(it) }
+                ?: HomeStatsOverviewState.Empty
         }
     }
 
@@ -178,15 +193,60 @@ class StatsViewModel @Inject constructor(
         return songs
     }
 
-    private fun PlaybackStatsSummary.hasListeningActivity(): Boolean {
-        return totalDurationMs > 0L ||
-            totalPlayCount > 0 ||
-            uniqueSongs > 0 ||
-            activeDays > 0 ||
-            totalSessions > 0
+    /** Library songs for [songIds], in the given order; ids no longer in the library are dropped. */
+    suspend fun resolveSongs(songIds: List<String>): List<Song> = withContext(Dispatchers.IO) {
+        val byId = loadSongs().associateBy { it.id }
+        songIds.mapNotNull { byId[it] }
+    }
+
+    /**
+     * Stats group artists by display name, so the id has to be looked up. Falls back to the
+     * library songs for names the artists table does not know (e.g. multi-artist display names).
+     */
+    suspend fun resolveArtistId(name: String): Long? = withContext(Dispatchers.IO) {
+        musicRepository.getArtistIdByName(name)
+            ?: loadSongs().firstOrNull { it.displayArtist == name || it.artist == name }?.artistId
+    }
+
+    /**
+     * The artist pictures the rest of the app shows: the user's custom image or a local folder
+     * portrait, otherwise the Deezer picture when external artist images are enabled.
+     * Names with no picture are absent.
+     */
+    suspend fun resolveArtistImages(names: Collection<String>): Map<String, String> =
+        withContext(Dispatchers.IO) {
+            names.distinct().map { name ->
+                async {
+                    val artistId = musicRepository.getArtistIdByName(name) ?: UNKNOWN_ARTIST_ID
+                    val url = runCatching {
+                        artistImageRepository.getEffectiveArtistImageUrl(artistId, name)
+                    }.onFailure { Timber.w(it, "Failed to resolve artist image for %s", name) }
+                        .getOrNull()
+                    url?.takeIf { it.isNotBlank() }?.let { name to it }
+                }
+            }.awaitAll().filterNotNull().toMap()
+        }
+
+    /**
+     * Stats group albums by title, which is ambiguous across artists. Prefer an album that owns
+     * one of [preferredSongIds] (the tracks actually played in range) before any namesake.
+     */
+    suspend fun resolveAlbumId(name: String, preferredSongIds: Collection<String>): Long? =
+        withContext(Dispatchers.IO) {
+            val preferred = preferredSongIds.toSet()
+            val candidates = loadSongs().filter { it.album == name }
+            (candidates.firstOrNull { it.id in preferred } ?: candidates.firstOrNull())?.albumId
+        }
+
+    /** False for the synthetic "unknown" bucket stats create for songs without a genre tag. */
+    suspend fun isLibraryGenre(name: String): Boolean = withContext(Dispatchers.IO) {
+        loadSongs().any { it.genre == name }
     }
 
     private companion object {
+        /** Matches no artists row, so lookups fall through to the by-name queries. */
+        const val UNKNOWN_ARTIST_ID = -1L
+
         val HomeOverviewRanges = listOf(
             StatsTimeRange.WEEK,
             StatsTimeRange.MONTH,
@@ -194,4 +254,19 @@ class StatsViewModel @Inject constructor(
             StatsTimeRange.ALL
         )
     }
+}
+
+/**
+ * Loads [ranges] in order and returns the first summary with listening activity, or null when
+ * none has any. Ranges after the first match are never loaded.
+ */
+internal suspend fun firstSummaryWithActivity(
+    ranges: List<StatsTimeRange>,
+    load: suspend (StatsTimeRange) -> PlaybackStatsSummary
+): PlaybackStatsSummary? {
+    for (range in ranges) {
+        val summary = load(range)
+        if (summary.hasListeningActivity()) return summary
+    }
+    return null
 }

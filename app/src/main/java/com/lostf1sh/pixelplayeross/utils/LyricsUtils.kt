@@ -131,6 +131,22 @@ object MultiLangRomanizer {
         }
     }
 
+    /**
+     * Romanizes a single lyric line, or returns null when its script needs no romanization.
+     * [entireLyricsHasKana] lets Han-only lines in Japanese lyrics use Japanese readings.
+     */
+    fun romanizeLine(line: String, entireLyricsHasKana: Boolean = false): String? {
+        return when {
+            isJapanese(line, entireLyricsHasKana) -> romanizeJapanese(line)
+            isChinese(line) -> romanizeChinese(line)
+            isKorean(line) -> romanizeKorean(line)
+            isHindi(line) -> romanizeHindi(line)
+            isPunjabi(line) -> romanizePunjabi(line)
+            isCyrillic(line) -> romanizeCyrillic(line)
+            else -> null
+        }?.capitalizeFirstLetter()?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     private fun isRussian(text: String) = text.any { RUSSIAN_CYRILLIC_LETTERS.contains(it.toString()) } && text.all { RUSSIAN_CYRILLIC_LETTERS.contains(it.toString()) || !it.toString().matches("[\\u0400-\\u04FF]".toRegex()) }
     private fun isUkrainian(text: String) = text.any { UKRAINIAN_CYRILLIC_LETTERS.contains(it.toString()) || UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) } && text.all { UKRAINIAN_CYRILLIC_LETTERS.contains(it.toString()) || UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) || !it.toString().matches("[\\u0400-\\u04FF]".toRegex()) }
     private fun isSerbian(text: String) = text.any { SERBIAN_CYRILLIC_LETTERS.contains(it.toString()) || SERBIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) } && text.all { SERBIAN_CYRILLIC_LETTERS.contains(it.toString()) || SERBIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) || !it.toString().matches("[\\u0400-\\u04FF]".toRegex()) }
@@ -765,18 +781,7 @@ object LyricsUtils {
         return if (isSynced && syncedLines.isNotEmpty()) {
             val sortedSyncedLines = syncedLines.sortedBy { it.time }
             val pairedLines = pairTranslationLines(sortedSyncedLines).map { line ->
-
-                val romanized = when {
-                    MultiLangRomanizer.isJapanese(line.line, entireLyricsHasKana) -> MultiLangRomanizer.romanizeJapanese(line.line)
-                    MultiLangRomanizer.isChinese(line.line) -> MultiLangRomanizer.romanizeChinese(line.line)
-                    MultiLangRomanizer.isKorean(line.line) -> MultiLangRomanizer.romanizeKorean(line.line)
-                    MultiLangRomanizer.isHindi(line.line) -> MultiLangRomanizer.romanizeHindi(line.line)
-                    MultiLangRomanizer.isPunjabi(line.line) -> MultiLangRomanizer.romanizePunjabi(line.line)
-                    MultiLangRomanizer.isCyrillic(line.line) -> MultiLangRomanizer.romanizeCyrillic(line.line)
-                    else -> null
-                }?.capitalizeFirstLetter()?.trim()
-
-                line.copy(romanization = romanized)
+                line.copy(romanization = MultiLangRomanizer.romanizeLine(line.line, entireLyricsHasKana))
             }
             val plainVersion = pairedLines.map { line ->
                 buildString {
@@ -787,20 +792,7 @@ object LyricsUtils {
             }
             Lyrics(synced = pairedLines, plain = plainVersion)
         } else {
-            val processedPlain = plainLines.map { line ->
-                val romanized = when {
-                    MultiLangRomanizer.isJapanese(line, entireLyricsHasKana) -> MultiLangRomanizer.romanizeJapanese(line)
-                    MultiLangRomanizer.isChinese(line) -> MultiLangRomanizer.romanizeChinese(line)
-                    MultiLangRomanizer.isKorean(line) -> MultiLangRomanizer.romanizeKorean(line)
-                    MultiLangRomanizer.isHindi(line) -> MultiLangRomanizer.romanizeHindi(line)
-                    MultiLangRomanizer.isPunjabi(line) -> MultiLangRomanizer.romanizePunjabi(line)
-                    MultiLangRomanizer.isCyrillic(line) -> MultiLangRomanizer.romanizeCyrillic(line)
-                    else -> null
-                }?.capitalizeFirstLetter()?.trim()
-
-                if (!romanized.isNullOrEmpty()) "$line\n$romanized" else line
-            }
-            Lyrics(plain = processedPlain)
+            Lyrics(plain = plainLines)
         }
     }
 
@@ -860,8 +852,11 @@ object LyricsUtils {
                 val wordOffsetMs = wordMatcher.group(1)?.toLongOrNull() ?: 0L
                 val rawText = wordMatcher.group(4) ?: ""
 
-                val startsNew = previousEndsWithSpace || rawText.firstOrNull()?.isWhitespace() == true
                 val wordText = rawText.trim()
+                val startsNew = words.isEmpty() ||
+                    previousEndsWithSpace ||
+                    rawText.firstOrNull()?.isWhitespace() == true ||
+                    (wordOffsetMs > 0L && shouldSeparateKugouTokens(words.lastOrNull()?.word, wordText))
                 previousEndsWithSpace = rawText.lastOrNull()?.isWhitespace() == true
 
                 if (wordText.isEmpty()) continue
@@ -894,6 +889,41 @@ object LyricsUtils {
         val plainVersion = paired.map { it.line }
         return Lyrics(synced = paired, plain = plainVersion, areFromRemote = false)
     }
+
+    /**
+     * Some Kugou producers omit spaces between timed Latin-script tokens. Recover those
+     * visual word boundaries without adding artificial gaps between writing systems that
+     * normally do not place a space between every timed glyph.
+     */
+    private fun shouldSeparateKugouTokens(previous: String?, current: String): Boolean {
+        val previousChar = previous?.lastOrNull { !it.isWhitespace() } ?: return false
+        val currentChar = current.firstOrNull { !it.isWhitespace() } ?: return false
+
+        if (currentChar.isLetterOrDigit()) {
+            if (previousChar.isLetterOrDigit()) {
+                return usesVisibleInterWordSpacing(previousChar) &&
+                    usesVisibleInterWordSpacing(currentChar)
+            }
+            return previousChar !in KUGOU_JOINING_PUNCTUATION
+        }
+        return false
+    }
+
+    private fun usesVisibleInterWordSpacing(char: Char): Boolean = when (
+        Character.UnicodeScript.of(char.code)
+    ) {
+        Character.UnicodeScript.HAN,
+        Character.UnicodeScript.HIRAGANA,
+        Character.UnicodeScript.KATAKANA,
+        Character.UnicodeScript.HANGUL,
+        Character.UnicodeScript.THAI,
+        Character.UnicodeScript.LAO,
+        Character.UnicodeScript.KHMER,
+        Character.UnicodeScript.MYANMAR -> false
+        else -> true
+    }
+
+    private val KUGOU_JOINING_PUNCTUATION = setOf('\'', '\u2019', '-', '\u2010', '\u2011')
 
     /**
      * Pairs consecutive synced lines that share the same timestamp.
@@ -1003,17 +1033,20 @@ private fun stripLeadingLyricsDocumentNoise(value: String): String {
 }
 
 private fun looksLikeTtmlDocument(value: String): Boolean {
-    if (value.startsWith("<tt", ignoreCase = true)) {
-        return true
-    }
-    if (!value.startsWith("<?xml", ignoreCase = true)) {
-        return false
-    }
+    // Match bare <tt>, namespaced <tt:tt>, and SMIL wrappers (<smil>) used
+    // by some Apple Music and broadcast TTML variants.
+    fun String.startsWithTtmlRoot(): Boolean =
+        startsWith("<tt", ignoreCase = true) ||
+            startsWith("<smil", ignoreCase = true)
 
-    val afterDeclaration = value.substringAfter("?>", missingDelimiterValue = "")
-    return afterDeclaration
+    if (value.startsWithTtmlRoot()) return true
+
+    if (!value.startsWith("<?xml", ignoreCase = true)) return false
+
+    return value
+        .substringAfter("?>", missingDelimiterValue = "")
         .trimStart()
-        .startsWith("<tt", ignoreCase = true)
+        .startsWithTtmlRoot()
 }
 
 private fun sanitizeLrcLine(rawLine: String): String {

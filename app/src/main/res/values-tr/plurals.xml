@@ -36,4 +36,52 @@
         <item quantity="one">%d kez</item>
         <item quantity="other">%d kez</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d aktif gün</item>
+        <item quantity="other">%d aktif gün</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d sanatçı</item>
+        <item quantity="other">%d sanatçı</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d gün</item>
+        <item quantity="other">%d gün</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d dinlenme</item>
+        <item quantity="other">%d dinlenme</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d oturum</item>
+        <item quantity="other">%d oturum</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d parça</item>
+        <item quantity="other">%d parça</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">%d çalma listesi silinsin mi?</item>
+        <item quantity="other">%d çalma listesi silinsin mi?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">%d çalma listesini silmek istediğinizden emin misiniz?</item>
+        <item quantity="other">%d çalma listesini silmek istediğinizden emin misiniz?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d Şarkı</item>
+        <item quantity="other">%d Şarkı</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d dakika önce</item>
+        <item quantity="other">%d dakika önce</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d saat önce</item>
+        <item quantity="other">%d saat önce</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d gün önce</item>
+        <item quantity="other">%d gün önce</item>
+    </plurals>
 </resources>

@@ -18,14 +18,14 @@ class PixelPlayerMediaButtonReceiver : MediaButtonReceiver() {
             return
         }
 
-        MusicService.markPendingMediaButtonForegroundStart()
+        MusicService.markPendingTemporaryForegroundStart()
         try {
             super.onReceive(context, intent)
         } catch (e: IllegalStateException) {
-            MusicService.unmarkPendingMediaButtonForegroundStart()
+            MusicService.unmarkPendingTemporaryForegroundStart()
             Timber.tag(TAG).w(e, "Media button start denied while app cached")
         } catch (throwable: Throwable) {
-            MusicService.unmarkPendingMediaButtonForegroundStart()
+            MusicService.unmarkPendingTemporaryForegroundStart()
             Timber.tag(TAG).w(throwable, "Media button dispatch failed before MusicService start")
             throw throwable
         }

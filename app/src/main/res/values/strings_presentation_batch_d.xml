@@ -6,6 +6,7 @@
     <string name="presentation_batch_d_reorder_tabs_cd">Reorder tabs</string>
     <string name="presentation_batch_d_sort_by">Sort by</string>
     <string name="presentation_batch_d_view_section_view">View</string>
+    <string name="presentation_batch_d_view_section_layout">Layout</string>
     <string name="presentation_batch_d_playlist_view">Playlist View</string>
     <string name="presentation_batch_d_view_grid">Grid</string>
     <string name="presentation_batch_d_view_list">List</string>

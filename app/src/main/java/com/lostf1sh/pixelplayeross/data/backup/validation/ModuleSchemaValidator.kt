@@ -71,6 +71,7 @@ class ModuleSchemaValidator @Inject constructor(
             BackupSection.EQUALIZER -> {
                 validatePreferenceEntries(jsonElement, section.key, errors)
             }
+            BackupSection.AUDIO_BOOKMARKS -> validateAudioBookmarks(jsonElement.asJsonArray, errors)
         }
 
         return if (errors.any { it.severity == Severity.ERROR }) {
@@ -356,6 +357,21 @@ class ModuleSchemaValidator @Inject constructor(
                 if (durationMs < 0 || durationMs > 30_000) {
                     errors.add(ValidationError("INVALID_TRANSITION_DURATION", "Transitions[$i]: duration out of range", module = "transitions", severity = Severity.WARNING))
                 }
+            }
+        }
+    }
+
+    private fun validateAudioBookmarks(array: com.google.gson.JsonArray, errors: MutableList<ValidationError>) {
+        array.forEachIndexed { i, element ->
+            if (!element.isJsonObject) return@forEachIndexed
+            val obj = element.asJsonObject
+            val songId = readStringField(obj, "songId", "song_id")
+            if (songId.isNullOrBlank()) {
+                errors.add(ValidationError("MISSING_SONG_ID", "AudioBookmarks[$i]: missing songId", module = "audio_bookmarks", severity = Severity.WARNING))
+            }
+            val timestamp = readNumericField(obj, "timestampMs", "timestamp_ms")
+            if (timestamp.present && (timestamp.value == null || timestamp.value < 0)) {
+                errors.add(ValidationError("INVALID_TIMESTAMP", "AudioBookmarks[$i]: invalid timestampMs", module = "audio_bookmarks", severity = Severity.WARNING))
             }
         }
     }

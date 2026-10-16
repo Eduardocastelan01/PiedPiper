@@ -267,6 +267,38 @@ class LyricsRepositoryImplTest {
     }
 
     @Test
+    fun fetchFromRemote_acceptsRomanizedTitleMatchForNonLatinSong() = runTest {
+        val apiService = mockk<LrcLibApiService>(relaxed = true)
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        val romanizedLyrics = lrcResponse(
+            name = "Nabi",
+            artistName = "IU",
+            duration = 200.0
+        )
+        coEvery { lyricsDao.getLyrics(107L) } returns null
+        coEvery { apiService.searchLyrics(any(), any(), any(), any()) } returns arrayOf(romanizedLyrics)
+
+        val repository = LyricsRepositoryImpl(
+            context = testContext(),
+            lrcLibApiService = apiService,
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository()
+        )
+        val song = testSong(
+            id = "107",
+            title = "나비",
+            artist = "IU",
+            duration = 200_000L
+        )
+
+        val result = repository.fetchFromRemote(song)
+
+        assertThat(result.isSuccess).isTrue()
+        coVerify(exactly = 1) { lyricsDao.insert(any()) }
+    }
+
+    @Test
     fun fetchFromRemote_prefersLrclibWordSyncedLyricsfile() = runTest {
         val apiService = mockk<LrcLibApiService>(relaxed = true)
         val lyricsDao = mockk<LyricsDao>(relaxed = true)

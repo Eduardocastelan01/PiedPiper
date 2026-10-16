@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Personalizza il mix di oggi</string>
+    <string name="mix_daily_subtitle">Visualizza un\'anteprima della modifica prima di usarla oggi</string>
+    <string name="mix_library_subtitle">Crea un mix dalla tua libreria musicale</string>
+    <string name="mix_close">Chiudi mix</string>
+    <string name="mix_request_label">Cosa vuoi ascoltare?</string>
+    <string name="mix_request_placeholder">Un artista, un genere, un mood o un\'attività</string>
+    <string name="mix_suggest_recent">Richiesta recente: %1$s</string>
+    <string name="mix_suggest_rediscover">Riscopri %1$s</string>
+    <string name="mix_back">Torna alla tua richiesta</string>
+    <string name="mix_done">Fatto</string>
+    <string name="mix_thinking">Elaborazione…</string>
+    <string name="mix_refine">Perfeziona il tuo mix</string>
+    <string name="mix_length">Durata della playlist</string>
+    <string name="mix_auto">Auto</string>
+    <string name="mix_up_to">Fino a %1$d</string>
+    <string name="mix_energy">Energia</string>
+    <string name="mix_energy_calm">Calma</string>
+    <string name="mix_energy_steady">Costante</string>
+    <string name="mix_energy_energetic">Energica</string>
+    <string name="mix_refine_hint">Auto segue la tua richiesta. Selezionare l\'energia aggiunge un requisito; potrebbero corrispondere meno brani.</string>
+    <string name="mix_selection_summary">Durata: %1$s · Energia: %2$s</string>
+    <string name="mix_edit_request">Modifica richiesta</string>
+    <string name="mix_playlist_name">Nome playlist</string>
+    <string name="mix_short_result">La tua libreria ha meno brani corrispondenti di quelli richiesti. Abbiamo mantenuto i tuoi requisiti.</string>
+    <string name="mix_preview_action">Anteprima mix</string>
+    <string name="mix_play">Riproduci</string>
+    <string name="mix_use_today">Usa per oggi</string>
+    <string name="mix_save">Salva playlist</string>
+    <string name="mix_saved_action">Salvata</string>
+    <string name="mix_saved">Salvata come %1$s</string>
+    <string name="mix_save_failed">Impossibile salvare questa playlist. L\'anteprima è ancora qui; prova a salvare di nuovo.</string>
+    <string name="mix_no_matches">Nessun brano corrispondente trovato. Modifica la richiesta o imposta l\'energia su Auto.</string>
+    <string name="mix_daily_updated">Daily Mix aggiornato</string>
+    <string name="mix_undo">Annulla</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d brano corrispondente · %2$d min</item>
+        <item quantity="other">%1$d brani corrispondenti · %2$d min</item>
+    </plurals>
+</resources>

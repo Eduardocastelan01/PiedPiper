@@ -37,6 +37,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,8 +45,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.HapticFeedbackConstantsCompat
+import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
+import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import kotlin.math.roundToInt
@@ -72,13 +76,16 @@ fun TimerOptionsBottomSheet(
     onCancelTimer: () -> Unit
 ) {
     var showCustomTimePicker by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
+    val view = LocalView.current
+    val appHapticsConfig = LocalAppHapticsConfig.current
     var timerSliderPosition by remember { mutableStateOf(0f) }
+    var prevTimerIndex by rememberSaveable { mutableIntStateOf(0) }
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
     val isSwitchEnabled = isEndOfTrackTimerActive
 
     var counterSliderPosition by remember { mutableStateOf(1f) }
+    var prevCounterValue by rememberSaveable { mutableIntStateOf(1) }
     var isTimerMode by remember { mutableStateOf(true) }
 
     val boxBackgroundColor by animateColorAsState(
@@ -101,7 +108,9 @@ fun TimerOptionsBottomSheet(
             activeTimerValueDisplay.startsWith("Custom:") -> 0f
             else -> 0f
         }
+        prevTimerIndex = timerSliderPosition.roundToInt().coerceIn(0, predefinedTimes.size - 1)
         counterSliderPosition = playCount
+        prevCounterValue = playCount.roundToInt().coerceIn(1, 10)
         if (playCount > 1f) {
             isTimerMode = false
         }
@@ -167,9 +176,18 @@ fun TimerOptionsBottomSheet(
                 ) {
                     Slider(
                         value = timerSliderPosition,
-                        onValueChange = {
-                            timerSliderPosition = it
+                        onValueChange = { newValue ->
+                            timerSliderPosition = newValue
                             isTimerMode = true
+                            val roundedIndex = newValue.roundToInt().coerceIn(0, predefinedTimes.size - 1)
+                            if (roundedIndex != prevTimerIndex) {
+                                prevTimerIndex = roundedIndex
+                                performAppCompatHapticFeedback(
+                                    view,
+                                    appHapticsConfig,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK
+                                )
+                            }
                         },
                         valueRange = 0f..(predefinedTimes.size - 1).toFloat(),
                         steps = predefinedTimes.size - 2,
@@ -248,9 +266,18 @@ fun TimerOptionsBottomSheet(
                 ) {
                     Slider(
                         value = counterSliderPosition,
-                        onValueChange = {
-                            counterSliderPosition = it
+                        onValueChange = { newValue ->
+                            counterSliderPosition = newValue
                             isTimerMode = false
+                            val roundedValue = newValue.roundToInt().coerceIn(1, 10)
+                            if (roundedValue != prevCounterValue) {
+                                prevCounterValue = roundedValue
+                                performAppCompatHapticFeedback(
+                                    view,
+                                    appHapticsConfig,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK
+                                )
+                            }
                         },
                         valueRange = 1f..10f,
                         steps = 8,
@@ -296,6 +323,11 @@ fun TimerOptionsBottomSheet(
                     .clickable(
                         enabled = isTimerMode || counterSliderPosition == 1f,
                         onClick = {
+                            performAppCompatHapticFeedback(
+                                view,
+                                appHapticsConfig,
+                                HapticFeedbackConstantsCompat.GESTURE_START
+                            )
                             onSetEndOfTrackTimer(!isSwitchEnabled)
                         }
                     )
@@ -316,8 +348,13 @@ fun TimerOptionsBottomSheet(
                     Switch(
                         checked = isSwitchEnabled,
                         enabled = isTimerMode || counterSliderPosition == 1f,
-                        onCheckedChange = {
-                            onSetEndOfTrackTimer(it)
+                        onCheckedChange = { newValue ->
+                            performAppCompatHapticFeedback(
+                                view,
+                                appHapticsConfig,
+                                HapticFeedbackConstantsCompat.GESTURE_START
+                            )
+                            onSetEndOfTrackTimer(newValue)
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.tertiary,

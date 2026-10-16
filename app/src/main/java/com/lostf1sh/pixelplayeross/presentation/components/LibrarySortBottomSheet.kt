@@ -200,7 +200,7 @@ fun LibrarySortBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = option.methodLabel,
+                                text = stringResource(option.methodLabelRes),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
                             )
@@ -421,10 +421,14 @@ internal fun LibrarySheetToggleCard(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+                // Checked, the card itself is `tertiary`, so the switch inverts the usual
+                // roles: an onTertiary track with a tertiary thumb. Both pairs are contrast-
+                // guaranteed in every palette, unlike onTertiaryContainer on tertiary.
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onTertiary,
-                    checkedTrackColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    checkedIconColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    checkedThumbColor = MaterialTheme.colorScheme.tertiary,
+                    checkedTrackColor = MaterialTheme.colorScheme.onTertiary,
+                    checkedBorderColor = MaterialTheme.colorScheme.onTertiary,
+                    checkedIconColor = MaterialTheme.colorScheme.onTertiary,
                     uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 ),

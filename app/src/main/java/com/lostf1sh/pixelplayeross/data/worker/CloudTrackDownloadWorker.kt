@@ -248,21 +248,6 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private fun extensionFor(responseType: String?, fallbackType: String?): String {
-        val type = responseType?.substringBefore(';')?.lowercase()
-            ?: fallbackType?.substringBefore(';')?.lowercase()
-        return when (type) {
-            "audio/flac", "audio/x-flac" -> "flac"
-            "audio/ogg", "application/ogg" -> "ogg"
-            "audio/opus" -> "opus"
-            "audio/mp4", "audio/m4a", "audio/x-m4a", "application/mp4", "video/mp4" -> "m4a"
-            "audio/aac", "audio/aacp" -> "aac"
-            "audio/wav", "audio/x-wav" -> "wav"
-            "audio/webm" -> "webm"
-            else -> "mp3"
-        }
-    }
-
     private data class DownloadSource(
         val url: String,
         val headers: Map<String, String> = emptyMap(),
@@ -282,5 +267,22 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
         const val KEY_ERROR = "error"
         private const val PROGRESS_STEP_BYTES = 512L * 1024L
         private const val MAX_RETRIES = 3
+
+        internal fun extensionFor(responseType: String?, fallbackType: String?): String {
+            val type = responseType?.substringBefore(';')?.trim()?.lowercase()
+                ?: fallbackType?.substringBefore(';')?.trim()?.lowercase()
+            return when (type) {
+                "audio/flac", "audio/x-flac", "application/x-flac" -> "flac"
+                "audio/ogg", "application/ogg", "video/ogg" -> "ogg"
+                "audio/opus" -> "opus"
+                "audio/mp4", "audio/m4a", "audio/x-m4a", "application/mp4", "video/mp4" -> "m4a"
+                "audio/aac", "audio/aacp" -> "aac"
+                "audio/wav", "audio/x-wav" -> "wav"
+                "audio/webm", "video/webm" -> "webm"
+                "audio/x-matroska", "video/x-matroska" -> "mka"
+                "audio/3gpp", "video/3gpp" -> "3gp"
+                else -> "mp3"
+            }
+        }
     }
 }
