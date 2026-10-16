@@ -141,6 +141,26 @@ class ThemeStateHolderArtworkTest {
         currentOwner.cancel()
     }
 
+    @Test
+    fun `current owner clearing hands album palettes back to the surviving owner`() = runTest {
+        val holder = holder()
+        val mainActivityOwner = childScope()
+        val externalPlayerOwner = childScope()
+        holder.initialize(mainActivityOwner)
+        holder.initialize(externalPlayerOwner)
+        runCurrent()
+        val uri = LocalArtworkUri.buildSongUri(1L)
+
+        // ViewModel.clear() cancels the scope before onCleared runs.
+        externalPlayerOwner.cancel()
+        holder.onCleared(externalPlayerOwner)
+        holder.ensureAlbumColorScheme(uri)
+
+        holder.getAlbumColorSchemeFlow(uri, eager = false).first { it == oldScheme }
+        coVerify(exactly = 1) { processor.getOrGenerateColorScheme(uri, any(), any(), any()) }
+        mainActivityOwner.cancel()
+    }
+
     private fun TestScope.childScope(): CoroutineScope =
         CoroutineScope(backgroundScope.coroutineContext + Job(backgroundScope.coroutineContext[Job]))
 

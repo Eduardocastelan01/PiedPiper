@@ -186,8 +186,10 @@ class LibraryStateHolder @Inject constructor(
 
 
     private var scope: CoroutineScope? = null
+    private val owners = OwnerStack<CoroutineScope> { it }
 
     fun initialize(scope: CoroutineScope) {
+        owners.push(scope)
         this.scope = scope
         scope.launch {
             val songSortKey = userPreferencesRepository.songsSortOptionFlow.first()
@@ -210,18 +212,24 @@ class LibraryStateHolder @Inject constructor(
     }
 
     fun onCleared(owner: CoroutineScope) {
-        // Only the scope that currently owns the binding may sever it. A stale
-        // PlayerViewModel clearing after a newer instance already re-initialized this
-        // singleton must not leave it scope-less (sorting and library loading would
-        // silently no-op until process restart).
-        if (scope !== owner) return
-        scope = null
+        // A stale PlayerViewModel clearing leaves the newer binding alone; the current one
+        // clearing hands the holder back to the previous live PlayerViewModel. Going scope-less
+        // instead would make sorting and library loading silently no-op until process restart.
+        owners.remove(owner) { next -> scope = next }
+        // The library collectors die with the scope they were launched in, whichever binding
+        // that was, so move them to the scope that is current now.
+        if (observerScope === owner) {
+            cancelLibraryObservers()
+            if (scope != null) startObservingLibraryData()
+        }
     }
 
     private var songsJob: Job? = null
     private var albumsJob: Job? = null
     private var artistsJob: Job? = null
     private var foldersJob: Job? = null
+    /** The scope the library collectors were launched in, or null while they are stopped. */
+    private var observerScope: CoroutineScope? = null
     @Volatile
     private var needsReloadAfterTrim: Boolean = false
 
@@ -237,6 +245,7 @@ class LibraryStateHolder @Inject constructor(
 
         Timber.tag("LibraryStateHolder").d("startObservingLibraryData called.")
         needsReloadAfterTrim = false
+        observerScope = scope
 
         songsJob = scope?.launch {
             _isLoadingLibrary.value = true
@@ -552,14 +561,7 @@ class LibraryStateHolder @Inject constructor(
                 foldersJob?.isActive == true
         if (!hasLoadedData && !hasActiveCollectors) return
 
-        songsJob?.cancel()
-        albumsJob?.cancel()
-        artistsJob?.cancel()
-        foldersJob?.cancel()
-        songsJob = null
-        albumsJob = null
-        artistsJob = null
-        foldersJob = null
+        cancelLibraryObservers()
 
         _allSongs.value = persistentListOf()
         _allSongsById.value = emptyMap()
@@ -574,6 +576,18 @@ class LibraryStateHolder @Inject constructor(
     fun restoreAfterTrimIfNeeded() {
         if (!needsReloadAfterTrim || scope == null) return
         startObservingLibraryData()
+    }
+
+    private fun cancelLibraryObservers() {
+        songsJob?.cancel()
+        albumsJob?.cancel()
+        artistsJob?.cancel()
+        foldersJob?.cancel()
+        songsJob = null
+        albumsJob = null
+        artistsJob = null
+        foldersJob = null
+        observerScope = null
     }
 }
 

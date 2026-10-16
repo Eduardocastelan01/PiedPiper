@@ -386,4 +386,47 @@ class PlaybackStateHolderTest {
         assertEquals(5_000L, holder.currentPosition.value)
         owner.cancel()
     }
+
+    @Test
+    fun `current owner clearing moves progress updates to the surviving owner`() = runTest {
+        var positionMs = 5_000L
+        val mainActivityOwner = ownerScope()
+        val externalPlayerOwner = ownerScope()
+        // Progress starts while ExternalPlayerActivity's view model is current, so in its scope.
+        val holder = holderBoundTo(
+            mainActivityOwner,
+            externalPlayerOwner,
+            controller = playingController { positionMs }
+        )
+        assertEquals(5_000L, holder.currentPosition.value)
+
+        // ViewModel.clear() cancels the scope before onCleared runs.
+        externalPlayerOwner.cancel()
+        holder.onCleared(externalPlayerOwner)
+        positionMs = 7_000L
+        advanceTimeBy(1_500L)
+        runCurrent()
+
+        assertEquals(7_000L, holder.currentPosition.value)
+        mainActivityOwner.cancel()
+    }
+
+    @Test
+    fun `stale owner clearing restarts the progress updates it was running`() = runTest {
+        var positionMs = 5_000L
+        val mainActivityOwner = ownerScope()
+        val externalPlayerOwner = ownerScope()
+        val holder = holderBoundTo(mainActivityOwner, controller = playingController { positionMs })
+        holder.initialize(externalPlayerOwner)
+        runCurrent()
+
+        mainActivityOwner.cancel()
+        holder.onCleared(mainActivityOwner)
+        positionMs = 7_000L
+        advanceTimeBy(1_500L)
+        runCurrent()
+
+        assertEquals(7_000L, holder.currentPosition.value)
+        externalPlayerOwner.cancel()
+    }
 }

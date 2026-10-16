@@ -57,6 +57,7 @@ class PlaybackStateHolder @Inject constructor(
 
     @Volatile
     private var scope: CoroutineScope? = null
+    private val owners = OwnerStack<CoroutineScope> { it }
 
     /** Mirrors the "Auto-play on skip" preference; the default matches the repository's. */
     @Volatile
@@ -131,6 +132,7 @@ class PlaybackStateHolder @Inject constructor(
     fun initialize(
         coroutineScope: CoroutineScope
     ) {
+        owners.push(coroutineScope)
         this.scope = coroutineScope
         scope?.launch {
             userPreferencesRepository.autoplayOnSkipFlow.collect { enabled ->
@@ -437,6 +439,8 @@ class PlaybackStateHolder @Inject constructor(
     }
 
     private var progressJob: kotlinx.coroutines.Job? = null
+    /** The scope [progressJob] runs in, or null while progress updates are stopped. */
+    private var progressScope: CoroutineScope? = null
 
     /**
      * Reconciles duration reported by the player with the current song metadata duration.
@@ -491,6 +495,7 @@ class PlaybackStateHolder @Inject constructor(
 
     fun startProgressUpdates() {
         stopProgressUpdates()
+        progressScope = scope
         progressJob = scope?.launch {
             _currentPosition.subscriptionCount.collectLatest { subscriberCount ->
                 if (subscriberCount == 0) return@collectLatest
@@ -561,6 +566,7 @@ class PlaybackStateHolder @Inject constructor(
     fun stopProgressUpdates() {
         progressJob?.cancel()
         progressJob = null
+        progressScope = null
     }
 
     private data class PreparedQueueReplacement(
@@ -928,15 +934,22 @@ class PlaybackStateHolder @Inject constructor(
     }
 
     fun onCleared(owner: CoroutineScope) {
-        // Only the scope that currently owns the binding may sever it. A stale
-        // PlayerViewModel (e.g. ExternalPlayerActivity's) clearing after a newer instance
-        // re-initialized this singleton must not cancel that instance's progress updates or
-        // leave it scope-less (the seek bar would freeze until another PlayerViewModel binds it).
-        if (scope !== owner) return
-        stopProgressUpdates()
-        shuffleToggleJob?.cancel()
-        shuffleToggleJob = null
-        scope = null
+        // A stale PlayerViewModel clearing leaves the newer binding alone; the current one
+        // (e.g. ExternalPlayerActivity's) clearing hands the holder back to the previous live
+        // PlayerViewModel instead of leaving it scope-less.
+        owners.remove(owner) { next ->
+            if (next == null) {
+                shuffleToggleJob?.cancel()
+                shuffleToggleJob = null
+            }
+            scope = next
+        }
+        // Progress updates die with the scope they were launched in, whichever binding that
+        // was. The surviving PlayerViewModel only restarts them on its next play/pause change,
+        // so restart them in the current scope now or the seek bar freezes meanwhile.
+        if (progressScope === owner) {
+            if (scope != null) startProgressUpdates() else stopProgressUpdates()
+        }
     }
 
 }

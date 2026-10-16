@@ -1699,7 +1699,7 @@ class PlayerViewModel @Inject constructor(
             }, ContextCompat.getMainExecutor(context))
 
 
-            connectivityStateHolder.initialize()
+            connectivityStateHolder.initialize(viewModelScope)
 
             sleepTimerStateHolder.initialize(
                 scope = viewModelScope,
@@ -4114,19 +4114,19 @@ class PlayerViewModel @Inject constructor(
         mediaController = null
         mediaControllerFuture.cancel(true)
         super.onCleared()
-        // The holder stops progress updates itself, and only when this instance still owns it;
-        // stopping them here would freeze the seek bar of a newer PlayerViewModel.
+        // The holder moves progress updates to the PlayerViewModel left bound, or stops them when
+        // none is; stopping them here would freeze the seek bar of the surviving instance.
         playbackStateHolder.onCleared(ownerScope)
         // The listening session belongs to MusicService, which finalizes it on track end,
         // stop/unload and onDestroy. Finalizing here would split a session that keeps
         // playing in the background after the activity finishes.
-        dailyMixStateHolder.onCleared()
-        lyricsStateHolder.onCleared()
+        dailyMixStateHolder.onCleared(ownerScope)
+        lyricsStateHolder.onCleared(ownerScope)
         themeStateHolder.onCleared(ownerScope)
-        searchStateHolder.onCleared()
+        searchStateHolder.onCleared(ownerScope)
         libraryStateHolder.onCleared(ownerScope)
         sleepTimerStateHolder.onCleared(ownerScope)
-        connectivityStateHolder.onCleared()
+        connectivityStateHolder.onCleared(ownerScope)
         queueUndoStateHolder.onCleared()
         playlistDismissUndoStateHolder.onCleared()
     }

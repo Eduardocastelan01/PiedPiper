@@ -49,6 +49,15 @@ class SleepTimerStateHolder @Inject constructor(
     private var toastEmitter: (suspend (String) -> Unit)? = null
     private var mediaControllerProvider: (() -> MediaController?)? = null
     private var songTitleResolver: ((String?) -> String?)? = null
+    private val owners = OwnerStack<Binding> { it.scope }
+
+    /** One PlayerViewModel's dependencies, kept so the holder can fall back to them. */
+    private class Binding(
+        val scope: CoroutineScope,
+        val toastEmitter: suspend (String) -> Unit,
+        val mediaControllerProvider: () -> MediaController?,
+        val songTitleResolver: (String?) -> String?,
+    )
 
     /**
      * Initialize with dependencies from ViewModel.
@@ -60,13 +69,19 @@ class SleepTimerStateHolder @Inject constructor(
         mediaControllerProvider: () -> MediaController?,
         songTitleResolver: (String?) -> String?,
     ) {
-        this.scope = scope
-        this.toastEmitter = toastEmitter
-        this.mediaControllerProvider = mediaControllerProvider
-        this.songTitleResolver = songTitleResolver
+        val binding = Binding(scope, toastEmitter, mediaControllerProvider, songTitleResolver)
+        owners.push(binding)
+        bind(binding)
+    }
+
+    private fun bind(binding: Binding) {
+        scope = binding.scope
+        toastEmitter = binding.toastEmitter
+        mediaControllerProvider = binding.mediaControllerProvider
+        songTitleResolver = binding.songTitleResolver
 
         sessionMirrorJob?.cancel()
-        sessionMirrorJob = scope.launch {
+        sessionMirrorJob = binding.scope.launch {
             launch { session.timer.collect { renderTimer(it) } }
             launch {
                 session.countedPlay.collect { countedPlay ->
@@ -190,18 +205,24 @@ class SleepTimerStateHolder @Inject constructor(
     }
 
     /**
-     * Cleanup when ViewModel is cleared. Only the scope that currently owns the binding
-     * may sever it: a stale PlayerViewModel clearing after a newer instance already
-     * re-initialized this singleton must not null the live callbacks (the timer toasts
-     * and end-of-track toggle would silently no-op until process restart).
+     * Cleanup when ViewModel is cleared. A stale PlayerViewModel clearing leaves the newer
+     * binding alone; the current one clearing re-binds the previous live PlayerViewModel and
+     * restarts the session mirror in its scope. Nulling the callbacks while a PlayerViewModel
+     * is still alive would make the timer display, toasts and end-of-track toggle silently
+     * no-op until process restart.
      */
     fun onCleared(owner: CoroutineScope) {
-        if (scope !== owner) return
-        sessionMirrorJob?.cancel()
-        sessionMirrorJob = null
-        scope = null
-        toastEmitter = null
-        mediaControllerProvider = null
-        songTitleResolver = null
+        owners.remove(owner) { next ->
+            if (next != null) {
+                bind(next)
+            } else {
+                sessionMirrorJob?.cancel()
+                sessionMirrorJob = null
+                scope = null
+                toastEmitter = null
+                mediaControllerProvider = null
+                songTitleResolver = null
+            }
+        }
     }
 }

@@ -159,7 +159,7 @@ class PlayerViewModelTest {
         every { mockSearchStateHolder.updateSearchFilter(any()) } just runs
         every { mockSearchStateHolder.initialize(any()) } just runs
 
-        every { mockConnectivityStateHolder.initialize() } just runs
+        every { mockConnectivityStateHolder.initialize(any()) } just runs
 
         _favoriteIdsFlow.value = emptySet()
         stablePlayerStateFlow = MutableStateFlow(StablePlayerState(currentSong = null))
@@ -749,6 +749,35 @@ class PlayerViewModelTest {
             val clearedScope = slot<CoroutineScope>()
             verify(exactly = 1) { mockPlaybackStateHolder.onCleared(capture(clearedScope)) }
             assertSame(boundScope.captured, clearedScope.captured)
+        }
+
+        @Test
+        fun `clearing releases every shared holder for the scope that bound it`() = runTest {
+            advanceUntilIdle()
+            val boundScope = slot<CoroutineScope>()
+            verify { mockThemeStateHolder.initialize(capture(boundScope)) }
+            val owner = boundScope.captured
+            verify { mockDailyMixStateHolder.initialize(owner) }
+            verify { mockLyricsStateHolder.initialize(owner, any(), any()) }
+            verify { mockSearchStateHolder.initialize(owner) }
+            verify { mockLibraryStateHolder.initialize(owner) }
+            verify { mockSleepTimerStateHolder.initialize(owner, any(), any(), any()) }
+            verify { mockConnectivityStateHolder.initialize(owner) }
+
+            PlayerViewModel::class.java.getDeclaredMethod("onCleared")
+                .apply { isAccessible = true }
+                .invoke(playerViewModel)
+
+            // Each holder falls back to whichever PlayerViewModel is still bound, so a cleared
+            // view model has to say which binding it is giving up.
+            verify(exactly = 1) { mockPlaybackStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockDailyMixStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockLyricsStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockThemeStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockSearchStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockLibraryStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockSleepTimerStateHolder.onCleared(owner) }
+            verify(exactly = 1) { mockConnectivityStateHolder.onCleared(owner) }
         }
     }
 

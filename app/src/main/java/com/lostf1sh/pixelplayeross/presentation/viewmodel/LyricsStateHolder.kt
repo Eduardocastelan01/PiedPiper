@@ -54,6 +54,7 @@ class LyricsStateHolder @Inject constructor(
     private var scope: CoroutineScope? = null
     private var loadingJob: Job? = null
     private var loadCallback: LyricsLoadCallback? = null
+    private val owners = OwnerStack<Pair<CoroutineScope, LyricsLoadCallback>> { it.first }
 
     private val _currentSongSyncOffset = MutableStateFlow(0)
     val currentSongSyncOffset: StateFlow<Int> = _currentSongSyncOffset.asStateFlow()
@@ -81,6 +82,7 @@ class LyricsStateHolder @Inject constructor(
         callback: LyricsLoadCallback,
         stablePlayerState: StateFlow<com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState>
     ) {
+        owners.push(coroutineScope to callback)
         scope = coroutineScope
         loadCallback = callback
 
@@ -393,10 +395,17 @@ class LyricsStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
-        loadingJob?.cancel()
-        scope = null
-        loadCallback = null
+    /**
+     * A stale PlayerViewModel clearing leaves the newer binding alone; the current one clearing
+     * hands lyric loading back to the previous live PlayerViewModel. Its sync-offset collector
+     * from [initialize] is still running in its own scope.
+     */
+    fun onCleared(owner: CoroutineScope) {
+        owners.remove(owner) { next ->
+            if (next == null) loadingJob?.cancel()
+            scope = next?.first
+            loadCallback = next?.second
+        }
     }
 }
 
