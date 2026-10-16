@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Cosmic Swirl</string>
+    <string name="collage_pattern_honeycomb_groove">Honeycomb Groove</string>
+    <string name="collage_pattern_vinyl_stack">Vinyl Stack</string>
+    <string name="collage_pattern_pixel_mosaic">Pixel Mosaic</string>
+    <string name="collage_pattern_stardust_scatter">Stardust Scatter</string>
+    <string name="collage_pattern_soft_orbit">Soft Orbit</string>
+    <string name="collage_pattern_arrow_fanfare">Arrow Fanfare</string>
+    <string name="collage_pattern_sunny_bloom">Sunny Bloom</string>
+    <string name="collage_pattern_pixel_cookie">Pixel Cookie</string>
+    <string name="collage_pattern_heart_garden">Heart Garden</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">Preparing %1$d cloud track for offline playback</item>
+        <item quantity="other">Preparing %1$d cloud tracks for offline playback</item>
+    </plurals>
+</resources>

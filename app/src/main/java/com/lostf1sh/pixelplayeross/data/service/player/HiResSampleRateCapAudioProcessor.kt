@@ -28,6 +28,8 @@ class HiResSampleRateCapAudioProcessor(
     private var inputFormat: AudioFormat = AudioFormat.NOT_SET
     private var outputFormat: AudioFormat = AudioFormat.NOT_SET
     private var downsampleFactor: Int = 1
+    // Retain storage when getOutput() clears the pending output reference.
+    private var reusableBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var pendingBytes = ByteArray(0)
     private var pendingSize = 0
@@ -177,14 +179,12 @@ class HiResSampleRateCapAudioProcessor(
     }
 
     private fun ensureOutputBuffer(requiredCapacity: Int): ByteBuffer {
-        return if (outputBuffer.capacity() < requiredCapacity) {
-            ByteBuffer.allocateDirect(requiredCapacity).order(NATIVE_ORDER).also {
-                outputBuffer = it
-            }
+        if (reusableBuffer.capacity() < requiredCapacity) {
+            reusableBuffer = ByteBuffer.allocateDirect(requiredCapacity).order(NATIVE_ORDER)
         } else {
-            outputBuffer.clear()
-            outputBuffer
+            reusableBuffer.clear()
         }
+        return reusableBuffer
     }
 
     private fun stashPendingBytes(inputBuffer: ByteBuffer) {
@@ -262,6 +262,7 @@ class HiResSampleRateCapAudioProcessor(
 
     override fun reset() {
         outputBuffer = AudioProcessor.EMPTY_BUFFER
+        reusableBuffer = AudioProcessor.EMPTY_BUFFER
         pendingSize = 0
         inputEnded = false
         inputFormat = AudioFormat.NOT_SET

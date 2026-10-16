@@ -37,6 +37,7 @@ class ThemeStateHolder @Inject constructor(
 ) {
 
     private var scope: CoroutineScope? = null
+    private val owners = OwnerStack<CoroutineScope> { it }
     @Volatile
     private var currentPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default
     @Volatile
@@ -56,6 +57,7 @@ class ThemeStateHolder @Inject constructor(
     val activePlayerColorSchemePair: StateFlow<ColorSchemePair?> = _activePlayerColorSchemePair.asStateFlow()
 
     fun initialize(scope: CoroutineScope) {
+        owners.push(scope)
         this.scope = scope
         var observedArtworkVersion = AlbumArtUtils.artworkCacheVersion.value
 
@@ -387,8 +389,12 @@ class ThemeStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
-        scope = null
+    fun onCleared(owner: CoroutineScope) {
+        // A stale PlayerViewModel clearing leaves the newer binding alone; the current one
+        // clearing hands extraction back to the previous live PlayerViewModel, whose own
+        // collectors above are still running. Going scope-less instead would stop album color
+        // extraction until process restart.
+        owners.remove(owner) { next -> scope = next }
     }
 
 }

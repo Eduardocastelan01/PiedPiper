@@ -16,21 +16,8 @@
     <string name="presentation_batch_e_clear_queue_dialog_title">Kuyruğu temizle</string>
     <string name="presentation_batch_e_create_playlist_subtitle">Oluşturma yöntemini seçin.</string>
     <string name="presentation_batch_e_create_playlist_title">Çalma listesi oluştur</string>
-    <string name="presentation_batch_e_creation_mode_describe">Tarif edin</string>
-    <string name="presentation_batch_e_creation_mode_describe_subtitle">Ne dinlemek istediğinizi yazın, şarkıları uygulama seçsin; tamamen çevrimdışı.</string>
     <string name="presentation_batch_e_creation_mode_manual">Manuel</string>
     <string name="presentation_batch_e_creation_mode_manual_subtitle">Kapak görselini, simgeyi, şekli tasarlayın ve şarkıları kendiniz seçin.</string>
-    <string name="presentation_batch_e_describe_generate">Oluştur</string>
-    <string name="presentation_batch_e_describe_no_matches">Kitaplığınızda bu tarife uyan şarkı yok.</string>
-    <string name="presentation_batch_e_describe_playlist_hint">örn. ağırlık çalışırken dinlenecek şarkılar</string>
-    <string name="presentation_batch_e_describe_playlist_subtitle">Bu cihazdaki kitaplığınızla eşleştirilir; hiçbir veri cihazdan çıkmaz.</string>
-    <string name="presentation_batch_e_describe_playlist_title">Çalma listenizi tarif edin</string>
-    <string name="presentation_batch_e_describe_regenerate">Yeniden Oluştur</string>
-    <plurals name="presentation_batch_e_describe_result_count">
-        <item quantity="one">%d şarkı eşleşti</item>
-        <item quantity="other">%d şarkı eşleşti</item>
-    </plurals>
-    <string name="presentation_batch_e_describe_save">Çalma listesini kaydet</string>
     <string name="presentation_batch_e_deselect_all">Tüm seçimi kaldır</string>
     <string name="presentation_batch_e_enter_playlist_name">Bir çalma listesi adı girin</string>
     <string name="presentation_batch_e_manage_presets_title">Ön ayarları yönet</string>

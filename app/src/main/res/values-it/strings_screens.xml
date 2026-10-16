@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d contrib.</string>
     <string name="about_link_fdroid_subtitle">Disponibile nel catalogo F-Droid</string>
+    <string name="about_licenses_title">Licenze e attribuzioni</string>
+    <string name="about_licenses_subtitle">Librerie open source, font e dati inclusi</string>
+    <string name="about_licenses_sheet_subtitle">Software di terze parti, font e dati inclusi in questa app.</string>
+    <string name="licenses_tab_all">Tutti</string>
+    <string name="licenses_tab_libraries">Librerie</string>
+    <string name="licenses_tab_fonts">Font</string>
+    <string name="licenses_tab_data">Dati</string>
+    <string name="licenses_tab_raw_notice">Testo originale</string>
+    <string name="licenses_search_placeholder">Cerca librerie o licenze…</string>
+    <string name="licenses_cd_clear_search">Cancella ricerca</string>
+    <string name="licenses_empty_results">Nessuna licenza corrisponde a \"%1$s\"</string>
+    <string name="licenses_detail_section">Sezione</string>
+    <string name="licenses_detail_source">Sorgente</string>
+    <string name="licenses_detail_license">Licenza</string>
+    <string name="licenses_toast_copied">Testo della licenza copiato negli appunti</string>
+    <string name="licenses_cd_close">Chiudi</string>
+    <string name="licenses_cd_copy">Copia testo della licenza</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Codice sorgente</string>
     <string name="about_maintainer_subtitle">Manutenzione della versione FOSS e di quella originale/non FOSS.</string>
@@ -26,10 +43,27 @@
     <string name="album_cover_for">Copertina di %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Salva segnalibro</string>
+    <string name="audio_bookmarks_selected_count">%1$d selezionati</string>
+    <string name="audio_bookmarks_cd_selected">Selezionato</string>
+    <string name="audio_bookmarks_cd_delete_selected">Elimina selezionati</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">Eliminare %1$d cartella?</item>
+        <item quantity="other">Eliminare %1$d cartelle?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d momento salvato verrà rimosso definitivamente. L\'operazione non può essere annullata.</item>
+        <item quantity="other">%1$d momenti salvati verranno rimossi definitivamente. L\'operazione non può essere annullata.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">Eliminare %1$d momento?</item>
+        <item quantity="other">Eliminare %1$d momenti?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">I momenti salvati selezionati verranno rimossi definitivamente. L\'operazione non può essere annullata.</string>
     <string name="audio_bookmarks_cd_open">Segnalibri audio</string>
     <string name="audio_bookmarks_back_to_top">Torna su</string>
     <string name="audio_bookmarks_clear_filter">Cancella filtro</string>
     <string name="audio_bookmarks_name_label">Nome del segnalibro</string>
+    <string name="audio_bookmarks_actions">Azioni del segnalibro</string>
     <string name="audio_bookmarks_title">Segnalibri</string>
     <string name="browse_by_genre">Esplora per genere</string>
     <string name="cd_about_open_link">Apri %1$s</string>
@@ -61,6 +95,18 @@
     <string name="cd_search_icon">Cerca</string>
     <string name="cd_shuffle_play">Riproduzione casuale</string>
     <string name="cd_shuffle_play_album">Riproduzione casuale album</string>
+    <string name="detail_hero_shuffle">Casuale</string>
+    <string name="detail_hero_play">Riproduci</string>
+    <string name="detail_hero_pause">Pausa</string>
+    <string name="detail_hero_resume">Riprendi</string>
+    <string name="detail_hero_more_actions">Altre opzioni</string>
+    <string name="detail_hero_add_to_playlist">Aggiungi a playlist</string>
+    <string name="detail_hero_play_next">Riproduci dopo</string>
+    <string name="detail_hero_add_to_queue">Aggiungi alla coda</string>
+    <string name="detail_hero_album_count_many">%1$d album</string>
+    <string name="detail_hero_album_count_one">1 album</string>
+    <string name="detail_hero_duration_minutes">%1$d min</string>
+    <string name="detail_hero_duration_hours">%1$d h %2$d min</string>
     <string name="cd_song_cover">Copertina brano</string>
     <string name="cd_sync">Sincronizza</string>
     <string name="cd_toggle_grid_list">Alterna vista griglia/elenco</string>
@@ -142,6 +188,7 @@
     <string name="search_nothing_found">Nessun risultato trovato</string>
     <string name="search_placeholder">Cerca…</string>
     <string name="search_try_different_or_filters">Prova un termine di ricerca diverso o controlla i filtri.</string>
+    <string name="search_filter_all">Tutti</string>
     <string name="setup_all_set_body">Sei pronto per goderti la tua musica.</string>
     <string name="setup_all_set_title">Tutto pronto!</string>
     <string name="setup_app_navigation_subtitle">Scegli lo stile della barra di navigazione inferiore.</string>
@@ -180,6 +227,9 @@
     <string name="setup_navbar_default_style">Stile predefinito</string>
     <string name="setup_navbar_footer">Puoi cambiarlo in seguito in Impostazioni &gt; Aspetto &gt; Stile barra navigazione.</string>
     <string name="setup_permission_alarms_title">Allarmi e promemoria</string>
+    <string name="setup_battery_optimization_title">Ottimizzazione batteria</string>
+    <string name="setup_battery_optimization_description">Alcuni dispositivi Android chiudono aggressivamente le app in background. Disabilita l\'ottimizzazione batteria per PixelPlayerOSS per prevenire interruzioni di riproduzione impreviste.</string>
+    <string name="setup_disable_battery_optimization">Disabilita ottimizzazione</string>
     <string name="setup_permission_granted">Permesso concesso</string>
     <string name="setup_permission_media_title">Permesso media</string>
     <string name="setup_permission_notifications_description">Abilita le notifiche per controllare la tua musica dalla schermata di blocco e dal pannello notifiche.</string>

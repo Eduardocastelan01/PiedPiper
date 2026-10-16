@@ -36,4 +36,52 @@
         <item quantity="one">%d gang</item>
         <item quantity="other">%d ganger</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d aktiv dag</item>
+        <item quantity="other">%d aktive dager</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d artist</item>
+        <item quantity="other">%d artister</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dager</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d avspilling</item>
+        <item quantity="other">%d avspillinger</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d økt</item>
+        <item quantity="other">%d økter</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d spor</item>
+        <item quantity="other">%d spor</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Slett %d spilleliste?</item>
+        <item quantity="other">Slett %d spillelister?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Er du sikker på at du vil slette %d spilleliste?</item>
+        <item quantity="other">Er du sikker på at du vil slette %d spillelister?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d sang</item>
+        <item quantity="other">%d sanger</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d minutt siden</item>
+        <item quantity="other">%d minutter siden</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d time siden</item>
+        <item quantity="other">%d timer siden</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d dag siden</item>
+        <item quantity="other">%d dager siden</item>
+    </plurals>
 </resources>

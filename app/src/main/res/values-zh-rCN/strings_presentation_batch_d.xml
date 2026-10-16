@@ -6,6 +6,7 @@
     <string name="presentation_batch_d_reorder_tabs_cd">调整标签顺序</string>
     <string name="presentation_batch_d_sort_by">排序方式</string>
     <string name="presentation_batch_d_view_section_view">视图</string>
+    <string name="presentation_batch_d_view_section_layout">布局</string>
     <string name="presentation_batch_d_playlist_view">歌单视图</string>
     <string name="presentation_batch_d_view_grid">网格</string>
     <string name="presentation_batch_d_view_list">列表</string>

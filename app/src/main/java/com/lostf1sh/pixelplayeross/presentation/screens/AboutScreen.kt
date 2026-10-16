@@ -45,6 +45,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.FilledIconButton
@@ -68,6 +69,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -155,8 +158,8 @@ private data class ProjectLink(
     val id: String,
     val title: String,
     val subtitle: String,
-    @DrawableRes val iconRes: Int,
-    val url: String,
+    val icon: Painter,
+    val onClick: () -> Unit,
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -180,15 +183,22 @@ fun AboutScreen(
             id = "source",
             title = stringResource(R.string.about_link_source_title),
             subtitle = stringResource(R.string.about_link_source_subtitle),
-            iconRes = R.drawable.github,
-            url = SourceRepoUrl,
+            icon = painterResource(R.drawable.github),
+            onClick = { openUrl(context, SourceRepoUrl) },
         ),
         ProjectLink(
             id = "fdroid",
             title = stringResource(R.string.about_link_fdroid_title),
             subtitle = stringResource(R.string.about_link_fdroid_subtitle),
-            iconRes = R.drawable.fdroid,
-            url = FDroidUrl,
+            icon = painterResource(R.drawable.fdroid),
+            onClick = { openUrl(context, FDroidUrl) },
+        ),
+        ProjectLink(
+            id = "licenses",
+            title = stringResource(R.string.about_licenses_title),
+            subtitle = stringResource(R.string.about_licenses_subtitle),
+            icon = rememberVectorPainter(Icons.Rounded.Balance),
+            onClick = { navController.navigateSafely(Screen.Licenses.route) },
         ),
     )
 
@@ -338,7 +348,7 @@ fun AboutScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(top = if (index == 0) 0.dp else 3.dp),
-                    onClick = { openUrl(context, link.url) },
+                    onClick = link.onClick,
                 )
             }
 
@@ -682,7 +692,7 @@ private fun AboutLinkCard(
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(
-                    painter = painterResource(link.iconRes),
+                    painter = link.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier

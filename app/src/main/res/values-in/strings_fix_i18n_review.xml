@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Pusaran Kosmik</string>
+    <string name="collage_pattern_honeycomb_groove">Irama Sarang Lebah</string>
+    <string name="collage_pattern_vinyl_stack">Tumpukan Vinil</string>
+    <string name="collage_pattern_pixel_mosaic">Mozaik Piksel</string>
+    <string name="collage_pattern_stardust_scatter">Taburan Debu Bintang</string>
+    <string name="collage_pattern_soft_orbit">Orbit Lembut</string>
+    <string name="collage_pattern_arrow_fanfare">Parade Panah</string>
+    <string name="collage_pattern_sunny_bloom">Mekar Cerah</string>
+    <string name="collage_pattern_pixel_cookie">Kue Piksel</string>
+    <string name="collage_pattern_heart_garden">Taman Hati</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="other">Menyiapkan %1$d lagu cloud untuk diputar offline</item>
+    </plurals>
+</resources>

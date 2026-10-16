@@ -241,4 +241,30 @@ class AudioOffloadPolicyTest {
 
         assertThat(shouldDisable).isFalse()
     }
+
+    @Test
+    fun offloadHealth_skipsOffloadWhenItStalledOnThisExactBuild() {
+        assertThat(
+            isAudioOffloadMarkedBroken(
+                storedBuildFingerprint = "OnePlus/PJZ110/OP5D0DL1:17/BP4A:user/release-keys",
+                currentBuildFingerprint = "OnePlus/PJZ110/OP5D0DL1:17/BP4A:user/release-keys"
+            )
+        ).isTrue()
+    }
+
+    @Test
+    fun offloadHealth_retestsOffloadAfterSystemUpdate() {
+        assertThat(
+            isAudioOffloadMarkedBroken(
+                storedBuildFingerprint = "OnePlus/PJZ110/OP5D0DL1:17/BP4A:user/release-keys",
+                currentBuildFingerprint = "OnePlus/PJZ110/OP5D0DL1:17/BP4B:user/release-keys"
+            )
+        ).isFalse()
+    }
+
+    @Test
+    fun offloadHealth_keepsOffloadWhenNothingWasRecorded() {
+        assertThat(isAudioOffloadMarkedBroken(null, "any/build")).isFalse()
+        assertThat(isAudioOffloadMarkedBroken("", "any/build")).isFalse()
+    }
 }

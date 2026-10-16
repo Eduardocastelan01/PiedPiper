@@ -163,6 +163,8 @@
     <string name="search_playlists_hint">Search for playlists…</string>
 
     <string name="multi_selection_playlists_count_upper">%1$d PLAYLISTS</string>
+    <string name="multi_selection_genres_count_upper">%1$d GENRES</string>
+    <string name="multi_selection_genres_queue_hint">Perform batch operations on all songs within these genres.</string>
     <string name="cd_export_all">Export all</string>
     <string name="cd_merge_all">Merge all</string>
     <string name="cd_share_all">Share all</string>
@@ -173,6 +175,10 @@
     <string name="reorder_tabs_reset_dialog_title">Reset order</string>
     <string name="reorder_tabs_reset_dialog_body">Reset tab order to the default?</string>
     <string name="reorder_tabs_reordering">Reordering tabs…</string>
+    <string name="reorder_tabs_visible_title">Visible tabs</string>
+    <string name="reorder_tabs_hidden_title">Hidden tabs</string>
+    <string name="reorder_tabs_hide_action">Hide tab</string>
+    <string name="reorder_tabs_show_action">Show tab</string>
     <string name="cd_drag_handle">Drag handle</string>
     <string name="cd_reset">Reset</string>
     <string name="action_done">Done</string>

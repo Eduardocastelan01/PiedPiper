@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">오늘의 믹스 조정</string>
+    <string name="mix_daily_subtitle">오늘 사용하기 전에 변경 사항을 미리 들어보세요</string>
+    <string name="mix_library_subtitle">음악 라이브러리로 믹스 만들기</string>
+    <string name="mix_close">믹스 닫기</string>
+    <string name="mix_request_label">어떤 음악을 듣고 싶으세요?</string>
+    <string name="mix_request_placeholder">아티스트, 장르, 분위기 또는 활동</string>
+    <string name="mix_suggest_recent">최근 요청: %1$s</string>
+    <string name="mix_suggest_rediscover">%1$s 다시 발견하기</string>
+    <string name="mix_back">요청으로 돌아가기</string>
+    <string name="mix_done">완료</string>
+    <string name="mix_thinking">생각하는 중…</string>
+    <string name="mix_refine">믹스 세부 조정</string>
+    <string name="mix_length">플레이리스트 길이</string>
+    <string name="mix_auto">자동</string>
+    <string name="mix_up_to">최대 %1$d곡</string>
+    <string name="mix_energy">에너지</string>
+    <string name="mix_energy_calm">차분하게</string>
+    <string name="mix_energy_steady">적당하게</string>
+    <string name="mix_energy_energetic">활기차게</string>
+    <string name="mix_refine_hint">자동은 요청 내용을 따릅니다. 에너지를 선택하면 조건이 추가되어 일치하는 곡이 줄어들 수 있습니다.</string>
+    <string name="mix_selection_summary">길이: %1$s · 에너지: %2$s</string>
+    <string name="mix_edit_request">요청 편집</string>
+    <string name="mix_playlist_name">플레이리스트 이름</string>
+    <string name="mix_short_result">라이브러리에 요청한 수보다 일치하는 곡이 적습니다. 요청한 조건은 그대로 유지했습니다.</string>
+    <string name="mix_preview_action">믹스 미리보기</string>
+    <string name="mix_play">재생</string>
+    <string name="mix_use_today">오늘 사용</string>
+    <string name="mix_save">플레이리스트 저장</string>
+    <string name="mix_saved_action">저장됨</string>
+    <string name="mix_saved">%1$s(으)로 저장됨</string>
+    <string name="mix_save_failed">이 플레이리스트를 저장할 수 없습니다. 미리보기는 그대로 남아 있으니 다시 저장해 보세요.</string>
+    <string name="mix_no_matches">일치하는 곡이 없습니다. 요청을 편집하거나 에너지를 자동으로 설정하세요.</string>
+    <string name="mix_daily_updated">데일리 믹스가 업데이트되었습니다</string>
+    <string name="mix_undo">실행 취소</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="other">일치하는 곡 %1$d개 · %2$d분</item>
+    </plurals>
+</resources>

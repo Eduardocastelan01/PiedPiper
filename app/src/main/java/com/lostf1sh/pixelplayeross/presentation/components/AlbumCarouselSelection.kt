@@ -4,6 +4,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
@@ -21,6 +22,9 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.first
 
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtQuality
+import kotlin.math.abs
+
+private const val SETTLED_PAGE_OFFSET_EPSILON = 0.001f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,31 +91,63 @@ fun AlbumCarouselSection(
         targetSize = targetSize,
         anchorIndex = effectiveTargetIndex
     )
-    var ignoreNextSettledSelectionForPage by remember { mutableStateOf<Int?>(null) }
-    var programmaticScrollInProgress by remember { mutableStateOf(false) }
+    // Scrolls this section runs itself: skips, and the snap when the queue shifts around the
+    // playing song. A counter rather than a flag, because a cancelled scroll's cleanup can run
+    // after the scroll that replaced it has already started.
+    var ownScrollsInFlight by remember { mutableIntStateOf(0) }
     var lastSettledSongId by remember { mutableStateOf(currentSong?.id) }
+
+    // A settle only picks a song after a scroll this section didn't start. User drags come
+    // through the pager's interaction source. Accessibility page actions, keyboard and mouse-wheel
+    // scrolls emit no DragInteraction, so any scroll that runs while none of ours does counts too.
+    // The NO_PEEK settle correction snaps synchronously, so it never shows up as a scroll here.
+    var isUserDragging by remember { mutableStateOf(false) }
+    var userScrollSettlePending by remember { mutableStateOf(false) }
+    LaunchedEffect(carouselState) {
+        carouselState.pagerState.interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is DragInteraction.Start -> {
+                    isUserDragging = true
+                    userScrollSettlePending = true
+                }
+                is DragInteraction.Stop, is DragInteraction.Cancel -> isUserDragging = false
+            }
+        }
+    }
+    LaunchedEffect(carouselState) {
+        snapshotFlow { carouselState.pagerState.isScrollInProgress && ownScrollsInFlight == 0 }
+            .filter { it }
+            .collect { userScrollSettlePending = true }
+    }
+
+    // Player -> Carousel. Each new target cancels the in-flight animation (the pager's
+    // MutatorMutex) and animates on from the current position, so a burst of skips keeps moving.
+    // Only an active user drag is waited for; waiting for our own just-cancelled scroll to go
+    // idle stalled the carousel until the taps stopped.
     LaunchedEffect(effectiveTargetIndex, requestedTargetIndex, queue) {
-        snapshotFlow { carouselState.pagerState.isScrollInProgress }
-            .first { !it }
-        
+        if (isUserDragging) {
+            snapshotFlow { isUserDragging }.first { !it }
+        }
+
         val currentPage = carouselState.pagerState.currentPage
-        if (currentPage != effectiveTargetIndex) {
-            val isShiftOnly = currentSong?.id != null && 
-                              currentSong.id == lastSettledSongId && 
+        // A scroll cancelled past the halfway point already reports the target as its current
+        // page, so also finish it when it was left between pages.
+        val isBetweenPages =
+            abs(carouselState.pagerState.currentPageOffsetFraction) > SETTLED_PAGE_OFFSET_EPSILON
+        if (currentPage != effectiveTargetIndex || isBetweenPages) {
+            val isShiftOnly = currentSong?.id != null &&
+                              currentSong.id == lastSettledSongId &&
                               requestedTargetIndex == null
-            
-            if (isShiftOnly) {
-                carouselState.pagerState.scrollToPage(effectiveTargetIndex)
-            } else {
-                if (requestedTargetIndex != null) {
-                    ignoreNextSettledSelectionForPage = effectiveTargetIndex
-                }
-                programmaticScrollInProgress = true
-                try {
+
+            ownScrollsInFlight++
+            try {
+                if (isShiftOnly) {
+                    carouselState.pagerState.scrollToPage(effectiveTargetIndex)
+                } else {
                     carouselState.animateScrollToItem(effectiveTargetIndex)
-                } finally {
-                    programmaticScrollInProgress = false
                 }
+            } finally {
+                ownScrollsInFlight--
             }
         }
         lastSettledSongId = currentSong?.id
@@ -123,11 +159,11 @@ fun AlbumCarouselSection(
             .distinctUntilChanged()
             .filter { !it }
             .collect {
+                // Only a settle that follows a user scroll picks a song. The player already drove
+                // this section's own scrolls, and a skip burst cancels them on intermediate pages.
+                if (!userScrollSettlePending) return@collect
+                userScrollSettlePending = false
                 val settled = carouselState.pagerState.currentPage
-                if (ignoreNextSettledSelectionForPage == settled) {
-                    ignoreNextSettledSelectionForPage = null
-                    return@collect
-                }
                 if (settled != currentSongIndex) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     queue.getOrNull(settled)?.let { onSongSelected(it, settled) }
@@ -145,7 +181,7 @@ fun AlbumCarouselSection(
             modifier = Modifier.fillMaxSize(),
             itemSpacing = itemSpacing,
             itemCornerRadius = corner,
-            suppressNoPeekSettleCorrection = requestedTargetIndex != null || programmaticScrollInProgress,
+            suppressNoPeekSettleCorrection = requestedTargetIndex != null || ownScrollsInFlight > 0,
             carouselStyle = if (carouselState.pagerState.pageCount == 1) CarouselStyle.NO_PEEK else carouselStyle,
             carouselWidth = availableWidth,
             itemKey = { index -> carouselItemKeys.getOrNull(index) ?: "queue_item_$index" },

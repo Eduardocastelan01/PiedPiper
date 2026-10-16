@@ -2,6 +2,23 @@
 <resources>
     <string name="about_contributions_format">%1$d вклад.</string>
     <string name="about_link_fdroid_subtitle">Доступно в каталоге F-Droid</string>
+    <string name="about_licenses_title">Лицензии и авторство</string>
+    <string name="about_licenses_subtitle">Библиотеки с открытым исходным кодом, шрифты и встроенные данные</string>
+    <string name="about_licenses_sheet_subtitle">Стороннее ПО, шрифты и данные, входящие в состав приложения.</string>
+    <string name="licenses_tab_all">Все</string>
+    <string name="licenses_tab_libraries">Библиотеки</string>
+    <string name="licenses_tab_fonts">Шрифты</string>
+    <string name="licenses_tab_data">Данные</string>
+    <string name="licenses_tab_raw_notice">Текст уведомления</string>
+    <string name="licenses_search_placeholder">Поиск библиотек или лицензий…</string>
+    <string name="licenses_cd_clear_search">Очистить поиск</string>
+    <string name="licenses_empty_results">Нет лицензий по запросу «%1$s»</string>
+    <string name="licenses_detail_section">Раздел</string>
+    <string name="licenses_detail_source">Источник</string>
+    <string name="licenses_detail_license">Лицензия</string>
+    <string name="licenses_toast_copied">Текст лицензии скопирован в буфер обмена</string>
+    <string name="licenses_cd_close">Закрыть</string>
+    <string name="licenses_cd_copy">Копировать текст лицензии</string>
     <string name="about_link_fdroid_title">F-Droid</string>
     <string name="about_link_source_title">Исходный код</string>
     <string name="about_maintainer_subtitle">Сопровождение FOSS-версии и оригинальной (не-FOSS) версии.</string>
@@ -26,10 +43,33 @@
     <string name="album_cover_for">Обложка %1$s</string>
     <string name="album_detail_meta_line">%1$s · %2$s</string>
     <string name="audio_bookmarks_cd_add">Сохранить закладку</string>
+    <string name="audio_bookmarks_selected_count">Выбрано: %1$d</string>
+    <string name="audio_bookmarks_cd_selected">Выбрано</string>
+    <string name="audio_bookmarks_cd_delete_selected">Удалить выбранные</string>
+    <plurals name="audio_bookmarks_delete_folders_title">
+        <item quantity="one">Удалить %1$d папку?</item>
+        <item quantity="few">Удалить %1$d папки?</item>
+        <item quantity="many">Удалить %1$d папок?</item>
+        <item quantity="other">Удалить %1$d папки?</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_folders_message">
+        <item quantity="one">%1$d закладка будет удалена безвозвратно. Это действие нельзя отменить.</item>
+        <item quantity="few">%1$d закладки будут удалены безвозвратно. Это действие нельзя отменить.</item>
+        <item quantity="many">%1$d закладок будут удалены безвозвратно. Это действие нельзя отменить.</item>
+        <item quantity="other">%1$d закладки будут удалены безвозвратно. Это действие нельзя отменить.</item>
+    </plurals>
+    <plurals name="audio_bookmarks_delete_moments_title">
+        <item quantity="one">Удалить %1$d закладку?</item>
+        <item quantity="few">Удалить %1$d закладки?</item>
+        <item quantity="many">Удалить %1$d закладок?</item>
+        <item quantity="other">Удалить %1$d закладки?</item>
+    </plurals>
+    <string name="audio_bookmarks_delete_moments_message">Выбранные закладки будут удалены безвозвратно. Это действие нельзя отменить.</string>
     <string name="audio_bookmarks_cd_open">Аудиозакладки</string>
     <string name="audio_bookmarks_back_to_top">Наверх</string>
     <string name="audio_bookmarks_clear_filter">Сбросить фильтр</string>
     <string name="audio_bookmarks_name_label">Название закладки</string>
+    <string name="audio_bookmarks_actions">Действия с закладкой</string>
     <string name="audio_bookmarks_title">Закладки</string>
     <string name="browse_by_genre">Обзор по жанрам</string>
     <string name="cd_about_open_link">Открыть %1$s</string>
@@ -61,6 +101,18 @@
     <string name="cd_search_icon">Поиск</string>
     <string name="cd_shuffle_play">Случайное воспроизведение</string>
     <string name="cd_shuffle_play_album">Перемешать альбом</string>
+    <string name="detail_hero_shuffle">Перемешать</string>
+    <string name="detail_hero_play">Воспроизвести</string>
+    <string name="detail_hero_pause">Пауза</string>
+    <string name="detail_hero_resume">Продолжить</string>
+    <string name="detail_hero_more_actions">Другие действия</string>
+    <string name="detail_hero_add_to_playlist">Добавить в плейлист</string>
+    <string name="detail_hero_play_next">Воспроизвести следующим</string>
+    <string name="detail_hero_add_to_queue">Добавить в очередь</string>
+    <string name="detail_hero_album_count_many">Альбомов: %1$d</string>
+    <string name="detail_hero_album_count_one">1 альбом</string>
+    <string name="detail_hero_duration_minutes">%1$d мин</string>
+    <string name="detail_hero_duration_hours">%1$d ч %2$d мин</string>
     <string name="cd_song_cover">Обложка песни</string>
     <string name="cd_sync">Синхронизировать</string>
     <string name="cd_toggle_grid_list">Переключить сетку/список</string>
@@ -142,6 +194,7 @@
     <string name="search_nothing_found">Ничего не найдено</string>
     <string name="search_placeholder">Поиск…</string>
     <string name="search_try_different_or_filters">Попробуйте другой запрос или проверьте фильтры.</string>
+    <string name="search_filter_all">Все</string>
     <string name="setup_all_set_body">Теперь можно наслаждаться музыкой.</string>
     <string name="setup_all_set_title">Готово!</string>
     <string name="setup_app_navigation_subtitle">Выберите стиль нижней панели навигации.</string>
@@ -180,6 +233,9 @@
     <string name="setup_navbar_default_style">Стиль по умолчанию</string>
     <string name="setup_navbar_footer">Позже это можно изменить в Настройки &gt; Внешний вид &gt; Стиль панели навигации.</string>
     <string name="setup_permission_alarms_title">Будильники и напоминания</string>
+    <string name="setup_battery_optimization_title">Оптимизация батареи</string>
+    <string name="setup_battery_optimization_description">Некоторые устройства Android агрессивно закрывают фоновые приложения. Отключите оптимизацию батареи для PixelPlayerOSS, чтобы избежать неожиданных прерываний воспроизведения.</string>
+    <string name="setup_disable_battery_optimization">Отключить оптимизацию</string>
     <string name="setup_permission_granted">Разрешение предоставлено</string>
     <string name="setup_permission_media_title">Доступ к медиафайлам</string>
     <string name="setup_permission_notifications_description">Включите уведомления, чтобы управлять музыкой с экрана блокировки и панели уведомлений.</string>

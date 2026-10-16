@@ -34,7 +34,8 @@ fun AutoSizingTextToFill(
     fontFamily: FontFamily? = null,
     fontWeight: FontWeight? = null,
     maxFontSizeLimit: TextUnit = 100.sp,
-    lineHeightRatio: Float = 1.2f
+    lineHeightRatio: Float = 1.2f,
+    maxLines: Int = Int.MAX_VALUE
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -42,11 +43,17 @@ fun AutoSizingTextToFill(
     var currentFontSize by remember { mutableStateOf(minFontSize) }
     var readyToDraw by remember { mutableStateOf(false) }
 
+    // Measure with the family and weight the final Text draws with: a size picked for the
+    // regular face can wrap past maxLines once the text is drawn bold.
+    val measuredStyle = remember(style, fontFamily, fontWeight) {
+        style.merge(TextStyle(fontFamily = fontFamily, fontWeight = fontWeight))
+    }
+
     BoxWithConstraints(modifier = modifier) {
         val maxWidthPx = with(density) { maxWidth.toPx() }.toInt()
         val maxHeightPx = with(density) { maxHeight.toPx() }.toInt()
 
-        LaunchedEffect(text, style, minFontSize, maxFontSizeLimit, lineHeightRatio, maxWidthPx, maxHeightPx) {
+        LaunchedEffect(text, measuredStyle, minFontSize, maxFontSizeLimit, lineHeightRatio, maxLines, maxWidthPx, maxHeightPx) {
             readyToDraw = false
             var bestFitFontSize = minFontSize
 
@@ -60,7 +67,7 @@ fun AutoSizingTextToFill(
             }
 
             val minFontEffectiveLineHeight = minFontSize * lineHeightRatio
-            val minFontEffectiveStyle = style.copy(
+            val minFontEffectiveStyle = measuredStyle.copy(
                 fontSize = minFontSize,
                 lineHeight = minFontEffectiveLineHeight
             )
@@ -69,7 +76,7 @@ fun AutoSizingTextToFill(
                 style = minFontEffectiveStyle,
                 overflow = TextOverflow.Clip,
                 softWrap = true,
-                maxLines = Int.MAX_VALUE,
+                maxLines = maxLines,
                 constraints = Constraints(
                     maxWidth = maxWidthPx.coerceAtLeast(0),
                     maxHeight = maxHeightPx.coerceAtLeast(0)
@@ -100,7 +107,7 @@ fun AutoSizingTextToFill(
                 }
 
                 val currentEffectiveLineHeight = candidateFontSize * lineHeightRatio
-                val candidateStyle = style.copy(
+                val candidateStyle = measuredStyle.copy(
                     fontSize = candidateFontSize,
                     lineHeight = currentEffectiveLineHeight
                 )
@@ -110,7 +117,7 @@ fun AutoSizingTextToFill(
                     style = candidateStyle,
                     overflow = TextOverflow.Clip,
                     softWrap = true,
-                    maxLines = Int.MAX_VALUE,
+                    maxLines = maxLines,
                     constraints = Constraints(
                         maxWidth = maxWidthPx.coerceAtLeast(0),
                         maxHeight = maxHeightPx.coerceAtLeast(0)
@@ -142,7 +149,7 @@ fun AutoSizingTextToFill(
                 fontWeight = fontWeight,
                 overflow = TextOverflow.Ellipsis,
                 softWrap = true,
-                maxLines = Int.MAX_VALUE
+                maxLines = maxLines
             )
         }
     }

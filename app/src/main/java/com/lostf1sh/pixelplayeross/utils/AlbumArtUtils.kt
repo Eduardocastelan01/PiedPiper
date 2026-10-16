@@ -12,6 +12,7 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
+import com.lostf1sh.pixelplayeross.data.diagnostics.PerformanceMetrics
 import com.lostf1sh.pixelplayeross.data.media.AudioMetadataReader
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
@@ -216,12 +217,14 @@ object AlbumArtUtils {
         if (!forceRefresh) {
             if (cachedFile.exists() && cachedFile.length() > 0) {
                 cachedFile.setLastModified(System.currentTimeMillis())
+                PerformanceMetrics.increment(PerformanceMetrics.Counters.ARTWORK_CACHE_HIT)
                 scheduleOversizedArtworkShrink(cachedFile)
                 return cachedFile
             }
             if (noArtFile.exists()) {
                 return null
             }
+            PerformanceMetrics.increment(PerformanceMetrics.Counters.ARTWORK_CACHE_MISS)
         } else {
             cachedFile.delete()
             noArtFile.delete()
@@ -712,6 +715,24 @@ object AlbumArtUtils {
     }
 
     private fun extractEmbeddedAlbumArtBytes(filePath: String): ByteArray? {
+        val startNanos = System.nanoTime()
+        val bytes = extractEmbeddedAlbumArtBytesInternal(filePath)
+        PerformanceMetrics.recordTiming(
+            PerformanceMetrics.Timings.ARTWORK_EXTRACT,
+            (System.nanoTime() - startNanos) / 1_000_000
+        )
+        if (bytes != null) {
+            PerformanceMetrics.increment(PerformanceMetrics.Counters.ARTWORK_EXTRACTED_FRESH)
+            // Only the byte size is recorded — a free field read. Embedded artwork
+            // *dimensions* are intentionally NOT decoded here: a per-file bitmap decode
+            // during scan is exactly the kind of overhead this diagnostic must avoid.
+            // Decoded dimensions belong to the real decode path (CoilBitmapLoader) instead.
+            PerformanceMetrics.recordEmbeddedArtwork(bytes.size.toLong())
+        }
+        return bytes
+    }
+
+    private fun extractEmbeddedAlbumArtBytesInternal(filePath: String): ByteArray? {
         val retrieverArtwork = MediaMetadataRetrieverPool.withRetriever { retriever ->
             try {
                 retriever.setDataSource(filePath)

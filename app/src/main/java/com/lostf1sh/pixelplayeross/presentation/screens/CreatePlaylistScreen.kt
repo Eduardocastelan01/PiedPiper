@@ -153,7 +153,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.TransformOrigin
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.compose.material3.MediumExtendedFloatingActionButton
 import androidx.compose.material3.SliderDefaults
@@ -289,7 +289,7 @@ fun EditPlaylistDialog(
 private fun CreatePlaylistContent(
     onDismiss: () -> Unit,
     onCreate: (String, String?, Int?, String?, List<String>, Float, Float, Float, String?, Float?, Float?, Float?, Float?, String?) -> Unit,
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
     val context = LocalContext.current
 

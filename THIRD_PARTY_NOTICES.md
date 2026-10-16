@@ -11,6 +11,15 @@ PixelPlayerOSS is licensed under the GNU General Public License v3.0 (GPL-3.0). 
 
 The OFL text is included in `app/src/main/assets/licenses/OFL.txt`.
 
+## Bundled Smart Mix Data Assets
+
+| Asset | Source | License |
+| --- | --- | --- |
+| `app/src/main/assets/nlp/artist-genres.txt` | Artist-to-genre labels derived from Wikidata, `https://www.wikidata.org` | CC0 1.0 (public domain dedication) |
+| `app/src/main/assets/nlp/concepts.txt` | Word-to-genre-family/mood concept table, generated offline with a locally run language model and shipped as static, reviewable text | Distributed under the project license (GPL-3.0) |
+
+Both files are read only on the device by the offline Smart Mix engine. The app makes no network request and runs no AI model to use them.
+
 ## Native/Binary Runtime Artifacts
 
 | Artifact | APK native library | Upstream/source | License evidence |

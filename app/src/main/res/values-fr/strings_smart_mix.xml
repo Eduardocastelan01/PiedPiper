@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Ajuster le mix du jour</string>
+    <string name="mix_daily_subtitle">Prévisualisez une modification avant de l\'utiliser aujourd\'hui</string>
+    <string name="mix_library_subtitle">Créez un mix à partir de votre bibliothèque musicale</string>
+    <string name="mix_close">Fermer le mix</string>
+    <string name="mix_request_label">Qu\'avez-vous envie d\'écouter ?</string>
+    <string name="mix_request_placeholder">Un artiste, un genre, une ambiance ou une activité</string>
+    <string name="mix_suggest_recent">Demande récente : %1$s</string>
+    <string name="mix_suggest_rediscover">Redécouvrir %1$s</string>
+    <string name="mix_back">Retour à votre demande</string>
+    <string name="mix_done">Terminé</string>
+    <string name="mix_thinking">Réflexion…</string>
+    <string name="mix_refine">Affiner votre mix</string>
+    <string name="mix_length">Longueur de la playlist</string>
+    <string name="mix_auto">Auto</string>
+    <string name="mix_up_to">Jusqu\'à %1$d</string>
+    <string name="mix_energy">Énergie</string>
+    <string name="mix_energy_calm">Calme</string>
+    <string name="mix_energy_steady">Modérée</string>
+    <string name="mix_energy_energetic">Énergique</string>
+    <string name="mix_refine_hint">Auto suit votre demande. Choisir une énergie ajoute une exigence ; moins de chansons pourraient correspondre.</string>
+    <string name="mix_selection_summary">Longueur : %1$s · Énergie : %2$s</string>
+    <string name="mix_edit_request">Modifier la demande</string>
+    <string name="mix_playlist_name">Nom de la liste de lecture</string>
+    <string name="mix_short_result">Votre bibliothèque contient moins de chansons correspondantes que demandé. Nous avons conservé vos critères.</string>
+    <string name="mix_preview_action">Aperçu du mix</string>
+    <string name="mix_play">Lire</string>
+    <string name="mix_use_today">Utiliser aujourd\'hui</string>
+    <string name="mix_save">Enregistrer la playlist</string>
+    <string name="mix_saved_action">Enregistrée</string>
+    <string name="mix_saved">Enregistrée sous %1$s</string>
+    <string name="mix_save_failed">Impossible d\'enregistrer cette playlist. Votre aperçu est toujours là ; réessayez d\'enregistrer.</string>
+    <string name="mix_no_matches">Aucune chanson correspondante. Modifiez votre demande ou réglez l\'énergie sur Auto.</string>
+    <string name="mix_daily_updated">Daily Mix mis à jour</string>
+    <string name="mix_undo">Annuler</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d chanson correspondante · %2$d min</item>
+        <item quantity="other">%1$d chansons correspondantes · %2$d min</item>
+    </plurals>
+</resources>

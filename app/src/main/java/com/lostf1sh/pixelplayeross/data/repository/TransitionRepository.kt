@@ -17,11 +17,14 @@ interface TransitionRepository {
      * 1. A specific rule for the given fromTrackId and toTrackId in the playlist.
      * 2. The default rule for the given playlistId.
      * 3. The global default settings from user preferences.
+     *
+     * Pass null track ids to skip the per-pair rule, e.g. when the queue no longer plays the
+     * pair the way the playlist has it.
      */
     fun resolveTransitionSettings(
         playlistId: String,
-        fromTrackId: String,
-        toTrackId: String
+        fromTrackId: String?,
+        toTrackId: String?
     ): Flow<TransitionResolution>
 
     /**

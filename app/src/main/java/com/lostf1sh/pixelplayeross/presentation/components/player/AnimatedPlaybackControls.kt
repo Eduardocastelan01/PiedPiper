@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -163,21 +164,25 @@ fun AnimatedPlaybackControls(
                 animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
                 label = "playCorner"
             )
-            val playShape = AbsoluteSmoothCornerShape(
-                cornerRadiusTL = playCorner,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusBL = playCorner,
-                smoothnessAsPercentTL = 60,
-                cornerRadiusTR = playCorner,
-                smoothnessAsPercentBL = 60,
-                cornerRadiusBR = playCorner,
-                smoothnessAsPercentBR = 60
-            )
             Box(
                 modifier = Modifier
                     .weight(playWeight)
                     .fillMaxHeight()
-                    .clip(playShape)
+                    // Read the animated corner in the draw phase so the play/pause morph
+                    // doesn't recompose the controls on every frame.
+                    .graphicsLayer {
+                        clip = true
+                        shape = AbsoluteSmoothCornerShape(
+                            cornerRadiusTL = playCorner,
+                            smoothnessAsPercentTR = 60,
+                            cornerRadiusBL = playCorner,
+                            smoothnessAsPercentTL = 60,
+                            cornerRadiusTR = playCorner,
+                            smoothnessAsPercentBL = 60,
+                            cornerRadiusBR = playCorner,
+                            smoothnessAsPercentBR = 60
+                        )
+                    }
                     .background(colorPlayPause)
                     .clickable {
                         lastClicked = PlaybackButtonType.PLAY_PAUSE

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">우주 소용돌이</string>
+    <string name="collage_pattern_honeycomb_groove">벌집 그루브</string>
+    <string name="collage_pattern_vinyl_stack">레코드 더미</string>
+    <string name="collage_pattern_pixel_mosaic">픽셀 모자이크</string>
+    <string name="collage_pattern_stardust_scatter">흩날리는 별가루</string>
+    <string name="collage_pattern_soft_orbit">부드러운 궤도</string>
+    <string name="collage_pattern_arrow_fanfare">화살표 팡파르</string>
+    <string name="collage_pattern_sunny_bloom">햇살 꽃</string>
+    <string name="collage_pattern_pixel_cookie">픽셀 쿠키</string>
+    <string name="collage_pattern_heart_garden">하트 정원</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="other">오프라인 재생을 위해 클라우드 곡 %1$d개를 준비하는 중입니다</item>
+    </plurals>
+</resources>

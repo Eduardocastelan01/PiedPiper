@@ -1,0 +1,62 @@
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Ajustar el mix de hoy</string>
+    <string name="mix_daily_subtitle">Revisa los cambios antes de aplicarlos hoy</string>
+    <string name="mix_library_subtitle">Crea un mix con tu biblioteca musical</string>
+    <string name="mix_close">Cerrar mix</string>
+    <string name="mix_request_label">¿Qué quieres escuchar?</string>
+    <string name="mix_request_placeholder">Un artista, género, estado de ánimo o actividad</string>
+    <!-- Sugerencias de momento: cada una nombra un estado de ánimo que el motor sin conexión reconoce. -->
+    <string name="mix_moment_morning">Mañana alegre</string>
+    <string name="mix_moment_study">Para estudiar</string>
+    <string name="mix_moment_workout">Entrenamiento</string>
+    <string name="mix_moment_feel_good">Buen humor</string>
+    <string name="mix_moment_chill_evening">Relax de noche</string>
+    <string name="mix_moment_late_night">Noche para desconectar</string>
+    <string name="mix_moment_party">Fiesta</string>
+    <!-- %1$s década de mix_decades, %2$s género, p. ej. "Rock de los noventa". Las décadas del
+         siglo XX van en palabras: el motor no reconoce "los 90" sin la "s". -->
+    <string name="mix_suggest_decade_genre">%2$s de los %1$s</string>
+    <string-array name="mix_decades">
+        <item>cincuenta</item>
+        <item>sesenta</item>
+        <item>setenta</item>
+        <item>ochenta</item>
+        <item>noventa</item>
+        <item>2000</item>
+        <item>2010</item>
+        <item>2020</item>
+    </string-array>
+    <string name="mix_suggest_recent">Pedido reciente: %1$s</string>
+    <string name="mix_suggest_rediscover">Redescubre %1$s</string>
+    <string name="mix_back">Volver a tu solicitud</string>
+    <string name="mix_done">Listo</string>
+    <string name="mix_thinking">Pensando…</string>
+    <string name="mix_refine">Ajustar tu mix</string>
+    <string name="mix_length">Cantidad de canciones</string>
+    <string name="mix_auto">Auto</string>
+    <string name="mix_up_to">Hasta %1$d</string>
+    <string name="mix_energy">Energía</string>
+    <string name="mix_energy_calm">Tranquila</string>
+    <string name="mix_energy_steady">Moderada</string>
+    <string name="mix_energy_energetic">Intensa</string>
+    <string name="mix_refine_hint">Auto sigue tu solicitud. Elegir una energía añade un requisito; pueden coincidir menos canciones.</string>
+    <string name="mix_selection_summary">Cantidad: %1$s · Energía: %2$s</string>
+    <string name="mix_edit_request">Editar solicitud</string>
+    <string name="mix_playlist_name">Nombre de la playlist</string>
+    <string name="mix_short_result">Tu biblioteca tiene menos canciones que coinciden. Mantuvimos tus requisitos.</string>
+    <string name="mix_preview_action">Ver mix</string>
+    <string name="mix_play">Reproducir</string>
+    <string name="mix_use_today">Usar para hoy</string>
+    <string name="mix_save">Guardar playlist</string>
+    <string name="mix_saved_action">Guardada</string>
+    <string name="mix_saved">Guardada como %1$s</string>
+    <string name="mix_save_failed">No se pudo guardar. Puedes revisar el mix e intentar guardarlo de nuevo.</string>
+    <string name="mix_no_matches">No se encontraron canciones. Edita tu solicitud o cambia la energía a Auto.</string>
+    <string name="mix_daily_updated">Daily Mix actualizado</string>
+    <string name="mix_undo">Deshacer</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d canción encontrada · %2$d min</item>
+        <item quantity="other">%1$d canciones encontradas · %2$d min</item>
+    </plurals>
+</resources>

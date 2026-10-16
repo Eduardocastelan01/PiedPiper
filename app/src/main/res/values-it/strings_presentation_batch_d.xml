@@ -96,4 +96,5 @@
     <string name="presentation_batch_d_view_grid">Griglia</string>
     <string name="presentation_batch_d_view_list">Elenco</string>
     <string name="presentation_batch_d_view_section_view">Visualizzazione</string>
+    <string name="presentation_batch_d_view_section_layout">Layout</string>
 </resources>

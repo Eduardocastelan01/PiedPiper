@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Kozmik Girdap</string>
+    <string name="collage_pattern_honeycomb_groove">Petek Ritmi</string>
+    <string name="collage_pattern_vinyl_stack">Plak Yığını</string>
+    <string name="collage_pattern_pixel_mosaic">Piksel Mozaiği</string>
+    <string name="collage_pattern_stardust_scatter">Yıldız Tozu Serpintisi</string>
+    <string name="collage_pattern_soft_orbit">Yumuşak Yörünge</string>
+    <string name="collage_pattern_arrow_fanfare">Ok Şöleni</string>
+    <string name="collage_pattern_sunny_bloom">Güneşli Çiçek</string>
+    <string name="collage_pattern_pixel_cookie">Piksel Kurabiye</string>
+    <string name="collage_pattern_heart_garden">Kalp Bahçesi</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">%1$d bulut parçası çevrimdışı dinleme için hazırlanıyor</item>
+        <item quantity="other">%1$d bulut parçası çevrimdışı dinleme için hazırlanıyor</item>
+    </plurals>
+</resources>

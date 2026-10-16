@@ -17,6 +17,7 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import com.lostf1sh.pixelplayeross.presentation.utils.AppHapticsConfig
 import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
@@ -155,7 +156,16 @@ internal class QueueItemDismissGestureHandler(
                     )
                 )
                 onDismiss()
-                offsetAnimatable.snapTo(0f)
+                // Give the VM time to remove the item. If it is removed this coroutine is
+                // cancelled with the item; otherwise the item slides back instead of snapping.
+                delay(1000)
+                offsetAnimatable.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
                 isDismissing = false
                 isInDismissZone = false
             }

@@ -99,6 +99,37 @@ class PlaylistIntentEngineTest {
     }
 
     @Test
+    fun `spelled-out decades filter by year in both languages`() {
+        val songs = listOf(
+            song(id = "nineties", title = "Old Hit", artist = "A", year = 1994),
+            song(id = "eighties", title = "Older Hit", artist = "B", year = 1985),
+            song(id = "tens", title = "New Hit", artist = "C", year = 2016),
+        )
+
+        // People write the word as often as the digits, and before this the word was an ordinary
+        // content term that matched nothing.
+        for (query in listOf("nineties", "noventa", "noventas")) {
+            assertThat(generate(query, songs)).containsExactly("nineties")
+        }
+        for (query in listOf("eighties", "ochenta")) {
+            assertThat(generate(query, songs)).containsExactly("eighties")
+        }
+    }
+
+    @Test
+    fun `a spelled-out decade combines with a genre like the digit form does`() {
+        val songs = listOf(
+            song(id = "rock90", title = "Riff", artist = "A", genre = "Rock", year = 1994),
+            song(id = "pop90", title = "Hook", artist = "B", genre = "Pop", year = 1996),
+            song(id = "rock10", title = "Later Riff", artist = "C", genre = "Rock", year = 2016),
+        )
+
+        val result = generate("nineties rock", songs)
+
+        assertThat(result).containsExactly("rock90")
+    }
+
+    @Test
     fun `favorites profile prefers favorite songs`() {
         val songs = listOf(
             song(id = "fav", title = "Loved One", artist = "A", favorite = true),
@@ -118,11 +149,11 @@ class PlaylistIntentEngineTest {
         assertThat(result).isNotEmpty()
     }
 
-    // ---- Tempo/energy scoring (BPM directive + mood conflicts) -------------------------
+    // ---- Tempo/energy scoring (BPM slider + mood conflicts) ----------------------------
 
     @Test
     fun `chillout with low bpm target excludes heavy metal even when metal dominates play counts`() {
-        // Regression: this exact query shape (with an appended BPM directive) once degenerated
+        // Regression: this exact query shape (UI appends the BPM directive) once degenerated
         // into "most played songs" and returned heavy metal for a chillout request.
         val songs = listOf(
             song(id = "metal1", title = "Numb", artist = "Linkin Park", genre = "Nu Metal"),
@@ -202,8 +233,8 @@ class PlaylistIntentEngineTest {
 
     @Test
     fun `chillout excludes an unrecognized aggressive subgenre`() {
-        // "Deathcore" / "Djent" don't contain the substring "metal", so a thin lexicon returned
-        // null energy for them -> no exclusion. They must be recognized as high-energy.
+        // "Deathcore" / "Djent" don't contain the substring "metal", so the old lexicon returned
+        // null energy for them -> no exclusion. They must now be recognized as high-energy.
         val songs = listOf(
             song(id = "deathcore", title = "Rupture", artist = "Gore", genre = "Deathcore", durationMs = 300_000),
             song(id = "djent", title = "Polyrhythm", artist = "Mesh", genre = "Progressive Djent"),
@@ -253,16 +284,16 @@ class PlaylistIntentEngineTest {
     }
 
     @Test
-    fun `tagging a song as metal removes it from a chillout mix`() {
-        // Simulates the user editing "Alternative"/"Music"/none -> "Nu Metal" and regenerating.
-        // The untagged version is admissible (offline we can't rule it out); the tagged one is not.
-        val untagged = listOf(song(id = "lp", title = "Numb", artist = "Linkin Park", genre = "Alternative"))
+    fun `unknown evidence and known metal both stay out of a chillout mix`() {
+        // Missing evidence cannot satisfy chill/energy constraints, and a known contradiction
+        // must remain excluded after the user supplies the genre tag.
+        val untagged = listOf(song(id = "lp", title = "Numb", artist = "Linkin Park", genre = null))
         val tagged = listOf(song(id = "lp", title = "Numb", artist = "Linkin Park", genre = "Nu Metal"))
 
         val beforeTag = generate("chillout\n[Target BPM: 60 BPM]", untagged)
         val afterTag = generate("chillout\n[Target BPM: 60 BPM]", tagged)
 
-        assertThat(beforeTag).contains("lp")
+        assertThat(beforeTag).isEmpty()
         assertThat(afterTag).doesNotContain("lp")
     }
 
@@ -284,5 +315,17 @@ class PlaylistIntentEngineTest {
 
         assertThat(result).contains("metal")
         assertThat(result).doesNotContain("ambient")
+    }
+
+    @Test
+    fun `artist request fills the length bound with every matching song`() {
+        // Regression: the composer passed min = 1, so a random size in [1, 25] returned
+        // two of twenty Linkin Park songs. The composer's length is now both bounds.
+        val linkinPark = (1..20).map { song(id = "lp$it", title = "Track $it", artist = "Linkin Park", genre = "Nu Metal") }
+        val others = (1..30).map { song(id = "other$it", title = "Song $it", artist = "Artist $it", genre = "Pop") }
+
+        val result = generate("linkin park", linkinPark + others, min = 25, max = 25)
+
+        assertThat(result).containsExactlyElementsIn(linkinPark.map { it.id })
     }
 }

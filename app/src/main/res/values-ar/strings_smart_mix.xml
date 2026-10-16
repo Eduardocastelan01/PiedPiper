@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">ضبط مزيج اليوم</string>
+    <string name="mix_daily_subtitle">عاين التغيير قبل استخدامه اليوم</string>
+    <string name="mix_library_subtitle">أنشئ مزيجاً من مكتبتك الموسيقية</string>
+    <string name="mix_close">إغلاق المزيج</string>
+    <string name="mix_request_label">ماذا تريد أن تسمع؟</string>
+    <string name="mix_request_placeholder">فنان أو نوع أو حالة مزاجية أو نشاط</string>
+    <string name="mix_suggest_recent">طلب حديث: %1$s</string>
+    <string name="mix_suggest_rediscover">أعد اكتشاف %1$s</string>
+    <string name="mix_back">العودة إلى طلبك</string>
+    <string name="mix_done">تم</string>
+    <string name="mix_thinking">جاري التفكير…</string>
+    <string name="mix_refine">حسّن مزيجك</string>
+    <string name="mix_length">طول قائمة التشغيل</string>
+    <string name="mix_auto">تلقائي</string>
+    <string name="mix_up_to">حتى %1$d</string>
+    <string name="mix_energy">الطاقة</string>
+    <string name="mix_energy_calm">هادئة</string>
+    <string name="mix_energy_steady">معتدلة</string>
+    <string name="mix_energy_energetic">حماسية</string>
+    <string name="mix_refine_hint">الوضع التلقائي يتبع طلبك. اختيار مستوى الطاقة يضيف شرطاً؛ وقد تتطابق أغانٍ أقل.</string>
+    <string name="mix_selection_summary">الطول: %1$s · الطاقة: %2$s</string>
+    <string name="mix_edit_request">تعديل الطلب</string>
+    <string name="mix_playlist_name">اسم قائمة التشغيل</string>
+    <string name="mix_short_result">تحتوي مكتبتك على أغانٍ مطابقة أقل من المطلوب. احتفظنا بشروطك.</string>
+    <string name="mix_preview_action">معاينة المزيج</string>
+    <string name="mix_play">تشغيل</string>
+    <string name="mix_use_today">استخدامه لليوم</string>
+    <string name="mix_save">حفظ قائمة التشغيل</string>
+    <string name="mix_saved_action">تم الحفظ</string>
+    <string name="mix_saved">تم الحفظ باسم %1$s</string>
+    <string name="mix_save_failed">تعذر حفظ قائمة التشغيل هذه. لا تزال المعاينة موجودة؛ حاول الحفظ مرة أخرى.</string>
+    <string name="mix_no_matches">لم يتم العثور على أغانٍ مطابقة. عدّل طلبك أو اضبط الطاقة على تلقائي.</string>
+    <string name="mix_daily_updated">تم تحديث المزيج اليومي</string>
+    <string name="mix_undo">تراجع</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="zero">%1$d أغنية مطابقة · %2$d د</item>
+        <item quantity="one">%1$d أغنية مطابقة · %2$d د</item>
+        <item quantity="two">%1$d أغنية مطابقة · %2$d د</item>
+        <item quantity="few">%1$d أغانٍ مطابقة · %2$d د</item>
+        <item quantity="many">%1$d أغنية مطابقة · %2$d د</item>
+        <item quantity="other">%1$d أغنية مطابقة · %2$d د</item>
+    </plurals>
+</resources>

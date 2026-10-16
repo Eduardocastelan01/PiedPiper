@@ -20,6 +20,7 @@ import android.content.Intent.EXTRA_STREAM
 import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
+import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import javax.inject.Inject
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -50,12 +51,13 @@ class ExternalPlayerActivity : ComponentActivity() {
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
+            val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
                 else -> systemDarkTheme
             }
-            PixelPlayerTheme(darkTheme = useDarkTheme) {
+            PixelPlayerTheme(darkTheme = useDarkTheme, themePreset = themePreset) {
                 ExternalPlayerOverlay(
                     playerViewModel = playerViewModel,
                     onDismiss = { finish() },

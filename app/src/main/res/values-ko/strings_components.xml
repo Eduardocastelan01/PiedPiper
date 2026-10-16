@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">로마자 표기 표시</string>
     <string name="lyrics_more_show_translations">번역 표시</string>
     <string name="multi_selection_playlists_count_upper">플레이리스트 %1$d개</string>
+    <string name="multi_selection_genres_count_upper">장르 %1$d개</string>
+    <string name="multi_selection_genres_queue_hint">이 장르에 속한 모든 곡에 대해 일괄 작업을 수행합니다.</string>
     <string name="multi_selection_selected">선택됨</string>
     <string name="multi_selection_songs_count_upper">곡 %1$d개</string>
     <string name="no_internet_dialog_message">이 콘텐츠를 이용하려면 인터넷 연결이 필요합니다. 네트워크 설정을 확인하고 다시 시도해 주세요.</string>
@@ -117,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">탭 순서를 기본값으로 재설정하시겠습니까?</string>
     <string name="reorder_tabs_reset_dialog_title">순서 초기화</string>
     <string name="reorder_tabs_sheet_title">라이브러리 탭 순서 변경</string>
+    <string name="reorder_tabs_visible_title">표시되는 탭</string>
+    <string name="reorder_tabs_hidden_title">숨겨진 탭</string>
+    <string name="reorder_tabs_hide_action">탭 숨기기</string>
+    <string name="reorder_tabs_show_action">탭 표시</string>
     <string name="search_playlists_hint">플레이리스트 검색…</string>
     <string name="song_field_album">앨범</string>
     <string name="song_field_album_artist">앨범 아티스트</string>

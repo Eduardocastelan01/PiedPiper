@@ -2,10 +2,12 @@
 
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -14,6 +16,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,11 +34,13 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Done
@@ -43,6 +48,9 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOff
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -61,12 +69,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,10 +88,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.R
@@ -89,9 +105,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.lostf1sh.pixelplayeross.presentation.screens.TabAnimation
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.DirectoryEntry
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.utils.StorageInfo
 import java.io.File
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -193,9 +211,43 @@ fun FileExplorerContent(
     onDismiss: () -> Unit,
     title: String = "Excluded folders",
     leadingContent: @Composable (() -> Unit)? = null,
+    /** Replaces the default close button — a hosting screen passes a back arrow here. */
+    navigationIcon: @Composable (() -> Unit)? = null,
+    /**
+     * Extra room under the content. As a full-screen dialog nothing overlaps the bottom;
+     * as a navigation destination the mini player floats over it.
+     */
+    extraBottomPadding: Dp = 0.dp,
+    /**
+     * Flat list of every audio folder for the "All subfolders" mode. Null hides the mode
+     * switcher entirely (the setup wizard keeps the plain tree).
+     */
+    allFolders: ImmutableList<DirectoryEntry>? = null,
+    isLoadingAllFolders: Boolean = false,
+    /** Asks the host to (re)build [allFolders]; `true` forces a fresh MediaStore scan. */
+    onRequestAllFolders: (forceRefresh: Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+    val allFoldersListState = rememberLazyListState()
+    val supportsAllFolders = allFolders != null
+    var showAllFolders by rememberSaveable { mutableStateOf(false) }
+    val isShowingAllFolders = supportsAllFolders && showAllFolders
+    val activeListState = if (isShowingAllFolders) allFoldersListState else listState
+    // Follows the mini player showing/hiding, like the other floating actions in the app.
+    val animatedExtraBottomPadding by animateDpAsState(
+        targetValue = extraBottomPadding,
+        animationSpec = tween(durationMillis = 250),
+        label = "file_explorer_fab_bottom_padding"
+    )
+
+    LaunchedEffect(isShowingAllFolders) {
+        if (isShowingAllFolders) onRequestAllFolders(false)
+    }
+    // The flat list is a view, not a place in the tree: Back returns to the tree first.
+    BackHandler(enabled = isShowingAllFolders) {
+        showAllFolders = false
+    }
     val safeSelectedStorageIndex = remember(availableStorages, selectedStorageIndex) {
         if (availableStorages.isEmpty()) {
             0
@@ -245,24 +297,30 @@ fun FileExplorerContent(
                     )
                 },
                 navigationIcon = {
-                    FilledIconButton(
-                        modifier = Modifier.padding(start = 6.dp),
-                        onClick = onDismiss,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.presentation_batch_g_file_explorer_cd_close)
-                        )
+                    if (navigationIcon != null) {
+                        navigationIcon()
+                    } else {
+                        FilledIconButton(
+                            modifier = Modifier.padding(start = 6.dp),
+                            onClick = onDismiss,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.presentation_batch_g_file_explorer_cd_close)
+                            )
+                        }
                     }
                 },
                 actions = {
                     FilledIconButton(
                         modifier = Modifier.padding(end = 6.dp),
-                        onClick = onRefresh,
+                        onClick = {
+                            if (isShowingAllFolders) onRequestAllFolders(true) else onRefresh()
+                        },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -279,7 +337,7 @@ fun FileExplorerContent(
         contentWindowInsets = WindowInsets.systemBars,
         floatingActionButton = {
             MediumExtendedFloatingActionButton(
-                modifier = Modifier.padding(end = 12.dp),
+                modifier = Modifier.padding(end = 12.dp, bottom = animatedExtraBottomPadding),
                 onClick = onDone,
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -346,23 +404,43 @@ fun FileExplorerContent(
                     .padding(horizontal = 18.dp)
             )
 
-            FileExplorerHeader(
-                modifier = Modifier.padding(horizontal = 18.dp),
-                currentPath = currentPath,
-                rootDirectory = rootDirectory,
-                isAtRoot = isAtRoot,
-                onNavigateUp = onNavigateUp,
-                onNavigateHome = onNavigateHome,
-                onNavigateTo = onNavigateTo,
-                navigationEnabled = true
-            )
+            if (supportsAllFolders) {
+                FileExplorerModeSwitcher(
+                    showAllFolders = isShowingAllFolders,
+                    onShowAllFoldersChange = { showAllFolders = it },
+                    modifier = Modifier
+                        .padding(horizontal = 18.dp)
+                        .padding(top = 4.dp)
+                )
+            }
+
+            if (!isShowingAllFolders) {
+                FileExplorerHeader(
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                    currentPath = currentPath,
+                    rootDirectory = rootDirectory,
+                    isAtRoot = isAtRoot,
+                    onNavigateUp = onNavigateUp,
+                    onNavigateHome = onNavigateHome,
+                    onNavigateTo = onNavigateTo,
+                    navigationEnabled = true
+                )
+            }
 
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 18.dp)
             ) {
-                AnimatedContent(
+                if (isShowingAllFolders) {
+                    AllFoldersList(
+                        folders = allFolders ?: persistentListOf(),
+                        isLoading = isLoadingAllFolders,
+                        listState = allFoldersListState,
+                        extraBottomPadding = extraBottomPadding,
+                        onToggleAllowed = onToggleAllowed
+                    )
+                } else AnimatedContent(
                     targetState = Triple(
                         currentPath,
                         directoryChildren,
@@ -392,8 +470,8 @@ fun FileExplorerContent(
                                         )
                                     ),
                                 contentPadding = PaddingValues(
-                                    bottom = 24.dp,
-                                    end = if (listState.canScrollForward || listState.canScrollBackward) 24.dp else 0.dp
+                                    bottom = 24.dp + extraBottomPadding,
+                                    end = animatedScrollbarInset(LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward), 24.dp, 0.dp)
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                                 state = listState
@@ -432,7 +510,7 @@ fun FileExplorerContent(
                 )
                 
                 ExpressiveScrollBar(
-                    listState = listState,
+                    listState = activeListState,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .padding(
@@ -441,6 +519,126 @@ fun FileExplorerContent(
                         )
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun FileExplorerModeSwitcher(
+    showAllFolders: Boolean,
+    onShowAllFoldersChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tabs = listOf(
+        stringResource(R.string.presentation_batch_g_file_explorer_mode_folders),
+        stringResource(R.string.presentation_batch_g_file_explorer_mode_all_subfolders)
+    )
+    val selectedIndex = if (showAllFolders) 1 else 0
+    // Connected Material 3 Expressive button group, so the two modes read as one control.
+    ButtonGroup(
+        overflowIndicator = { menuState -> ButtonGroupDefaults.OverflowIndicator(menuState) },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+    ) {
+        tabs.forEachIndexed { index, label ->
+            customItem(
+                buttonGroupContent = {
+                    val selected = selectedIndex == index
+                    val interactionSource = remember(index) { MutableInteractionSource() }
+                    ToggleButton(
+                        checked = selected,
+                        onCheckedChange = { onShowAllFoldersChange(index == 1) },
+                        modifier = Modifier
+                            .weight(if (selected) 1.15f else 1f)
+                            .animateWidth(interactionSource)
+                            .height(52.dp)
+                            .semantics { role = Role.Tab },
+                        shapes = if (index == 0) {
+                            ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        } else {
+                            ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        },
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            checkedContainerColor = MaterialTheme.colorScheme.primary,
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = null,
+                        contentPadding = PaddingValues(horizontal = 10.dp),
+                        interactionSource = interactionSource
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontFamily = RoundedSans,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                menuContent = { menuState ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        leadingIcon = {
+                            if (selectedIndex == index) {
+                                Icon(imageVector = Icons.Rounded.Check, contentDescription = null)
+                            }
+                        },
+                        onClick = {
+                            onShowAllFoldersChange(index == 1)
+                            menuState.dismiss()
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AllFoldersList(
+    folders: ImmutableList<DirectoryEntry>,
+    isLoading: Boolean,
+    listState: LazyListState,
+    extraBottomPadding: Dp,
+    onToggleAllowed: (File) -> Unit
+) {
+    when {
+        folders.isEmpty() && isLoading -> ExplorerLoadingState(
+            message = stringResource(R.string.presentation_batch_g_file_explorer_loading_all_subfolders)
+        )
+
+        folders.isEmpty() -> ExplorerEmptyState(
+            text = stringResource(R.string.presentation_batch_g_file_explorer_empty_folders)
+        )
+
+        else -> LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(topEnd = 20.dp, topStart = 20.dp)),
+            contentPadding = PaddingValues(
+                bottom = 24.dp + extraBottomPadding,
+                end = animatedScrollbarInset(LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward), 24.dp, 0.dp)
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            state = listState
+        ) {
+            items(folders, key = { it.canonicalPath }) { directoryEntry ->
+                FileExplorerItem(
+                    file = directoryEntry.file,
+                    audioCount = directoryEntry.directAudioCount,
+                    displayName = directoryEntry.displayName,
+                    isBlocked = directoryEntry.isBlocked,
+                    onNavigate = {},
+                    onToggleAllowed = { onToggleAllowed(directoryEntry.file) },
+                    navigationEnabled = false
+                )
+            }
+            item { Spacer(modifier = Modifier.height(76.dp)) }
         }
     }
 }
@@ -542,7 +740,8 @@ private fun FileExplorerItem(
             .fillMaxWidth()
             .clip(shape)
             .background(containerColor)
-            .clickable(enabled = navigationEnabled) { onNavigate() }
+            // Without tree navigation (the flat "All subfolders" list) the whole card toggles.
+            .clickable { if (navigationEnabled) onNavigate() else onToggleAllowed() }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)

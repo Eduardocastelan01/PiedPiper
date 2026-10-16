@@ -283,25 +283,50 @@ internal fun rememberMiniPlayerDismissGestureHandler(
     }
 }
 
-internal fun Modifier.miniPlayerDismissHorizontalGesture(
+/**
+ * Single pointer-input node for the collapsed mini player's horizontal gesture.
+ *
+ * Which handler receives the drag depends on [skipMode], so flipping the "swipe to change song"
+ * preference swaps the behavior without changing the shape of the modifier chain around the
+ * player card. With [skipMode] on, every horizontal swipe changes track and dismissal moves to a
+ * downward swipe; otherwise short swipes change track and long swipes dismiss.
+ */
+internal fun Modifier.miniPlayerHorizontalGesture(
     enabled: Boolean,
-    handler: MiniPlayerDismissGestureHandler
+    skipMode: Boolean,
+    dismissHandler: MiniPlayerDismissGestureHandler,
+    skipHandler: MiniPlayerSkipGestureHandler
 ): Modifier {
     if (!enabled) return this
-    return this.pointerInput(enabled, handler) {
-        val velocityTracker = VelocityTracker()
-        detectHorizontalDragGestures(
-            onDragStart = {
-                velocityTracker.resetTracking()
-                handler.onDragStart()
-            },
-            onHorizontalDrag = { change, dragAmount ->
-                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                change.consume()
-                handler.onHorizontalDrag(dragAmount)
-            },
-            onDragEnd = { handler.onDragEnd(velocityTracker.calculateVelocity().x) },
-            onDragCancel = { handler.onDragCancel() }
-        )
+    return this.pointerInput(skipMode, dismissHandler, skipHandler) {
+        if (skipMode) {
+            detectHorizontalDragGestures(
+                onDragStart = { skipHandler.onDragStart() },
+                onHorizontalDrag = { change, dragAmount ->
+                    change.consume()
+                    skipHandler.onHorizontalDrag(
+                        uptimeMillis = change.uptimeMillis,
+                        dragAmount = dragAmount
+                    )
+                },
+                onDragEnd = { skipHandler.onDragEnd() },
+                onDragCancel = { skipHandler.onDragCancel() }
+            )
+        } else {
+            val velocityTracker = VelocityTracker()
+            detectHorizontalDragGestures(
+                onDragStart = {
+                    velocityTracker.resetTracking()
+                    dismissHandler.onDragStart()
+                },
+                onHorizontalDrag = { change, dragAmount ->
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    change.consume()
+                    dismissHandler.onHorizontalDrag(dragAmount)
+                },
+                onDragEnd = { dismissHandler.onDragEnd(velocityTracker.calculateVelocity().x) },
+                onDragCancel = { dismissHandler.onDragCancel() }
+            )
+        }
     }
 }

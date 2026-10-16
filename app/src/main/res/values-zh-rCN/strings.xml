@@ -120,7 +120,6 @@
 <string name="widget_bar_4x1_desc">简洁播放控制条</string>
 <string name="widget_control_4x2_desc">完整控制，支持随机与循环</string>
 <string name="widget_grid_2x2_desc">简约方形播放器小组件</string>
-<string name="service_processing_action">正在处理播放指令…</string>
 
 <string name="playlist_none_to_share">没有可分享的播放列表</string>
 <string name="playlist_share_chooser_title">分享播放列表</string>
@@ -152,9 +151,18 @@
 <string name="player_no_songs_in_library_toast">曲库内暂无歌曲</string>
 <string name="player_playback_stopped_eot">播放停止：%1$s 播放完毕。</string>
 <string name="player_default_track_title">曲目</string>
+    <string name="player_audio_output_title">播放设备</string>
+<string name="player_audio_output_this_phone">本机</string>
+    <string name="player_audio_output_wired">有线耳机</string>
+    <string name="player_audio_output_unknown_device">音频设备</string>
+    <string name="player_audio_output_more_devices">更多设备</string>
+    <string name="player_audio_output_more_devices_subtitle">使用系统输出选择器连接或切换设备</string>
 <string name="player_no_songs_to_shuffle">没有歌曲可供随机播放。</string>
 <string name="player_queue_name_selected_albums">选中专辑</string>
 <string name="player_no_playable_songs_in_albums">选中专辑中没有可播放歌曲</string>
+<string name="player_no_playable_songs_in_genres">在选定的流派中未找到可播放的歌曲</string>
+    <string name="player_queue_name_selected_genres">选中流派</string>
+    <string name="player_could_not_queue_genres">无法将选中流派加入队列</string>
 <string name="player_only_first_n_albums_queued">仅加入前 %1$d 个专辑</string>
 <string name="player_albums_queued_format">已加入 %1$d 个专辑（共%2$d首歌曲）</string>
 <string name="player_could_not_queue_albums">无法将选中专辑加入队列</string>
@@ -179,6 +187,12 @@
 <string name="player_permission_denied_save_lyrics">权限被拒绝，无法保存歌词</string>
 <string name="player_permission_denied_edit_this_file">权限被拒绝，无法修改此文件</string>
 <string name="metadata_updated_successfully">元数据更新成功</string>
+<string name="metadata_edit_write_interrupted">保存被中断。已保留完整副本，稍后将恢复这首歌曲。</string>
+<string name="metadata_edit_write_still_pending">未保存：需先恢复这首歌曲。请允许访问并释放存储空间，然后重试。</string>
+<string name="metadata_restore_permission_prompt">请允许访问，以恢复未完整保存的歌曲。</string>
+<string name="metadata_restore_done">已恢复未完整保存的歌曲</string>
+<string name="metadata_restore_incomplete">部分歌曲暂时无法恢复，应用稍后会重试。</string>
+<string name="metadata_restore_permission_denied">歌曲未恢复。应用会在稍后或你编辑其中一首时再次请求。</string>
 <string name="player_updating_n_songs">正在更新 %1$d 首歌曲…</string>
 <string name="player_batch_genre_updated_all">成功更新 %1$d 首歌曲！</string>
 <string name="player_batch_genre_updated_partial">更新%1$d首，%2$d首更新失败</string>
@@ -223,6 +237,8 @@
 <string name="batch_edit_multiple_covers">（多张不同封面）</string>
 
 <string name="player_error_skipping">无法播放该曲目，自动跳过</string>
+<string name="player_unsupported_format">无法播放 %1$s：此设备没有 %2$s 的解码器</string>
+<string name="player_unsupported_format_unknown">此格式</string>
 <string name="sync_failed_toast">曲库同步失败，下拉刷新重试。</string>
 
 <string name="a11y_toggle_on">开启</string>

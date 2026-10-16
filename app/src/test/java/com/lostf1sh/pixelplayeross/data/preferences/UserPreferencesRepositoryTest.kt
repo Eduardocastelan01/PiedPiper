@@ -1,10 +1,15 @@
 package com.lostf1sh.pixelplayeross.data.preferences
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import app.cash.turbine.test
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -150,4 +155,223 @@ class UserPreferencesRepositoryTest {
             tempDir.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun `playback speed persists exact hundredths and clamps out of range values`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            // Exact float equality: 1.15 must be stored as the literal 1.15f.
+            repository.setPlaybackSpeed(1.15f)
+            assertEquals(1.15f, repository.playbackSpeedFlow.first())
+
+            repository.setPlaybackSpeed(1.1499999f)
+            assertEquals(1.15f, repository.playbackSpeedFlow.first())
+
+            repository.setPlaybackSpeed(10f)
+            assertEquals(3f, repository.playbackSpeedFlow.first())
+
+            repository.setPlaybackSpeed(0f)
+            assertEquals(0.25f, repository.playbackSpeedFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `legacy noisy or invalid stored playback speed is normalized on read`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val dataStore = PreferenceDataStoreFactory.create(
+                scope = backgroundScope,
+                produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+            )
+            val repository = UserPreferencesRepository(dataStore = dataStore, json = Json)
+            val speedKey = floatPreferencesKey("playback_speed")
+
+            dataStore.edit { it[speedKey] = 0.74999994f }
+            assertEquals(0.75f, repository.playbackSpeedFlow.first())
+
+            dataStore.edit { it[speedKey] = Float.NaN }
+            assertEquals(1f, repository.playbackSpeedFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `playbackSpeedFlow ignores unrelated preference writes`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.playbackSpeedFlow.test {
+                assertEquals(1f, awaitItem())
+
+                repository.setNavBarStyle("compact")
+                testScheduler.advanceUntilIdle()
+                expectNoEvents()
+
+                repository.setPlaybackSpeed(1.15f)
+                assertEquals(1.15f, awaitItem())
+            }
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `autoplay on skip is on by default and persists`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            assertTrue(repository.autoplayOnSkipFlow.first())
+
+            repository.setAutoplayOnSkip(false)
+            assertEquals(false, repository.autoplayOnSkipFlow.first())
+
+            repository.setAutoplayOnSkip(true)
+            assertTrue(repository.autoplayOnSkipFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder backfills Folders right after Liked for a legacy order`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["SONGS","LIKED","ALBUMS","ARTIST","PLAYLISTS"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(
+                listOf("SONGS", "LIKED", "FOLDERS", "ALBUMS", "ARTIST", "PLAYLISTS"),
+                repository.storedLibraryTabsOrder()
+            )
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder appends Folders when a legacy order has no Liked tab`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["ALBUMS","SONGS"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("ALBUMS", "SONGS", "FOLDERS"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder does not bring back a Folders tab the user hid`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS","FOLDERS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            // The stored order is the visible-tab list, so dropping FOLDERS hides it.
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("SONGS", "ALBUMS", "LIKED"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder leaves a malformed order untouched`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("not a tab list")
+            repository.migrateTabOrder()
+
+            assertEquals("not a tab list", repository.libraryTabsOrderFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder with no saved order only marks the migration done`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.migrateTabOrder()
+            assertNull(repository.libraryTabsOrderFlow.first())
+
+            repository.saveLibraryTabsOrder("""["SONGS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("SONGS", "LIKED"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    private suspend fun UserPreferencesRepository.storedLibraryTabsOrder(): List<String>? =
+        libraryTabsOrderFlow.first()?.let { Json.decodeFromString<List<String>>(it) }
 }

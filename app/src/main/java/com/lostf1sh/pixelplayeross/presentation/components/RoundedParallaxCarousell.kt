@@ -73,11 +73,10 @@ class CarouselState(
 
     suspend fun scrollToItem(item: Int) = pagerState.scrollToPage(item, 0f)
 
-    @Suppress("UNUSED_PARAMETER")
     suspend fun animateScrollToItem(item: Int, animationSpec: AnimationSpec<Float> = spring()) {
         if ((item == pagerState.currentPage && pagerState.currentPageOffsetFraction == 0f) || pagerState.pageCount == 0) return
         val targetPage = if (pagerState.pageCount > 0) item.coerceIn(0, pagerState.pageCount - 1) else 0
-        pagerState.animateScrollToPage(targetPage)
+        pagerState.animateScrollToPage(page = targetPage, animationSpec = animationSpec)
     }
 
     companion object {
@@ -635,6 +634,33 @@ private class Strategy(
         return lerp(steps[range.fromStepIndex], steps[range.toStepIndex], range.steppedInterpolation)
     }
 
+    // CarouselPageSize writes a fresh Strategy into state on every pager measure, and that same
+    // measure reads it back. Without value equality every write would count as a change, and once
+    // a scroll has settled the pager would invalidate itself and re-measure on every frame.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Strategy) return false
+        if (!isValid && !other.isValid) return true
+        return isValid == other.isValid &&
+            availableSpace == other.availableSpace &&
+            itemSpacing == other.itemSpacing &&
+            beforeContentPadding == other.beforeContentPadding &&
+            afterContentPadding == other.afterContentPadding &&
+            defaultKeylines == other.defaultKeylines &&
+            startKeylineSteps == other.startKeylineSteps &&
+            endKeylineSteps == other.endKeylineSteps
+    }
+
+    override fun hashCode(): Int {
+        if (!isValid) return isValid.hashCode()
+        var result = availableSpace.hashCode()
+        result = 31 * result + itemSpacing.hashCode()
+        result = 31 * result + beforeContentPadding.hashCode()
+        result = 31 * result + afterContentPadding.hashCode()
+        result = 31 * result + defaultKeylines.hashCode()
+        return result
+    }
+
     companion object {
         val Empty = Strategy(
             defaultKeylines = KeylineList.Empty,
@@ -707,6 +733,17 @@ private class KeylineList internal constructor(keylines: List<Keyline>) : List<K
     fun getKeylineAfter(unadjustedOffset: Float): Keyline {
         return firstOrNull { it.unadjustedOffset >= unadjustedOffset } ?: last()
     }
+
+    // Interface delegation doesn't forward equals/hashCode, so compare the keylines themselves.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KeylineList) return false
+        if (size != other.size) return false
+        for (i in indices) if (this[i] != other[i]) return false
+        return true
+    }
+
+    override fun hashCode(): Int = fold(0) { result, keyline -> 31 * result + keyline.hashCode() }
 
     companion object { val Empty = KeylineList(emptyList()) }
 }
