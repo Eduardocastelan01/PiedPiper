@@ -97,6 +97,7 @@ fun GenreMultiSelectionOptionSheet(
                         fontFamily = RoundedSans,
                         minFontSize = 16.sp,
                         maxFontSizeLimit = 24.sp,
+                        maxLines = 2,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(

@@ -31,12 +31,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,18 +56,25 @@ import coil.request.ImageRequest
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Artist
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.data.offline.CloudOfflineRepository
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtPaletteStyle
 import com.lostf1sh.pixelplayeross.presentation.components.AutoScrollingTextOnDemand
+import com.lostf1sh.pixelplayeross.presentation.components.EditMultipleSongsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveTopBarContent
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
 import com.lostf1sh.pixelplayeross.presentation.components.GenreSortBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.components.MultiSelectionBottomSheet
+import com.lostf1sh.pixelplayeross.presentation.components.PlayerSheetAwareBackHandler
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImageCompactListTargetSize
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.extractFastScrollGlyph
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
+import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionActionRow
+import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionCountPill
 import com.lostf1sh.pixelplayeross.presentation.screens.QuickFillDialog
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.CloudDownloadsViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.GenreDetailListItem
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.GenreDetailViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SortOption
@@ -77,6 +86,7 @@ import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.utils.formatDuration
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -94,14 +104,59 @@ fun GenreDetailScreen(
     decodedGenreId: String = java.net.URLDecoder.decode(genreId, "UTF-8"),
     playerViewModel: PlayerViewModel,
     viewModel: GenreDetailViewModel = hiltViewModel(),
-    playlistViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel = hiltViewModel()
+    playlistViewModel: com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel = hiltViewModel(),
+    cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
     val libraryGenres by playerViewModel.genres.collectAsStateWithLifecycle()
-    
+
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+
+    // Song selection is shared with Library and Search through the player view model.
+    val multiSelectionState = playerViewModel.multiSelectionStateHolder
+    val selectedSongs by multiSelectionState.selectedSongs.collectAsStateWithLifecycle()
+    val isSelectionMode by multiSelectionState.isSelectionMode.collectAsStateWithLifecycle()
+    val selectedSongIds by multiSelectionState.selectedSongIds.collectAsStateWithLifecycle()
+    var showMultiSelectionSheet by remember { mutableStateOf(false) }
+    var showBatchEditSheet by remember { mutableStateOf(false) }
+
+    // Start and leave with an empty selection: the holder is shared, so a selection made here
+    // must not show up in Search or Library, nor one made there show up here. Leaving through the
+    // top-bar back button pops the screen without going through the back handler below.
+    DisposableEffect(multiSelectionState) {
+        multiSelectionState.clearSelection()
+        onDispose { multiSelectionState.clearSelection() }
+    }
+
+    // Back clears the selection before leaving the genre; an expanded player sheet collapses first.
+    PlayerSheetAwareBackHandler(
+        coordinator = playerViewModel.playerSheetBackCoordinator,
+        enabled = isSelectionMode
+    ) {
+        multiSelectionState.clearSelection()
+    }
+
+    // Saving a batch edit or deleting clears the selection in the view model without dismissing
+    // the sheets. Drop them with the selection so the next long press only selects a song. A
+    // denied write permission keeps the selection, and with it the batch-edit dialog.
+    LaunchedEffect(isSelectionMode) {
+        if (!isSelectionMode) {
+            showMultiSelectionSheet = false
+            showBatchEditSheet = false
+        }
+    }
+
+    val onSongLongPress: (Song) -> Unit = remember(multiSelectionState, haptic) {
+        { song ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            multiSelectionState.toggleSelection(song)
+        }
+    }
+
     var isTransitionFinished by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(300)
@@ -122,6 +177,13 @@ fun GenreDetailScreen(
     val maxTopBarHeightPx = with(density) { maxTopBarHeight.toPx() }
 
     val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
+    // The status-bar inset can change without recreating the activity (rotation, window
+    // resize; MainActivity handles orientation|screenSize itself). Clamp the bar's height
+    // into the new range so the collapsed bar never sits under the status bar.
+    LaunchedEffect(minTopBarHeightPx, maxTopBarHeightPx) {
+        val clamped = topBarHeight.value.coerceIn(minTopBarHeightPx, maxTopBarHeightPx)
+        if (clamped != topBarHeight.value) topBarHeight.snapTo(clamped)
+    }
     val collapseFraction by remember(minTopBarHeightPx, maxTopBarHeightPx) {
         derivedStateOf {
             1f - ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(0f, 1f)
@@ -136,7 +198,7 @@ fun GenreDetailScreen(
         }
     }
 
-    val nestedScrollConnection = remember {
+    val nestedScrollConnection = remember(minTopBarHeightPx, maxTopBarHeightPx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val delta = available.y
@@ -228,6 +290,7 @@ fun GenreDetailScreen(
     var showSortSheet by remember { mutableStateOf(false) }
     var showSongOptionsSheet by remember { mutableStateOf<Song?>(null) }
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
+    var playlistSheetSongs by remember { mutableStateOf<ImmutableList<Song>>(persistentListOf()) }
     var showQuickFillDialog by remember { mutableStateOf(false) }
 
     val isUnknownGenre = remember(decodedGenreId) {
@@ -311,7 +374,11 @@ fun GenreDetailScreen(
                                 onSongClick = { song ->
                                     playerViewModel.showAndPlaySong(song, uiState.sortedSongs, genreDisplayName)
                                 },
-                                onMoreOptionsClick = { song -> showSongOptionsSheet = song }
+                                onMoreOptionsClick = { song -> showSongOptionsSheet = song },
+                                isSelectionMode = isSelectionMode,
+                                isSelected = item.song.id in selectedSongIds,
+                                selectionIndex = multiSelectionState.getSelectionIndex(item.song.id),
+                                onLongPress = { onSongLongPress(item.song) }
                             )
                         }
                         is GenreDetailListItem.Spacer -> {
@@ -362,27 +429,61 @@ fun GenreDetailScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 collapsedContentColor = MaterialTheme.colorScheme.onSurface
             )
-        
-            Box(
-                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = fabBottomPadding + 26.dp, end = 16.dp)
-                    .zIndex(10f)
-            ) {
-                 MediumFloatingActionButton(
-                    onClick = { showSortSheet = true },
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    shape = AbsoluteSmoothCornerShape(24.dp, 60)
+
+            SelectionCountPill(
+                selectedCount = selectedSongs.size,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .zIndex(6f)
+                    .padding(top = minTopBarHeight + 24.dp)
+            )
+
+            if (isSelectionMode) {
+                // SelectionActionRow has no background of its own, so give it a surface while it
+                // floats over the list.
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = fabBottomPadding + 16.dp)
+                        .zIndex(10f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.cd_options),
-                        modifier = Modifier.size(28.dp)
+                    SelectionActionRow(
+                        selectedCount = selectedSongs.size,
+                        onSelectAll = { multiSelectionState.selectAll(uiState.sortedSongs) },
+                        onDeselect = { multiSelectionState.clearSelection() },
+                        onOptionsClick = { showMultiSelectionSheet = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
                     )
                 }
+            } else {
+                // Only reachable outside selection mode, so the sort sheet can't open mid-selection.
+                Box(
+                     modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = fabBottomPadding + 26.dp, end = 16.dp)
+                        .zIndex(10f)
+                ) {
+                     MediumFloatingActionButton(
+                        onClick = { showSortSheet = true },
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        shape = AbsoluteSmoothCornerShape(24.dp, 60)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.cd_options),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
             }
-        
+
             if (showSortSheet) {
                 GenreSortBottomSheet(
                     onDismiss = { showSortSheet = false },
@@ -471,6 +572,7 @@ fun GenreDetailScreen(
                             playerViewModel.sendToast(toastPlayingNext)
                         },
                         onAddToPlayList = {
+                            playlistSheetSongs = persistentListOf(song)
                             showPlaylistBottomSheet = true
                         },
                         onDeleteFromDevice = playerViewModel::deleteFromDevice,
@@ -525,18 +627,104 @@ fun GenreDetailScreen(
                         removeFromListTrigger = {}
                     )
                 }
-
-                if (showPlaylistBottomSheet) {
-                    com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet(
-                        playlistUiState = playlistUiState,
-                        songs = persistentListOf(song),
-                        onDismiss = { showPlaylistBottomSheet = false },
-                        bottomBarHeight = 0.dp,
-                        playerViewModel = playerViewModel
-                    )
-                }
             }
-        
+
+            // Shared by the single-song options sheet and the multi-selection sheet.
+            if (showPlaylistBottomSheet && playlistSheetSongs.isNotEmpty()) {
+                com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet(
+                    playlistUiState = playlistUiState,
+                    songs = playlistSheetSongs,
+                    onDismiss = {
+                        showPlaylistBottomSheet = false
+                        playlistSheetSongs = persistentListOf()
+                    },
+                    bottomBarHeight = 0.dp,
+                    playerViewModel = playerViewModel
+                )
+            }
+
+            if (showMultiSelectionSheet && selectedSongs.isNotEmpty()) {
+                MultiSelectionBottomSheet(
+                    selectedSongs = selectedSongs,
+                    favoriteSongIds = favoriteSongIds,
+                    onDismiss = { showMultiSelectionSheet = false },
+                    onPlayAll = {
+                        playerViewModel.playSelectedSongs(selectedSongs)
+                        showMultiSelectionSheet = false
+                    },
+                    onAddToQueue = {
+                        playerViewModel.addSelectedToQueue(selectedSongs)
+                        showMultiSelectionSheet = false
+                    },
+                    onPlayNext = {
+                        playerViewModel.addSelectedAsNext(selectedSongs)
+                        showMultiSelectionSheet = false
+                    },
+                    onAddToPlaylist = {
+                        playlistSheetSongs = selectedSongs
+                        multiSelectionState.clearSelection()
+                        showMultiSelectionSheet = false
+                        showPlaylistBottomSheet = true
+                    },
+                    onToggleLikeAll = { shouldLike ->
+                        if (shouldLike) {
+                            playerViewModel.likeSelectedSongs(selectedSongs)
+                        } else {
+                            playerViewModel.unlikeSelectedSongs(selectedSongs)
+                        }
+                        showMultiSelectionSheet = false
+                    },
+                    onShareAll = {
+                        playerViewModel.shareSelectedAsZip(selectedSongs)
+                        showMultiSelectionSheet = false
+                    },
+                    onDownloadAll = {
+                        val cloudSongCount = CloudOfflineRepository.downloadCandidates(selectedSongs).size
+                        cloudDownloadsViewModel.downloadSelected(selectedSongs)
+                        multiSelectionState.clearSelection()
+                        playerViewModel.sendToast(
+                            context.getString(R.string.cloud_download_selected_started, cloudSongCount)
+                        )
+                        showMultiSelectionSheet = false
+                    },
+                    onDeleteAll = { deleteActivity, onComplete ->
+                        playerViewModel.deleteSelectedFromDevice(deleteActivity, selectedSongs) {
+                            showMultiSelectionSheet = false
+                            onComplete(true)
+                        }
+                    },
+                    onBatchEdit = {
+                        showMultiSelectionSheet = false
+                        showBatchEditSheet = true
+                    }
+                )
+            }
+
+            if (showBatchEditSheet && selectedSongs.isNotEmpty()) {
+                EditMultipleSongsSheet(
+                    visible = showBatchEditSheet,
+                    songs = selectedSongs,
+                    onDismiss = { showBatchEditSheet = false },
+                    onSave = { songs, title, artist, album, albumArtist, composer, genre, lyrics, trackNumber, discNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate ->
+                        playerViewModel.saveBatchMetadata(
+                            songs = songs,
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            albumArtist = albumArtist,
+                            composer = composer,
+                            genre = genre,
+                            lyrics = lyrics,
+                            trackNumber = trackNumber,
+                            discNumber = discNumber,
+                            replayGainTrackGainDb = replayGainTrackGainDb,
+                            replayGainAlbumGainDb = replayGainAlbumGainDb,
+                            coverArtUpdate = coverArtUpdate
+                        )
+                    }
+                )
+            }
+
             if (uiState.isLoadingSongs) {
                 ContainedLoadingIndicator(modifier = Modifier.align(Alignment.Center))
             }
@@ -826,7 +1014,11 @@ fun GenreSongItemWrapper(
     item: com.lostf1sh.pixelplayeross.presentation.viewmodel.GenreDetailListItem.SongItem,
     stablePlayerState: StablePlayerState,
     onSongClick: (Song) -> Unit,
-    onMoreOptionsClick: (Song) -> Unit
+    onMoreOptionsClick: (Song) -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    selectionIndex: Int? = null,
+    onLongPress: () -> Unit = {}
 ) {
     val song = item.song
     val isFirstInAlbum = item.isFirstInAlbum
@@ -876,7 +1068,11 @@ fun GenreSongItemWrapper(
                  showAlbumArt = false,
                  customShape = songItemShape,
                  onClick = { onSongClick(song) },
-                 onMoreOptionsClick = onMoreOptionsClick
+                 onMoreOptionsClick = onMoreOptionsClick,
+                 isSelected = isSelected,
+                 selectionIndex = selectionIndex,
+                 isSelectionMode = isSelectionMode,
+                 onLongPress = onLongPress
              )
              
              if (isLastInAlbum) Spacer(Modifier.height(8.dp))
