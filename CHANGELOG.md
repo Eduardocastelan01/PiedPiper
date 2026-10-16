@@ -66,6 +66,7 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Listening Stats are easier to find: the Home card is always shown, with loading and "No listening data yet" states, and the Home menu button opens a sidebar with a Listening Stats shortcut ([#142](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/142)).
 - Previous goes back to the previous song during the first 10 seconds of a track. After 3 seconds it used to restart the current song.
 - Adding songs to a playlist or creating one no longer breaks library sorting, search, album colours, the seek bar, and the sleep timer until the app restarts.
+- Closing the player that opens audio files from other apps no longer breaks library sorting, search, album colours, the seek bar, and the sleep timer in the app until it restarts.
 - Closing the app while music keeps playing no longer splits the current song's listening session in your stats.
 - Reordering a playlist no longer removes songs that are currently unavailable (excluded folder, unmounted storage, signed-out server, or not scanned yet). Deleting a playlist or removing songs from it also removes their saved transition rules.
 - Deleting several selected playlists in Library or Search asks for confirmation first. Select all in Liked selects every liked song, not only the ones loaded so far.
