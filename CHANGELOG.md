@@ -69,14 +69,14 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Closing the app while music keeps playing no longer splits the current song's listening session in your stats.
 - Reordering a playlist no longer removes songs that are currently unavailable (excluded folder, unmounted storage, signed-out server, or not scanned yet). Deleting a playlist or removing songs from it also removes their saved transition rules.
 - Deleting several selected playlists in Library or Search asks for confirmation first. Select all in Liked selects every liked song, not only the ones loaded so far.
-- The Songs tab's locate button works again, the Folders locate button keeps working after moving between folders, and the Library header and back handling follow the tab on screen during fast swipes.
+- The Songs tab's locate button works again, Locate on Liked scrolls to the playing song's place in the Liked list, and Locate no longer moves the neighbouring tab. The Folders locate button keeps working after moving between folders, and the Library header and back handling follow the tab on screen during fast swipes.
 - Rapid next/previous taps in the full player no longer land on an intermediate song or stall the album carousel, and the player colours keep up. Paging the carousel with TalkBack, Switch Access, the keyboard, or a mouse wheel changes the song again.
 - Pulling the Next up queue down from its list and back up brings it back with your finger.
 - Widget controls no longer flash a placeholder notification or drop the paused media notification after the app is swiped away. The main widget follows the album palette like the other widgets.
 - Library scans no longer extract embedded artwork from poorly tagged files or log per-file tag details.
 - Public IPv6 servers are no longer treated as local, so they no longer skip the HTTPS requirement; .home and .internal hosts count as local. Cloud streaming and offline downloads accept .ogg, .webm, .mka, and .3gp files served with video/ or application/ content types.
 - The setup wizard's Next button stays above the navigation bar, and setup pages scroll on short screens and with large font sizes. Changing the app language also updates text from background work, such as backup restore progress.
-- Stats weekday, month, and "Week N" labels, library sort options, and the bottom navigation labels follow the app language.
+- Stats weekday, month, and "Week N" labels, library sort options, collage pattern names, the bottom navigation labels, and the message shown when cloud downloads start follow the app language.
 - Song counts, listening durations, and "time ago" labels are translated, with each language's plural forms (for example Russian 2 песни and 5 песен). Zero songs reads "0 Songs" instead of "0 Song".
 - Lyrics sheet: square corners at rest, a loading skeleton, and the options sheet stays below the status bar.
 - The playlist options sheet scrolls on small screens and in landscape, so Export stays reachable. The New playlist dialog opens with the keyboard ready, creates the playlist on Done, and ignores names made only of spaces.
