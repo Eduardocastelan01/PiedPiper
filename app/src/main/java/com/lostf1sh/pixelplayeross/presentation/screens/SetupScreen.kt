@@ -2,6 +2,7 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -38,6 +39,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -73,6 +76,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.RoundedCorner
@@ -115,12 +119,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -137,6 +147,7 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.backup.model.BackupSection
 import com.lostf1sh.pixelplayeross.data.backup.model.BackupTransferProgressUpdate
 import com.lostf1sh.pixelplayeross.data.backup.model.RestorePlan
+import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.presentation.components.PermissionIconCollage
 import com.lostf1sh.pixelplayeross.presentation.components.BackupModuleSelectionDialog
@@ -149,6 +160,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.SetupUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SetupViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.ExpTitleTypography
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
+import com.lostf1sh.pixelplayeross.utils.AppLocaleManager
 import com.lostf1sh.pixelplayeross.utils.StorageInfo
 import com.lostf1sh.pixelplayeross.utils.isIgnoringBatteryOptimizations
 import com.lostf1sh.pixelplayeross.utils.openBatteryOptimizationSettings
@@ -676,29 +688,35 @@ fun WelcomePage() {
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 2.dp,
-            shadowElevation = 0.dp
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                tonalElevation = 2.dp,
+                shadowElevation = 0.dp
             ) {
-                Text(
-                    text = stringResource(R.string.setup_beta_symbol),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    text = stringResource(R.string.setup_beta_label),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.setup_beta_symbol),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = stringResource(R.string.setup_beta_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
+            SetupLanguagePill()
         }
         Spacer(modifier = Modifier.height(16.dp))
         Box(
@@ -755,6 +773,75 @@ fun WelcomePage() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = stringResource(R.string.setup_intro_body), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/**
+ * Language shortcut on the welcome page, so the rest of onboarding can be read in the chosen
+ * language. It opens the same in-app picker as Settings > Appearance and stores the choice through
+ * [AppLocaleManager], so both places agree. Recreating the activity applies the locale; the pager
+ * state survives it, so the user stays on this page. AppLocaleManager also moves the application
+ * context over, so text the retained SetupViewModel builds (restore progress, toasts) follows.
+ */
+@Composable
+private fun SetupLanguagePill() {
+    val context = LocalContext.current
+    var showLanguageSheet by remember { mutableStateOf(false) }
+    // recreate() rebuilds this composition after a change, so reading the tag once is enough.
+    val currentLanguageTag = remember(context) { AppLocaleManager.currentLanguageTag(context) }
+    val currentLanguage = remember(currentLanguageTag) {
+        AppLanguage.entries.firstOrNull { it.tag == currentLanguageTag } ?: AppLanguage.SYSTEM
+    }
+    val languageLabel = stringResource(R.string.setcat_app_language_label)
+    val currentLanguageName = stringResource(currentLanguage.labelRes)
+
+    Surface(
+        onClick = { showLanguageSheet = true },
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp,
+        modifier = Modifier.semantics {
+            contentDescription = languageLabel
+            stateDescription = currentLanguageName
+        }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Language,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = currentLanguageName,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+
+    if (showLanguageSheet) {
+        val languageOptions = remember(context) { AppLanguage.getLanguageOptions(context) }
+        OptionSelectionSheet(
+            title = languageLabel,
+            options = languageOptions,
+            selectedKey = currentLanguageTag,
+            onSelect = { tag ->
+                showLanguageSheet = false
+                if (tag != currentLanguageTag) {
+                    AppLocaleManager.applyLanguage(context, tag)
+                    (context as? Activity)?.recreate()
+                }
+            },
+            onDismiss = { showLanguageSheet = false }
+        )
     }
 }
 
@@ -1048,11 +1135,14 @@ fun ThemeSelectionPage(
         )
     )
 
+    // fillMaxSize before verticalScroll keeps the viewport as the minimum height, so SpaceBetween
+    // still spreads the content on tall screens while short screens and large fonts can scroll.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1074,9 +1164,12 @@ fun ThemeSelectionPage(
             )
         }
 
+        // The top padding only shows when the page overflows and SpaceBetween leaves no gap.
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp)
         ) {
             themeOptions.forEach { option ->
                 ThemeModeOptionCard(
@@ -1233,6 +1326,7 @@ fun ExternalServicesPage(
         verticalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1256,7 +1350,9 @@ fun ExternalServicesPage(
 
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp)
         ) {
             ExternalServiceToggleCard(
                 title = stringResource(R.string.setup_external_lyrics_title),
@@ -1359,99 +1455,113 @@ fun LibraryLayoutPage(
 ) {
     val isCompact = uiState.libraryNavigationMode == "compact_pill"
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isCompactHeight = maxHeight < 680.dp
+        val pagePadding = if (maxWidth < 360.dp) 20.dp else 24.dp
+        val titleSize = if (maxWidth < 360.dp || isCompactHeight) 29.sp else 32.sp
+        val previewHeight = if (isCompactHeight) 150.dp else 190.dp
+        val sectionSpacing = if (isCompactHeight) 14.dp else 18.dp
+
+        // The preview has a fixed height instead of weight(1f): a weighted child collapses to
+        // nothing once the content overflows inside a vertical scroll.
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.setup_library_layout_title),
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = RoundedSans,
-                    fontSize = 32.sp
-                ),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = stringResource(R.string.setup_library_layout_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Box(
+            verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = pagePadding, vertical = if (isCompactHeight) 18.dp else 24.dp)
         ) {
-            LibraryHeaderPreview(isCompact = isCompact)
-        }
-        
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = RoundedCornerShape(24.dp),
-                onClick = { onModeSelected(if (isCompact) "tab_row" else "compact_pill") }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(
-                   modifier = Modifier
-                       .padding(horizontal = 20.dp, vertical = 16.dp)
-                       .fillMaxWidth(),
-                   verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.setup_compact_mode),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isCompact) stringResource(R.string.setup_compact_mode_pill_hint) else stringResource(R.string.setup_compact_mode_tab_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = isCompact,
-                        onCheckedChange = { checked ->
-                            onModeSelected(if (checked) "compact_pill" else "tab_row")
-                        }
-                    )
+                if (!isCompactHeight) {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+                Text(
+                    text = stringResource(R.string.setup_library_layout_title),
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontFamily = RoundedSans,
+                        fontSize = titleSize
+                    ),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(if (isCompactHeight) 10.dp else 16.dp))
+
+                Text(
+                    text = stringResource(R.string.setup_library_layout_subtitle),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = stringResource(R.string.setup_library_layout_footer),
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = sectionSpacing)
+                    .height(previewHeight),
+                contentAlignment = Alignment.Center
+            ) {
+                LibraryHeaderPreview(isCompact = isCompact, previewHeight = previewHeight)
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    onClick = { onModeSelected(if (isCompact) "tab_row" else "compact_pill") }
+                ) {
+                    Row(
+                       modifier = Modifier
+                           .padding(horizontal = 20.dp, vertical = 16.dp)
+                           .fillMaxWidth(),
+                       verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.setup_compact_mode),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isCompact) stringResource(R.string.setup_compact_mode_pill_hint) else stringResource(R.string.setup_compact_mode_tab_hint),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isCompact,
+                            onCheckedChange = { checked ->
+                                onModeSelected(if (checked) "compact_pill" else "tab_row")
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.setup_library_layout_footer),
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
+            }
         }
     }
 }
 
 @Composable
-fun LibraryHeaderPreview(isCompact: Boolean) {
+fun LibraryHeaderPreview(isCompact: Boolean, previewHeight: Dp = 180.dp) {
     val gradientColors = listOf(
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
@@ -1474,7 +1584,7 @@ fun LibraryHeaderPreview(isCompact: Boolean) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
+                .height(previewHeight)
                 .background(Brush.verticalGradient(gradientColors))
         ) {
             AnimatedContent(
@@ -1653,71 +1763,142 @@ fun PermissionPageLayout(
     onGrantClicked: () -> Unit,
     content: @Composable () -> Unit = {}
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = RoundedSans,
-                    fontSize = 32.sp
-                ),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isCompactHeight = maxHeight < 640.dp
+        val horizontalPadding = if (maxWidth < 360.dp) 20.dp else 24.dp
+        val verticalPadding = if (isCompactHeight) 18.dp else 24.dp
+        val contentSpacing = if (isCompactHeight) 14.dp else 20.dp
+        val titleSize = if (maxWidth < 360.dp || isCompactHeight) 29.sp else 32.sp
+        val footerSpacing = if (isCompactHeight) 10.dp else 16.dp
 
-        Box(
+        // Header and actions take their natural height; the icon collage gets what is left, so
+        // it fills tall screens and shrinks (down to a readable minimum) on short ones instead of
+        // pushing the button off screen. Only if even the minimum does not fit does the page
+        // scroll. Keep lazy lists and nested vertical scrolls out of these slots: the header and
+        // footer are measured with unbounded height.
+        HeroFillLayout(
+            viewportHeight = maxHeight - verticalPadding * 2,
+            spacing = contentSpacing,
+            minHeroHeight = if (isCompactHeight) 120.dp else 160.dp,
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            PermissionIconCollage(
-                modifier = Modifier.height(220.dp),
-                icons = icons
-            )
-        }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            content()
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onGrantClicked,
-                enabled = buttonEnabled,
-                contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
-            ) {
-                AnimatedContent(targetState = granted, label = "ButtonAnim") { isGranted ->
-                    if (isGranted) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Check, null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(buttonText)
-                        }
-                    } else {
-                        Text(
-                            text = buttonText,
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            header = {
+                // fillMaxWidth: HeroFillLayout places slots at x = 0, so a narrower column would
+                // pull short centered titles to the start.
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (!isCompactHeight) {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontFamily = RoundedSans,
+                            fontSize = titleSize
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(if (isCompactHeight) 10.dp else 16.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            hero = {
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // The collage sizes its icons from `height`, so pass the space it really has.
+                    PermissionIconCollage(
+                        icons = icons,
+                        height = minOf(maxHeight, 220.dp)
+                    )
+                }
+            },
+            footer = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    content()
+                    Spacer(modifier = Modifier.height(footerSpacing))
+                    Button(
+                        onClick = onGrantClicked,
+                        enabled = buttonEnabled,
+                        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
+                    ) {
+                        // Long labels (and large font scales) wrap instead of being cut off; the
+                        // footer is measured at its natural height, so the collage gives way.
+                        AnimatedContent(targetState = granted, label = "ButtonAnim") { isGranted ->
+                            if (isGranted) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Check, null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(buttonText, textAlign = TextAlign.Center)
+                                }
+                            } else {
+                                Text(
+                                    text = buttonText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(footerSpacing))
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+        )
+    }
+}
+
+/**
+ * Stacks [header], [hero] and [footer] vertically. Header and footer are measured at their
+ * natural height; the hero receives the remaining part of [viewportHeight] (never less than
+ * [minHeroHeight]). Works inside a vertical scroll, where a weighted Column cannot.
+ */
+@Composable
+private fun HeroFillLayout(
+    viewportHeight: Dp,
+    spacing: Dp,
+    minHeroHeight: Dp,
+    modifier: Modifier = Modifier,
+    header: @Composable () -> Unit,
+    hero: @Composable () -> Unit,
+    footer: @Composable () -> Unit,
+) {
+    Layout(
+        contents = listOf(header, hero, footer),
+        modifier = modifier
+    ) { (headerMeasurables, heroMeasurables, footerMeasurables), constraints ->
+        val width = constraints.maxWidth
+        val looseWidth = Constraints(maxWidth = width)
+        val headerPlaceables = headerMeasurables.map { it.measure(looseWidth) }
+        val footerPlaceables = footerMeasurables.map { it.measure(looseWidth) }
+        val spacingPx = spacing.roundToPx()
+        val headerHeight = headerPlaceables.sumOf { it.height }
+        val footerHeight = footerPlaceables.sumOf { it.height }
+        val heroHeight = (viewportHeight.roundToPx() - headerHeight - footerHeight - spacingPx * 2)
+            .coerceAtLeast(minHeroHeight.roundToPx())
+        val heroPlaceables = heroMeasurables.map {
+            it.measure(Constraints.fixed(width, heroHeight))
+        }
+        val totalHeight = headerHeight + spacingPx + heroHeight + spacingPx + footerHeight
+        layout(width, totalHeight) {
+            var y = 0
+            headerPlaceables.forEach { it.placeRelative(0, y); y += it.height }
+            y += spacingPx
+            heroPlaceables.forEach { it.placeRelative(0, y) }
+            y += heroHeight + spacingPx
+            footerPlaceables.forEach { it.placeRelative(0, y); y += it.height }
         }
     }
 }
@@ -2185,9 +2366,12 @@ fun SetupBottomBar(
             smoothnessAsPercentTR = 60
         )
     ) {
+        // The app draws edge-to-edge and Scaffold does not inset its bottomBar slot, so keep the
+        // step text and FAB above the system navigation bar while the surface still runs under it.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(bottom = 14.dp)
         ) {
             Row(
@@ -2300,125 +2484,139 @@ fun NavBarLayoutPage(
 ) {
     val isDefault = uiState.navBarStyle != "full_width"
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isCompactHeight = maxHeight < 720.dp
+        val pagePadding = if (maxWidth < 360.dp) 20.dp else 24.dp
+        val titleSize = if (maxWidth < 360.dp || isCompactHeight) 29.sp else 32.sp
+        val previewHeight = if (isCompactHeight) 164.dp else 200.dp
+        val sectionSpacing = if (isCompactHeight) 14.dp else 18.dp
+
+        // Fixed preview height for the same reason as LibraryLayoutPage: weight(1f) cannot share
+        // space inside a vertical scroll.
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.setup_app_navigation_title),
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontFamily = RoundedSans,
-                    fontSize = 32.sp
-                ),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = stringResource(R.string.setup_app_navigation_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Box(
+            verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = pagePadding, vertical = if (isCompactHeight) 18.dp else 24.dp)
         ) {
-            NavBarPreview(isDefault = isDefault)
-        }
-        
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = RoundedCornerShape(24.dp),
-                onClick = { onModeSelected(if (isDefault) "full_width" else "default") }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier = Modifier
-                       .padding(horizontal = 20.dp, vertical = 16.dp)
-                       .fillMaxWidth()
-                ) {
-                    Row(
-                       modifier = Modifier.fillMaxWidth(),
-                       verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.setup_navbar_default_style),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (isDefault) stringResource(R.string.setup_nav_floating_pill_description) else stringResource(R.string.setup_nav_full_width_description),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = isDefault,
-                            onCheckedChange = { checked ->
-                                onModeSelected(if (checked) "default" else "full_width")
-                            }
-                        )
-                    }
-                    
-                    AnimatedVisibility(
-                        visible = true,
-                        enter =   androidx.compose.animation.expandVertically() + fadeIn(),
-                        exit = androidx.compose.animation.shrinkVertically() + fadeOut()
-                    ) {
-                         Column {
-                             Spacer(modifier = Modifier.height(16.dp))
-                             FilledTonalButton(
-                                 onClick = onCustomizeRadius,
-                                 modifier = Modifier.fillMaxWidth(),
-                                 colors = ButtonDefaults.filledTonalButtonColors(
-                                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                 )
-                             ) {
-                                 Icon(Icons.Rounded.RoundedCorner, contentDescription = null, modifier = Modifier.size(18.dp))
-                                 Spacer(modifier = Modifier.width(8.dp))
-                                 Text(stringResource(R.string.customize_corner_radius))
-                             }
-                         }
-                    }
+                if (!isCompactHeight) {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+                Text(
+                    text = stringResource(R.string.setup_app_navigation_title),
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontFamily = RoundedSans,
+                        fontSize = titleSize
+                    ),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(if (isCompactHeight) 10.dp else 16.dp))
+
+                Text(
+                    text = stringResource(R.string.setup_app_navigation_subtitle),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = stringResource(R.string.setup_navbar_footer),
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = sectionSpacing)
+                    .height(previewHeight),
+                contentAlignment = Alignment.Center
+            ) {
+                NavBarPreview(isDefault = isDefault, previewHeight = previewHeight)
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    onClick = { onModeSelected(if (isDefault) "full_width" else "default") }
+                ) {
+                    Column(
+                        modifier = Modifier
+                           .padding(horizontal = 20.dp, vertical = 16.dp)
+                           .fillMaxWidth()
+                    ) {
+                        Row(
+                           modifier = Modifier.fillMaxWidth(),
+                           verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.setup_navbar_default_style),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isDefault) stringResource(R.string.setup_nav_floating_pill_description) else stringResource(R.string.setup_nav_full_width_description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isDefault,
+                                onCheckedChange = { checked ->
+                                    onModeSelected(if (checked) "default" else "full_width")
+                                }
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = true,
+                            enter =   androidx.compose.animation.expandVertically() + fadeIn(),
+                            exit = androidx.compose.animation.shrinkVertically() + fadeOut()
+                        ) {
+                             Column {
+                                 Spacer(modifier = Modifier.height(16.dp))
+                                 FilledTonalButton(
+                                     onClick = onCustomizeRadius,
+                                     modifier = Modifier.fillMaxWidth(),
+                                     colors = ButtonDefaults.filledTonalButtonColors(
+                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                     )
+                                 ) {
+                                     Icon(Icons.Rounded.RoundedCorner, contentDescription = null, modifier = Modifier.size(18.dp))
+                                     Spacer(modifier = Modifier.width(8.dp))
+                                     Text(stringResource(R.string.customize_corner_radius))
+                                 }
+                             }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.setup_navbar_footer),
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(if (isCompactHeight) 8.dp else 24.dp))
+            }
         }
     }
 }
 
 @Composable
-fun NavBarPreview(isDefault: Boolean) {
+fun NavBarPreview(isDefault: Boolean, previewHeight: Dp = 200.dp) {
     val gradientColors = listOf(
         MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f),
         MaterialTheme.colorScheme.surfaceContainer,
@@ -2431,7 +2629,7 @@ fun NavBarPreview(isDefault: Boolean) {
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(previewHeight)
             .padding(horizontal = 8.dp)
     ) {
         Box(
