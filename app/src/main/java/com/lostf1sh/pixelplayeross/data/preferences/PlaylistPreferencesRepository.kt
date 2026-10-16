@@ -1,11 +1,13 @@
 package com.lostf1sh.pixelplayeross.data.preferences
 
 import com.lostf1sh.pixelplayeross.data.database.LocalPlaylistDao
+import com.lostf1sh.pixelplayeross.data.database.TransitionDao
 import com.lostf1sh.pixelplayeross.data.model.Playlist
 import com.lostf1sh.pixelplayeross.data.database.toEntity
 import com.lostf1sh.pixelplayeross.data.database.toPlaylist
 import com.lostf1sh.pixelplayeross.data.model.isSmartPlaylist
 import com.lostf1sh.pixelplayeross.data.model.SortOption
+import com.lostf1sh.pixelplayeross.data.playlist.mergeVisiblePlaylistOrder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -19,7 +21,8 @@ import javax.inject.Singleton
 @Singleton
 class PlaylistPreferencesRepository @Inject constructor(
     private val localPlaylistDao: LocalPlaylistDao,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val transitionDao: TransitionDao
 ) {
     private val migrationMutex = Mutex()
     @Volatile
@@ -81,6 +84,7 @@ class PlaylistPreferencesRepository @Inject constructor(
     suspend fun deletePlaylist(playlistId: String) {
         ensureMigratedIfNeeded()
         localPlaylistDao.deletePlaylist(playlistId)
+        transitionDao.deleteRulesForPlaylist(playlistId)
         clearPlaylistSongOrderMode(playlistId)
     }
 
@@ -96,9 +100,15 @@ class PlaylistPreferencesRepository @Inject constructor(
 
     suspend fun updatePlaylist(playlist: Playlist) {
         ensureMigratedIfNeeded()
+        val previousIds = localPlaylistDao.observePlaylistSongs(playlist.id).first()
+            .mapTo(HashSet()) { it.songId }
         val updated = playlist.copy(lastModified = System.currentTimeMillis())
         localPlaylistDao.upsertPlaylist(updated.toEntity())
         localPlaylistDao.replacePlaylistSongs(updated.id, updated.songIds)
+        // Rules only go away once no copy of the track is left in the playlist.
+        (previousIds - updated.songIds.toHashSet()).forEach { removedId ->
+            transitionDao.deleteRulesForTrack(updated.id, removedId)
+        }
     }
 
     suspend fun addSongsToPlaylist(playlistId: String, songIdsToAdd: List<String>) {
@@ -138,11 +148,22 @@ class PlaylistPreferencesRepository @Inject constructor(
         updatePlaylist(existing.copy(songIds = existing.songIds.filterNot { it == songIdToRemove }))
     }
 
-    suspend fun reorderSongsInPlaylist(playlistId: String, newSongOrderIds: List<String>) {
+    /**
+     * Saves a new order for the songs the playlist currently shows. Songs that are missing
+     * from [newSongOrderIds] because they are unavailable right now keep their positions.
+     *
+     * @return the full saved order, or null when the playlist can't be reordered or
+     * [newSongOrderIds] doesn't match the playlist's stored songs.
+     */
+    suspend fun reorderSongsInPlaylist(playlistId: String, newSongOrderIds: List<String>): List<String>? {
         ensureMigratedIfNeeded()
-        val existing = userPlaylistsFlow.first().find { it.id == playlistId } ?: return
-        if (existing.isSmartPlaylist) return
-        updatePlaylist(existing.copy(songIds = newSongOrderIds))
+        val existing = userPlaylistsFlow.first().find { it.id == playlistId } ?: return null
+        if (existing.isSmartPlaylist) return null
+        val merged = mergeVisiblePlaylistOrder(existing.songIds, newSongOrderIds) ?: return null
+        if (merged != existing.songIds) {
+            updatePlaylist(existing.copy(songIds = merged))
+        }
+        return merged
     }
 
     suspend fun setPlaylistSongOrderMode(playlistId: String, modeValue: String) =
