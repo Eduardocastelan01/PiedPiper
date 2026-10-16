@@ -73,6 +73,7 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Rapid next/previous taps in the full player no longer land on an intermediate song or stall the album carousel, and the player colours keep up. Paging the carousel with TalkBack, Switch Access, the keyboard, or a mouse wheel changes the song again.
 - The full player's album carousel no longer keeps re-measuring on every frame after it scrolls to another song.
 - The full player no longer keeps redrawing on every frame after you pause it, which wasted battery while it sat paused.
+- A paused full player also stops animating its flat progress wave out of sight, which kept the app busy on every screen refresh.
 - Pulling the Next up queue down from its list and back up brings it back with your finger.
 - Widget controls no longer flash a placeholder notification or drop the paused media notification after the app is swiped away. The main widget follows the album palette like the other widgets.
 - Library scans no longer extract embedded artwork from poorly tagged files or log per-file tag details.
