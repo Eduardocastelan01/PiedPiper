@@ -60,4 +60,12 @@
         <item quantity="one">%d parça</item>
         <item quantity="other">%d parça</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">%d çalma listesi silinsin mi?</item>
+        <item quantity="other">%d çalma listesi silinsin mi?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">%d çalma listesini silmek istediğinizden emin misiniz?</item>
+        <item quantity="other">%d çalma listesini silmek istediğinizden emin misiniz?</item>
+    </plurals>
 </resources>

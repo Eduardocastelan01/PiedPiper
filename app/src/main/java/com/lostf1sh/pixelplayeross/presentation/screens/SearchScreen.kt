@@ -80,6 +80,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImageListTargetSize
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.PlaylistPlay
@@ -147,6 +148,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.GenreMultiSelectionOp
 import com.lostf1sh.pixelplayeross.presentation.components.MultiSelectionBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.PlayerSheetAwareBackHandler
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistMultiSelectionBottomSheet
+import com.lostf1sh.pixelplayeross.presentation.components.DeletePlaylistsConfirmationDialog
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionActionRow
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionCountPill
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.CloudDownloadsViewModel
@@ -165,7 +167,7 @@ private const val MAX_ALBUM_MULTI_SELECTION = 6
 @Composable
 fun SearchScreen(
     paddingValues: PaddingValues,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel(),
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
     navController: NavHostController,
     onSearchBarActiveChange: (Boolean) -> Unit = {},
@@ -202,6 +204,8 @@ fun SearchScreen(
     val isPlaylistSelectionMode by playlistSelectionState.isSelectionMode.collectAsStateWithLifecycle()
     val selectedPlaylistIds by playlistSelectionState.selectedPlaylistIds.collectAsStateWithLifecycle()
     var showPlaylistMultiSelectionSheet by remember { mutableStateOf(false) }
+    var showDeletePlaylistConfirmation by remember { mutableStateOf(false) }
+    var pendingDeletePlaylistIds by remember { mutableStateOf(emptyList<String>()) }
 
     var selectedGenres by remember { mutableStateOf<ImmutableList<Genre>>(persistentListOf()) }
     val selectedGenreIds = remember(selectedGenres) { selectedGenres.mapTo(HashSet()) { it.id } }
@@ -885,9 +889,10 @@ fun SearchScreen(
             selectedPlaylists = selectedPlaylists,
             onDismiss = { showPlaylistMultiSelectionSheet = false },
             onDeleteAll = {
-                playlistViewModel.deletePlaylistsInBatch(selectedPlaylistIds.toList())
+                // Keep the selection until the deletion is confirmed, so Cancel leaves it as it was.
+                pendingDeletePlaylistIds = selectedPlaylistIds.toList()
                 showPlaylistMultiSelectionSheet = false
-                playlistSelectionState.clearSelection()
+                showDeletePlaylistConfirmation = true
             },
             onExportAll = {
                 playlistViewModel.exportPlaylistsAsM3u(selectedPlaylistIds.toList())
@@ -904,6 +909,22 @@ fun SearchScreen(
                 }
                 showPlaylistMultiSelectionSheet = false
                 playlistSelectionState.clearSelection()
+            }
+        )
+    }
+
+    if (showDeletePlaylistConfirmation && pendingDeletePlaylistIds.isNotEmpty()) {
+        DeletePlaylistsConfirmationDialog(
+            count = pendingDeletePlaylistIds.size,
+            onConfirm = {
+                playlistViewModel.deletePlaylistsInBatch(pendingDeletePlaylistIds)
+                playlistSelectionState.clearSelection()
+                showDeletePlaylistConfirmation = false
+                pendingDeletePlaylistIds = emptyList()
+            },
+            onDismiss = {
+                showDeletePlaylistConfirmation = false
+                pendingDeletePlaylistIds = emptyList()
             }
         )
     }

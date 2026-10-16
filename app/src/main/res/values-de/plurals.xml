@@ -60,4 +60,12 @@
         <item quantity="one">%d Titel</item>
         <item quantity="other">%d Titel</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">%d Playlist löschen?</item>
+        <item quantity="other">%d Playlists löschen?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">%d Playlist wirklich löschen?</item>
+        <item quantity="other">%d Playlists wirklich löschen?</item>
+    </plurals>
 </resources>

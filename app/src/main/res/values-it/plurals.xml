@@ -66,4 +66,14 @@
         <item quantity="many">%d brani</item>
         <item quantity="other">%d brani</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Eliminare %d playlist?</item>
+        <item quantity="many">Eliminare %d playlist?</item>
+        <item quantity="other">Eliminare %d playlist?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Sei sicuro di voler eliminare %d playlist?</item>
+        <item quantity="many">Sei sicuro di voler eliminare %d playlist?</item>
+        <item quantity="other">Sei sicuro di voler eliminare %d playlist?</item>
+    </plurals>
 </resources>

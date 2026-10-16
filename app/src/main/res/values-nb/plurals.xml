@@ -60,4 +60,12 @@
         <item quantity="one">%d spor</item>
         <item quantity="other">%d spor</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Slett %d spilleliste?</item>
+        <item quantity="other">Slett %d spillelister?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Er du sikker på at du vil slette %d spilleliste?</item>
+        <item quantity="other">Er du sikker på at du vil slette %d spillelister?</item>
+    </plurals>
 </resources>

@@ -120,4 +120,20 @@
         <item quantity="many">%d مساراً</item>
         <item quantity="other">%d مسار</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="zero">هل تريد حذف قوائم التشغيل؟</item>
+        <item quantity="one">هل تريد حذف قائمة تشغيل واحدة؟</item>
+        <item quantity="two">هل تريد حذف قائمتي تشغيل؟</item>
+        <item quantity="few">هل تريد حذف %d قوائم تشغيل؟</item>
+        <item quantity="many">هل تريد حذف %d قائمة تشغيل؟</item>
+        <item quantity="other">هل تريد حذف %d قائمة تشغيل؟</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="zero">هل أنت متأكد من أنك تريد حذف قوائم التشغيل؟</item>
+        <item quantity="one">هل أنت متأكد من أنك تريد حذف قائمة تشغيل واحدة؟</item>
+        <item quantity="two">هل أنت متأكد من أنك تريد حذف قائمتي التشغيل هاتين؟</item>
+        <item quantity="few">هل أنت متأكد من أنك تريد حذف %d قوائم تشغيل؟</item>
+        <item quantity="many">هل أنت متأكد من أنك تريد حذف %d قائمة تشغيل؟</item>
+        <item quantity="other">هل أنت متأكد من أنك تريد حذف %d قائمة تشغيل؟</item>
+    </plurals>
 </resources>

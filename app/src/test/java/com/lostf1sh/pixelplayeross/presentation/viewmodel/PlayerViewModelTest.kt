@@ -620,6 +620,60 @@ class PlayerViewModelTest {
     }
 
     @Nested
+    @DisplayName("Liked select all")
+    inner class FavoriteSelectionTests {
+
+        // More favorites than one page of the Liked list (paging maxSize is 250).
+        private val favoriteSongs = (1..300).map { id ->
+            Song(id = "$id", title = "Song $id", artist = "Artist", genre = "Rock", albumArtUriString = null, artistId = 1L, albumId = 1L, contentUriString = "content://dummy/$id", duration = 180000L, bitrate = null, sampleRate = null, album = "Album", path = "/music/$id.mp3", mimeType = "audio/mpeg")
+        }
+
+        private val hideLocalMedia = MutableStateFlow(false)
+
+        // Runs before the view model's init collectors are first dispatched.
+        @BeforeEach
+        fun stubLibrarySongs() {
+            every { mockLibraryStateHolder.allSongsById } returns MutableStateFlow(favoriteSongs.associateBy { it.id })
+            every { mockUserPreferencesRepository.hideLocalMediaFlow } returns hideLocalMedia
+        }
+
+        @Test
+        fun `select all returns every favorite in the order of the Liked list`() = runTest {
+            advanceUntilIdle()
+            val favoriteSort = playerViewModel.playerUiState.value.currentFavoriteSortOption
+            val sortedIds = favoriteSongs.map { it.id.toLong() }.shuffled(kotlin.random.Random(7))
+            coEvery { mockMusicRepository.getFavoriteSongIdsSorted(favoriteSort, StorageFilter.ALL) } returns sortedIds
+
+            val selection = playerViewModel.getSongsForCurrentFavoriteSelection()
+
+            assertEquals(sortedIds.map(Long::toString), selection.map { it.id })
+        }
+
+        @Test
+        fun `select all resolves favorites that are missing from the library cache`() = runTest {
+            advanceUntilIdle()
+            val uncachedSong = favoriteSongs.first().copy(id = "301", title = "Song 301")
+            coEvery { mockMusicRepository.getFavoriteSongIdsSorted(any(), any()) } returns listOf(301L, 1L)
+            every { mockMusicRepository.getSongsByIds(listOf("301")) } returns flowOf(listOf(uncachedSong))
+
+            val selection = playerViewModel.getSongsForCurrentFavoriteSelection()
+
+            assertEquals(listOf("301", "1"), selection.map { it.id })
+        }
+
+        @Test
+        fun `select all only asks for cloud favorites while local media is hidden`() = runTest {
+            hideLocalMedia.value = true
+            advanceUntilIdle()
+
+            playerViewModel.getSongsForCurrentFavoriteSelection()
+
+            coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
+            coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+        }
+    }
+
+    @Nested
     @DisplayName("Search History")
     inner class SearchHistoryTests {
 

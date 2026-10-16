@@ -66,4 +66,14 @@
         <item quantity="many">%d canciones</item>
         <item quantity="other">%d canciones</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">¿Eliminar %d lista de reproducción?</item>
+        <item quantity="many">¿Eliminar %d listas de reproducción?</item>
+        <item quantity="other">¿Eliminar %d listas de reproducción?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">¿Estás seguro de que deseas eliminar %d lista de reproducción?</item>
+        <item quantity="many">¿Estás seguro de que deseas eliminar %d listas de reproducción?</item>
+        <item quantity="other">¿Estás seguro de que deseas eliminar %d listas de reproducción?</item>
+    </plurals>
 </resources>

@@ -66,4 +66,14 @@
         <item quantity="many">%d titres</item>
         <item quantity="other">%d titres</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Supprimer %d liste de lecture ?</item>
+        <item quantity="many">Supprimer %d listes de lecture ?</item>
+        <item quantity="other">Supprimer %d listes de lecture ?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Êtes-vous sûr de vouloir supprimer %d liste de lecture ?</item>
+        <item quantity="many">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
+        <item quantity="other">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
+    </plurals>
 </resources>

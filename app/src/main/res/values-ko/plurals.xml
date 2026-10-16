@@ -45,4 +45,10 @@
     <plurals name="stats_tracks_count">
         <item quantity="other">트랙 %d곡</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="other">플레이리스트 %d개를 삭제하시겠습니까?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="other">플레이리스트 %d개를 정말 삭제하시겠습니까?</item>
+    </plurals>
 </resources>

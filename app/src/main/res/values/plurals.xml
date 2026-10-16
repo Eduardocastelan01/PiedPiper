@@ -60,4 +60,12 @@
         <item quantity="one">%d track</item>
         <item quantity="other">%d tracks</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Delete %d playlist?</item>
+        <item quantity="other">Delete %d playlists?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Are you sure you want to delete %d playlist?</item>
+        <item quantity="other">Are you sure you want to delete %d playlists?</item>
+    </plurals>
 </resources>

@@ -143,6 +143,10 @@ fun LibrarySongsTab(
         }
     }
 
+    LaunchedEffect(locateCurrentSongAction) {
+        registerActionCallback(locateCurrentSongAction)
+    }
+
     ResetScrollOnSortChange(
         sortKey = sortOption.storageKey,
         items = songs,

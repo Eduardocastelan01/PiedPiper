@@ -45,4 +45,10 @@
     <plurals name="stats_tracks_count">
         <item quantity="other">%d 首歌曲</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="other">确定删除 %d 个歌单？</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="other">你确定要删除这 %d 个歌单吗？</item>
+    </plurals>
 </resources>

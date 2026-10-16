@@ -655,6 +655,16 @@ class PlayerViewModel @Inject constructor(
         return resolvePlaybackQueueFromSortedIds(sortedIds)
     }
 
+    /** Every song in the Liked list as it is sorted and filtered on screen, not just the loaded pages. */
+    suspend fun getSongsForCurrentFavoriteSelection(): List<Song> {
+        val state = playerUiState.value
+        val sortedIds = musicRepository.getFavoriteSongIdsSorted(
+            state.currentFavoriteSortOption,
+            currentEffectiveLibraryStorageFilter(state),
+        )
+        return resolvePlaybackQueueFromSortedIds(sortedIds)
+    }
+
     private fun currentEffectiveLibraryStorageFilter(
         state: PlayerUiState = playerUiState.value,
     ): com.lostf1sh.pixelplayeross.data.model.StorageFilter {
@@ -954,7 +964,9 @@ class PlayerViewModel @Inject constructor(
         .map { orderJson ->
             if (orderJson != null) {
                 try {
+                    // An empty saved order (hand-edited or restored) would leave the library without pages.
                     Json.decodeFromString<List<String>>(orderJson).toImmutableList()
+                        .ifEmpty { persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED") }
                 } catch (e: Exception) {
                     persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
                 }
@@ -1544,7 +1556,9 @@ class PlayerViewModel @Inject constructor(
 
             viewModelScope.launch {
                 combine(libraryTabsFlow, lastLibraryTabIndexFlow) { tabs, index ->
-                    tabs.getOrNull(index)?.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS
+                    // Wrap a saved index that outlived a shorter tab list, as LibraryScreen does.
+                    tabs.getOrNull(index.mod(tabs.size.coerceAtLeast(1)))?.toLibraryTabIdOrNull()
+                        ?: LibraryTabId.SONGS
                 }.collect { tabId ->
                     _currentLibraryTabId.value = tabId
                 }

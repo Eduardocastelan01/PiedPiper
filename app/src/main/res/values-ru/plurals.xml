@@ -72,4 +72,16 @@
         <item quantity="many">%d треков</item>
         <item quantity="other">%d трека</item>
     </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Удалить %d плейлист?</item>
+        <item quantity="few">Удалить %d плейлиста?</item>
+        <item quantity="many">Удалить %d плейлистов?</item>
+        <item quantity="other">Удалить %d плейлиста?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Вы уверены, что хотите удалить %d плейлист?</item>
+        <item quantity="few">Вы уверены, что хотите удалить %d плейлиста?</item>
+        <item quantity="many">Вы уверены, что хотите удалить %d плейлистов?</item>
+        <item quantity="other">Вы уверены, что хотите удалить %d плейлиста?</item>
+    </plurals>
 </resources>
