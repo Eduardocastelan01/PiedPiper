@@ -19,6 +19,13 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Battery optimization exemption prompt in setup and Playback settings.
 - "Show scrollbar" setting, grid view for the Playlists tab, and customizable sidebar shortcuts.
 - Redesigned album and artist headers, segmented library lists, a new Stats screen with Heavy Rotation drill-down, and an animated splash.
+- Playback speed in exact 0.05× steps from 0.25× to 3×, with − and + buttons, presets, and a typed value with two decimals. The same controls open from a new Speed button in the Next up queue, which is highlighted while the speed isn't 1× ([#145](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/145)).
+- "Auto-play on skip" setting (Settings → Behavior, on by default): Next, Previous, and the mini player's swipe-to-skip start playback when you skip while paused.
+- Hide library tabs you don't use from the Reorder library tabs sheet, and bring them back from its Hidden tabs group.
+- Multi-selection on genre pages.
+- Choose the app language from the setup welcome page.
+- Five new Home collage patterns.
+- The Next up queue follows the predictive back gesture on Android 14 and newer.
 
 ### Changed
 - The playback service now runs the sleep timer. Duration timers no longer drift while audio offload lets the CPU sleep. End-of-track pauses exactly at the end of the song, even with crossfade on. Counted play restores your previous repeat mode.
@@ -26,6 +33,12 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - On devices where audio offload stalls, playback falls back after 1.5 seconds instead of 4, and offload stays off until the next system update.
 - Library tabs keep their scroll position when you come back to them.
 - Better online lyrics matching for non-Latin titles.
+- Settings search scrolls to the matching setting and highlights it once. It also finds the playback speed (with words like "podcast"), Auto-play on skip, crossfade duration, ReplayGain mode, the lyrics auto-hide delay, the artist parsing options, and Listening stats.
+- The library toolbar animates between its Shuffle, New playlist, and folder modes, and the storage filter button is tinted while a filter is active.
+- Sleep-timer sliders tick as you drag, and equalizer knobs no longer buzz continuously.
+- Smoother player expand and collapse: the full player keeps its layout and the mini player stays aligned with its card, including next to the navigation rail.
+- Navidrome/Subsonic logins accept server addresses typed without http:// or https://, using http for local and VPN hosts and https otherwise, as Jellyfin already did.
+- Performance reports include library scan, metadata, and artwork timings.
 
 ### Fixed
 - Navidrome/Subsonic and Jellyfin album artwork no longer gets stuck on the placeholder after a few songs. The player loaded cloud covers through the app's own artwork content provider, and concurrent loads could exhaust the image decoder slots that provider waited on, freezing every artwork load until the app restarted. Server error responses are also no longer cached as cover images, and concurrent cover downloads no longer corrupt each other's cache file ([#138](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/138)).
@@ -33,7 +46,7 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Jellyfin playlists no longer go missing on Jellyfin 10.10 and newer, where playlists can hold mixed content and audio playlists are often reported without a media type.
 - With crossfade on, queues longer than 200 songs no longer shrink to a 200-song window after a transition, and the shortened queue is no longer restored after the app is killed.
 - Restoring a backup before the library scan finishes no longer drops songs from playlists. They are added back once the scan finds them. Transition rules restored on another device now point at the right songs.
-- Correctly accented titles such as "Château" or "CORAÇÃO" are no longer turned into garbled text during library scans.
+- Correctly accented titles such as "Château" or "CORAÇÃO" are no longer turned into garbled text during library scans. Libraries scanned by an earlier version are checked once after updating, so titles that were already garbled are repaired.
 - Reordering the queue no longer flickers, and a swiped-away queue item no longer jumps back before it is removed.
 - Metadata edits work on files that can only be written through the system's media permission.
 - Songs whose files were already deleted can now be removed from the library.
@@ -49,6 +62,30 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Recently Played hour labels follow the system 24-hour setting, and the Search filter chips are translated.
 - Updated Netty to 4.2.28 for security fixes.
 - Pressing back with the Now Playing screen or the Next up queue open inside a folder in the Folders tab now closes the player instead of leaving the folder ([#136](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/136)).
+- Albums copied to the device while music was playing, while a library scan was running, or while the app was in the background no longer show only some of their songs. Syncs started by new files, pull-to-refresh, and Refresh library no longer wait up to about 15 minutes for playback to stop, and changes that arrive during a scan get a follow-up scan ([#126](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/126)).
+- Listening Stats are easier to find: the Home card is always shown, with loading and "No listening data yet" states, and the Home menu button opens a sidebar with a Listening Stats shortcut ([#142](https://github.com/PixelPlayerHQ/PixelPlayerOSS/issues/142)).
+- Previous goes back to the previous song during the first 10 seconds of a track. After 3 seconds it used to restart the current song.
+- Adding songs to a playlist or creating one no longer breaks library sorting, search, album colours, the seek bar, and the sleep timer until the app restarts.
+- Closing the app while music keeps playing no longer splits the current song's listening session in your stats.
+- Reordering a playlist no longer removes songs that are currently unavailable (excluded folder, unmounted storage, signed-out server, or not scanned yet). Deleting a playlist or removing songs from it also removes their saved transition rules.
+- Deleting several selected playlists in Library or Search asks for confirmation first. Select all in Liked selects every liked song, not only the ones loaded so far.
+- The Songs tab's locate button works again, the Folders locate button keeps working after moving between folders, and the Library header and back handling follow the tab on screen during fast swipes.
+- Rapid next/previous taps in the full player no longer land on an intermediate song or stall the album carousel, and the player colours keep up. Paging the carousel with TalkBack, Switch Access, the keyboard, or a mouse wheel changes the song again.
+- Pulling the Next up queue down from its list and back up brings it back with your finger.
+- Widget controls no longer flash a placeholder notification or drop the paused media notification after the app is swiped away. The main widget follows the album palette like the other widgets.
+- Library scans no longer extract embedded artwork from poorly tagged files or log per-file tag details.
+- Public IPv6 servers are no longer treated as local, so they no longer skip the HTTPS requirement; .home and .internal hosts count as local. Cloud streaming and offline downloads accept .ogg, .webm, .mka, and .3gp files served with video/ or application/ content types.
+- The setup wizard's Next button stays above the navigation bar, and setup pages scroll on short screens and with large font sizes. Changing the app language also updates text from background work, such as backup restore progress.
+- Stats weekday, month, and "Week N" labels, library sort options, and the bottom navigation labels follow the app language.
+- Song counts, listening durations, and "time ago" labels are translated, with each language's plural forms (for example Russian 2 песни and 5 песен). Zero songs reads "0 Songs" instead of "0 Song".
+- Lyrics sheet: square corners at rest, a loading skeleton, and the options sheet stays below the status bar.
+- The playlist options sheet scrolls on small screens and in landscape, so Export stays reachable. The New playlist dialog opens with the keyboard ready, creates the playlist on Done, and ignores names made only of spaces.
+- Multi-selection sheets no longer clip long translated labels, and the genre header keeps its size after rotation.
+- Home and Audio bookmarks restore their scroll position when you come back to them.
+- Equalizer sliders no longer draw dark fills while the equalizer is off, and checked switches in the sort sheet are readable.
+- The cover editor shows a music-note placeholder instead of a broken-image icon when artwork can't be loaded.
+- The playing song's scrolling title in song lists fades with its row highlight.
+- The screen revealed by a predictive back gesture is dimmed every time, not only every other time after a cancelled gesture.
 
 ## [0.3.0] - 2026-08-15
 
