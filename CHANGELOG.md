@@ -71,6 +71,7 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Deleting several selected playlists in Library or Search asks for confirmation first. Select all in Liked selects every liked song, not only the ones loaded so far.
 - The Songs tab's locate button works again, Locate on Liked scrolls to the playing song's place in the Liked list, and Locate no longer moves the neighbouring tab. The Folders locate button keeps working after moving between folders, and the Library header and back handling follow the tab on screen during fast swipes.
 - Rapid next/previous taps in the full player no longer land on an intermediate song or stall the album carousel, and the player colours keep up. Paging the carousel with TalkBack, Switch Access, the keyboard, or a mouse wheel changes the song again.
+- The full player's album carousel no longer keeps re-measuring on every frame after it scrolls to another song.
 - Pulling the Next up queue down from its list and back up brings it back with your finger.
 - Widget controls no longer flash a placeholder notification or drop the paused media notification after the app is swiped away. The main widget follows the album palette like the other widgets.
 - Library scans no longer extract embedded artwork from poorly tagged files or log per-file tag details.
