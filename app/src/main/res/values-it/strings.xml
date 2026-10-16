@@ -248,4 +248,5 @@
     <string name="musicbrainz_no_results">Nessuna registrazione adatta trovata.</string>
     <string name="musicbrainz_match_score">Affidabilità della corrispondenza: %1$d%%</string>
     <string name="musicbrainz_applied">Identificatori MusicBrainz salvati. Sono stati integrati l\'anno mancante e i nomi segnaposto.</string>
+    <string name="cloud_playlist_download">Scarica playlist</string>
 </resources>

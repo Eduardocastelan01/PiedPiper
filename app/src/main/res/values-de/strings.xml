@@ -248,4 +248,5 @@
     <string name="musicbrainz_no_results">Keine passenden Aufnahmen gefunden.</string>
     <string name="musicbrainz_match_score">Übereinstimmung: %1$d %%</string>
     <string name="musicbrainz_applied">MusicBrainz-IDs gespeichert. Fehlendes Jahr und Platzhalternamen wurden ergänzt.</string>
+    <string name="cloud_playlist_download">Playlist herunterladen</string>
 </resources>

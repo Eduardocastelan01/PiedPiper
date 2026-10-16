@@ -164,4 +164,14 @@
     <string name="widget_wavy_progress_bar_desc">Индикатор прогресса, %1$d%%</string>
     <string name="song_info_tone_picker_body">Выберите, куда PixelPlayerOSS должен установить этот звук.</string>
     <string name="song_info_ringtone_permission_prompt">Включите «Изменение системных настроек», затем вернитесь в PixelPlayerOSS, чтобы завершить установку автоматически.</string>
+    <string name="edit_song_custom_metadata_heading">Дополнительные метаданные</string>
+    <string name="edit_song_custom_metadata_description">Укажите оценку от 0 до 5 или добавьте текстовые поля, например MOOD, COMMENT, YEAR или BPM.</string>
+    <string name="edit_song_rating">Оценка (0–5)</string>
+    <string name="edit_song_rating_not_set">Не задана</string>
+    <string name="edit_song_custom_field_name">Название поля</string>
+    <string name="edit_song_custom_field_value">Значение</string>
+    <string name="edit_song_add_custom_field">Добавить поле метаданных</string>
+    <string name="edit_song_remove_custom_field">Удалить поле</string>
+    <string name="edit_song_custom_metadata_formats">Оценку и пользовательские поля можно записывать в файлы MP3, WAV, AIFF, FLAC, OGG, Opus, M4A, M4B и MP4.</string>
+    <string name="edit_song_custom_metadata_invalid">Проверьте дополнительные поля метаданных.</string>
 </resources>

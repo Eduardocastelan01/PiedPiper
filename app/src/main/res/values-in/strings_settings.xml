@@ -313,4 +313,16 @@
     <string name="updates_notification_text">PixelPlayerOSS %1$s siap diinstal.</string>
     <string name="updates_notification_confirm_title">Selesaikan pembaruan PixelPlayerOSS</string>
     <string name="updates_notification_confirm_text">Ketuk untuk mengonfirmasi instalasi.</string>
+    <string name="setcat_m3u_sync_section">Sinkronisasi playlist</string>
+    <string name="setcat_m3u_sync_title">Sinkronisasi M3U otomatis</string>
+    <string name="setcat_m3u_sync_disabled_subtitle">Pilih folder eksternal untuk menjaga playlist lokal tetap sinkron dua arah</string>
+    <string name="setcat_m3u_sync_enabled_subtitle">Menyinkronkan dengan %1$s</string>
+    <string name="setcat_m3u_sync_selected_folder">folder yang dipilih</string>
+    <string name="setcat_m3u_sync_now_title">Sinkronkan playlist sekarang</string>
+    <string name="setcat_m3u_sync_now_subtitle">Impor dan ekspor perubahan tanpa menimpa konflik</string>
+    <string name="setcat_m3u_sync_result">%1$d berubah · %2$d konflik · %3$d entri belum terselesaikan</string>
+    <string name="setcat_global_now_playing_theme_title">Gunakan warna lagu yang sedang diputar di seluruh aplikasi</string>
+    <string name="setcat_global_now_playing_theme_subtitle">Mewarnai seluruh aplikasi dari sampul album lagu saat ini. Mode terang dan gelap tetap berlaku.</string>
+    <string name="setcat_keep_screen_awake_title">Biarkan layar tetap menyala saat memutar</string>
+    <string name="setcat_keep_screen_awake_subtitle">Mencegah layar tidur saat musik sedang diputar dan aplikasi terlihat.</string>
 </resources>

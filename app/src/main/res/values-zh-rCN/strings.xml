@@ -268,4 +268,5 @@
     <string name="musicbrainz_no_results">未找到合适的录音。</string>
     <string name="musicbrainz_match_score">匹配度：%1$d%%</string>
     <string name="musicbrainz_applied">已保存 MusicBrainz 标识符，并补全了缺失的年份和占位名称。</string>
+    <string name="cloud_playlist_download">下载歌单</string>
 </resources>

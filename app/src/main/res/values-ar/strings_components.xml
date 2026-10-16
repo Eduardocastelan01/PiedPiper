@@ -164,4 +164,14 @@
     <string name="widget_wavy_progress_bar_desc">شريط التقدم، %1$d بالمئة</string>
     <string name="song_info_tone_picker_body">اختر المكان الذي يجب أن يثبّت PixelPlayerOSS هذا الصوت فيه.</string>
     <string name="song_info_ringtone_permission_prompt">فعّل إذن تعديل إعدادات النظام، ثم عد إلى PixelPlayerOSS لإتمام العملية تلقائياً.</string>
+    <string name="edit_song_custom_metadata_heading">بيانات وصفية اختيارية</string>
+    <string name="edit_song_custom_metadata_description">عيّن تقييمًا من 0 إلى 5 أو أضف حقولًا نصية مثل MOOD وCOMMENT وYEAR وBPM.</string>
+    <string name="edit_song_rating">التقييم (0–5)</string>
+    <string name="edit_song_rating_not_set">غير محدد</string>
+    <string name="edit_song_custom_field_name">اسم الحقل</string>
+    <string name="edit_song_custom_field_value">القيمة</string>
+    <string name="edit_song_add_custom_field">إضافة حقل بيانات وصفية</string>
+    <string name="edit_song_remove_custom_field">إزالة الحقل</string>
+    <string name="edit_song_custom_metadata_formats">يمكن كتابة التقييم والحقول المخصصة في ملفات MP3 وWAV وAIFF وFLAC وOGG وOpus وM4A وM4B وMP4.</string>
+    <string name="edit_song_custom_metadata_invalid">تحقق من حقول البيانات الوصفية الاختيارية.</string>
 </resources>

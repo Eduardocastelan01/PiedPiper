@@ -328,4 +328,16 @@
     <string name="updates_notification_text">PixelPlayerOSS %1$s 已可安装。</string>
     <string name="updates_notification_confirm_title">完成 PixelPlayerOSS 更新</string>
     <string name="updates_notification_confirm_text">点击以确认安装。</string>
+    <string name="setcat_m3u_sync_section">歌单同步</string>
+    <string name="setcat_m3u_sync_title">自动 M3U 同步</string>
+    <string name="setcat_m3u_sync_disabled_subtitle">选择一个外部文件夹，让本地歌单双向保持同步</string>
+    <string name="setcat_m3u_sync_enabled_subtitle">正在与 %1$s 同步</string>
+    <string name="setcat_m3u_sync_selected_folder">所选文件夹</string>
+    <string name="setcat_m3u_sync_now_title">立即同步歌单</string>
+    <string name="setcat_m3u_sync_now_subtitle">导入并导出更改，不覆盖冲突项</string>
+    <string name="setcat_m3u_sync_result">%1$d 项已更改 · %2$d 项冲突 · %3$d 项未解决</string>
+    <string name="setcat_global_now_playing_theme_title">在整个应用中使用当前播放歌曲的配色</string>
+    <string name="setcat_global_now_playing_theme_subtitle">根据当前歌曲的专辑封面为整个应用配色，仍遵循浅色和深色模式。</string>
+    <string name="setcat_keep_screen_awake_title">播放时保持屏幕常亮</string>
+    <string name="setcat_keep_screen_awake_subtitle">音乐正在播放且应用可见时，防止屏幕休眠。</string>
 </resources>

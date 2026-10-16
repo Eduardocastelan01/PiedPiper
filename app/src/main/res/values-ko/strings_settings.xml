@@ -313,4 +313,16 @@
     <string name="updates_notification_text">PixelPlayerOSS %1$s 버전을 설치할 준비가 되었습니다.</string>
     <string name="updates_notification_confirm_title">PixelPlayerOSS 업데이트 마무리</string>
     <string name="updates_notification_confirm_text">탭하여 설치를 확인하세요.</string>
+    <string name="setcat_m3u_sync_section">플레이리스트 동기화</string>
+    <string name="setcat_m3u_sync_title">자동 M3U 동기화</string>
+    <string name="setcat_m3u_sync_disabled_subtitle">외부 폴더를 선택하여 로컬 플레이리스트를 양방향으로 동기화하세요</string>
+    <string name="setcat_m3u_sync_enabled_subtitle">동기화 중: %1$s</string>
+    <string name="setcat_m3u_sync_selected_folder">선택한 폴더</string>
+    <string name="setcat_m3u_sync_now_title">지금 플레이리스트 동기화</string>
+    <string name="setcat_m3u_sync_now_subtitle">충돌을 덮어쓰지 않고 변경 사항을 가져오고 내보냅니다</string>
+    <string name="setcat_m3u_sync_result">변경 %1$d개 · 충돌 %2$d개 · 미해결 항목 %3$d개</string>
+    <string name="setcat_global_now_playing_theme_title">앱 전체에 현재 재생 중인 곡의 색상 사용</string>
+    <string name="setcat_global_now_playing_theme_subtitle">현재 곡의 앨범 아트로 앱 전체의 색상을 구성합니다. 밝은 모드와 어두운 모드는 계속 적용됩니다.</string>
+    <string name="setcat_keep_screen_awake_title">재생 중 화면 켜짐 유지</string>
+    <string name="setcat_keep_screen_awake_subtitle">음악이 재생 중이고 앱이 화면에 표시되는 동안 화면이 꺼지지 않도록 합니다.</string>
 </resources>

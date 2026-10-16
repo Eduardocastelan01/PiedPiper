@@ -248,4 +248,5 @@
     <string name="musicbrainz_no_results">لم يتم العثور على تسجيلات مناسبة.</string>
     <string name="musicbrainz_match_score">نسبة الثقة في التطابق: %1$d%%</string>
     <string name="musicbrainz_applied">تم حفظ معرّفات MusicBrainz. تم استكمال السنة المفقودة والأسماء المؤقتة.</string>
+    <string name="cloud_playlist_download">تنزيل قائمة التشغيل</string>
 </resources>
