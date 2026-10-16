@@ -789,7 +789,7 @@ fun SettingsCategoryScreen(
                                 ThemeSelectorItem(
                                     label = stringResource(R.string.setcat_collage_pattern_label),
                                     description = stringResource(R.string.setcat_collage_pattern_desc),
-                                    options = CollagePattern.entries.associate { it.storageKey to it.label },
+                                    options = CollagePattern.entries.associate { it.storageKey to stringResource(it.labelRes) },
                                     selectedKey = uiState.collagePattern.storageKey,
                                     onSelectionChanged = { key ->
                                         settingsViewModel.setCollagePattern(CollagePattern.fromStorageKey(key))

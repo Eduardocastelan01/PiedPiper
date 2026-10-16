@@ -272,7 +272,6 @@
     <string name="cloud_downloads_empty_subtitle">Cloud tracks you download will appear here.</string>
     <string name="cloud_download_selected">Download selected cloud tracks</string>
     <string name="cloud_download_selected_count">Download %1$d cloud tracks</string>
-    <string name="cloud_download_selected_started">Preparing %1$d cloud tracks for offline playback</string>
     <string name="musicbrainz_lookup">Find on MusicBrainz</string>
     <string name="musicbrainz_searching">Searching for recording matches…</string>
     <string name="musicbrainz_lookup_failed">MusicBrainz lookup failed</string>

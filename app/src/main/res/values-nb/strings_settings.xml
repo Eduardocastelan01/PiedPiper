@@ -285,7 +285,7 @@
     <string name="setcat_autoplay_on_skip_subtitle">Start avspillingen automatisk når du hopper til en annen sang mens avspillingen er satt på pause.</string>
     <string name="playback_speed_description">Tonehøyden forblir den samme. Gjelder alt du spiller av.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">%1$s ganger</string>
+    <string name="playback_speed_state_description">hastighet %1$s×</string>
     <string name="playback_speed_decrease">Senk avspillingshastigheten</string>
     <string name="playback_speed_increase">Øk avspillingshastigheten</string>
     <string name="playback_speed_presets">Forhåndsinnstillinger</string>

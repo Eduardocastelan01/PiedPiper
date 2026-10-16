@@ -285,7 +285,7 @@
     <string name="setcat_autoplay_on_skip_subtitle">بدء التشغيل تلقائيًا عند التخطي إلى أغنية أخرى أثناء الإيقاف المؤقت.</string>
     <string name="playback_speed_description">تبقى طبقة الصوت كما هي. ينطبق على كل ما تشغّله.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">%1$s ضعف</string>
+    <string name="playback_speed_state_description">السرعة %1$s×</string>
     <string name="playback_speed_decrease">خفض سرعة التشغيل</string>
     <string name="playback_speed_increase">زيادة سرعة التشغيل</string>
     <string name="playback_speed_presets">الإعدادات المسبقة</string>

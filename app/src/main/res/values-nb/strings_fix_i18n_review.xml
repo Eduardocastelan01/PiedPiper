@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Kosmisk virvel</string>
+    <string name="collage_pattern_honeycomb_groove">Bikakegroove</string>
+    <string name="collage_pattern_vinyl_stack">Vinylstabel</string>
+    <string name="collage_pattern_pixel_mosaic">Pikselmosaikk</string>
+    <string name="collage_pattern_stardust_scatter">Stjernestøvdryss</string>
+    <string name="collage_pattern_soft_orbit">Myk bane</string>
+    <string name="collage_pattern_arrow_fanfare">Pilfanfare</string>
+    <string name="collage_pattern_sunny_bloom">Solfylt blomstring</string>
+    <string name="collage_pattern_pixel_cookie">Pikselkjeks</string>
+    <string name="collage_pattern_heart_garden">Hjertehage</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">Klargjør %1$d sang fra skyen for avspilling uten nett</item>
+        <item quantity="other">Klargjør %1$d sanger fra skyen for avspilling uten nett</item>
+    </plurals>
+</resources>

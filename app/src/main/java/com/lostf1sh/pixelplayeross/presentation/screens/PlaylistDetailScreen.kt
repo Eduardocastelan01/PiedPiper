@@ -935,8 +935,9 @@ fun PlaylistDetailScreen(
                                 cloudDownloadsViewModel.downloadSelected(cloudSongsInPlaylist)
                                 Toast.makeText(
                                     context,
-                                    context.getString(
-                                        R.string.cloud_download_selected_started,
+                                    context.resources.getQuantityString(
+                                        R.plurals.cloud_download_selected_started,
+                                        cloudSongsInPlaylist.size,
                                         cloudSongsInPlaylist.size,
                                     ),
                                     Toast.LENGTH_SHORT,

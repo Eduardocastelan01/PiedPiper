@@ -222,7 +222,7 @@
     <!-- Playback speed -->
     <string name="playback_speed_description">Pitch stays the same. Applies to everything you play.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">%1$s times</string>
+    <string name="playback_speed_state_description">%1$s× speed</string>
     <string name="playback_speed_decrease">Decrease playback speed</string>
     <string name="playback_speed_increase">Increase playback speed</string>
     <string name="playback_speed_presets">Presets</string>

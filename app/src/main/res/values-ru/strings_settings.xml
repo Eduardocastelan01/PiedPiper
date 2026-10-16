@@ -285,7 +285,7 @@
     <string name="setcat_autoplay_on_skip_subtitle">Автоматически начинать воспроизведение при переходе к другому треку во время паузы.</string>
     <string name="playback_speed_description">Высота тона не меняется. Применяется ко всему, что вы слушаете.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">в %1$s раза</string>
+    <string name="playback_speed_state_description">скорость %1$s×</string>
     <string name="playback_speed_decrease">Уменьшить скорость воспроизведения</string>
     <string name="playback_speed_increase">Увеличить скорость воспроизведения</string>
     <string name="playback_speed_presets">Пресеты</string>

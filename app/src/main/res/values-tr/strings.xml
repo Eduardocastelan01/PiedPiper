@@ -247,5 +247,4 @@
     <string name="cloud_downloads_empty_subtitle">İndirdiğiniz bulut parçaları burada görünür.</string>
     <string name="cloud_download_selected">Seçili bulut parçalarını indir</string>
     <string name="cloud_download_selected_count">%1$d bulut parçasını indir</string>
-    <string name="cloud_download_selected_started">%1$d bulut parçası çevrimdışı dinleme için hazırlanıyor</string>
 </resources>

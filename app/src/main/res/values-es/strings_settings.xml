@@ -285,7 +285,7 @@
     <string name="setcat_autoplay_on_skip_subtitle">Reproduce automáticamente si el reproductor está pausado al cambiar de canción.</string>
     <string name="playback_speed_description">El tono no cambia. Se aplica a todo lo que reproduces.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">%1$s veces</string>
+    <string name="playback_speed_state_description">velocidad %1$s×</string>
     <string name="playback_speed_decrease">Reducir la velocidad de reproducción</string>
     <string name="playback_speed_increase">Aumentar la velocidad de reproducción</string>
     <string name="playback_speed_presets">Preajustes</string>

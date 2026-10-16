@@ -285,7 +285,7 @@
     <string name="setcat_autoplay_on_skip_subtitle">Avvia automaticamente la riproduzione quando passi a un altro brano mentre è in pausa.</string>
     <string name="playback_speed_description">L\'intonazione resta invariata. Si applica a tutto ciò che ascolti.</string>
     <string name="playback_speed_value">%1$s×</string>
-    <string name="playback_speed_state_description">%1$s volte</string>
+    <string name="playback_speed_state_description">velocità %1$s×</string>
     <string name="playback_speed_decrease">Riduci velocità di riproduzione</string>
     <string name="playback_speed_increase">Aumenta velocità di riproduzione</string>
     <string name="playback_speed_presets">Preset</string>
