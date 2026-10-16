@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components.scoped
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SheetOverlayStateTest {
@@ -43,6 +44,21 @@ class SheetOverlayStateTest {
     @Test
     fun completedBackGesture_removesTheCoverage() {
         assertEquals(0f, fraction(offsetPx = 0f, backProgress = 1f))
+    }
+
+    @Test
+    fun heldBackProgress_letsTheCoverageOnlyFallAsTheQueueSlidesOut() {
+        val releaseProgress = 0.9f
+        var previous = fraction(offsetPx = 0f, backProgress = releaseProgress)
+        for (step in 1..20) {
+            val current = fraction(
+                offsetPx = hiddenOffsetPx * step / 20f,
+                backProgress = releaseProgress
+            )
+            assertTrue(current <= previous, "Coverage rose from $previous to $current at step $step")
+            previous = current
+        }
+        assertEquals(0f, previous)
     }
 
     @Test

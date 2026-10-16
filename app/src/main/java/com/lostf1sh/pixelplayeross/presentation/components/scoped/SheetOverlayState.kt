@@ -39,7 +39,8 @@ internal data class SheetOverlayState(
  * How far the queue sheet visually covers the player, from 0 (hidden) to 1 (fully open).
  *
  * Follows the live sheet offset, so the scrim and the player behind it track the finger, and
- * fades out as the predictive back gesture progresses.
+ * fades out as the predictive back gesture progresses. A committed back holds its progress while
+ * the sheet slides out (see [settleQueueBackProgress]), so the fraction only falls as it closes.
  */
 internal fun computeQueueVisualOpenFraction(
     isQueueShown: Boolean,

@@ -782,7 +782,7 @@ fun UnifiedPlayerSheetV2(
                 animationDurationMs = ANIMATION_DURATION_MS,
                 scope = scope
             ) {
-                sheetActionHandlers.animateQueueSheet(false)
+                queueSheetController.animateTo(false)
             }
 
             UnifiedPlayerQueueAndSongInfoHost(
