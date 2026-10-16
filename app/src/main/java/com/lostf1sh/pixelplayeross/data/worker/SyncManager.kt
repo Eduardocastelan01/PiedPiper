@@ -10,6 +10,8 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
+import com.lostf1sh.pixelplayeross.utils.mediaStoreGenerationsChanged
+import com.lostf1sh.pixelplayeross.utils.readExternalMediaStoreGenerations
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,14 +65,22 @@ data class SyncProgress(
 class SyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val mediaStoreObserver: MediaStoreObserver
+    private val mediaStoreObserver: MediaStoreObserver,
+    private val localLibraryChangeTracker: LocalLibraryChangeTracker
 ) {
     private val workManager = WorkManager.getInstance(context)
     private val sharingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var mediaStoreAutoSyncJob: Job? = null
     private val autoSyncLock = Any()
+    // Delayed follow-up once the consecutive follow-up cap is hit; see scheduleBackoffFollowUpSync.
+    private var cappedFollowUpJob: Job? = null
     @Volatile
     private var lastForegroundSyncTime = 0L
+    // Serializes the background snapshot (onStop) and the foreground comparison (onStart), and
+    // keeps their MediaStore binder calls off the main thread.
+    private val foregroundCheckDispatcher = Dispatchers.IO.limitedParallelism(1)
+    @Volatile
+    private var backgroundMediaStoreGenerations: Map<String, Long>? = null
     @Volatile
     private var currentSyncWorkId: UUID? = null
 
@@ -120,6 +130,7 @@ class SyncManager @Inject constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         observeStorageChanges()
+        observeSyncCompletion()
         observeAppForeground()
         schedulePeriodicMaintenance()
     }
@@ -256,7 +267,11 @@ class SyncManager @Inject constructor(
     fun incrementalSync() {
         Timber.tag(TAG).i("Incremental sync requested - Scheduling incremental worker")
         enqueueSyncWork(
-            request = SyncWorker.incrementalSyncWork(runMaintenance = false),
+            // Explicit user request (pull-to-refresh): run now even during playback.
+            request = SyncWorker.incrementalSyncWork(
+                runMaintenance = false,
+                bypassPlaybackDeferral = true
+            ),
             policy = ExistingWorkPolicy.REPLACE
         )
     }
@@ -294,7 +309,12 @@ class SyncManager @Inject constructor(
     fun forceRefresh() {
         Timber.tag(TAG).i("Manual local refresh requested - Scheduling incremental worker")
         enqueueSyncWork(
-            request = SyncWorker.incrementalSyncWork(runMaintenance = false),
+            // Explicit user request (refresh button, folder changes, end of setup): run now
+            // even during playback.
+            request = SyncWorker.incrementalSyncWork(
+                runMaintenance = false,
+                bypassPlaybackDeferral = true
+            ),
             policy = ExistingWorkPolicy.REPLACE
         )
     }
@@ -326,8 +346,78 @@ class SyncManager @Inject constructor(
     private fun observeStorageChanges() {
         sharingScope.launch {
             mediaStoreObserver.externalMediaStoreChanges.collect {
+                // Recorded before the debounce: a sync that is already running when this
+                // change lands then gets a follow-up even if the debounced request is dropped.
+                localLibraryChangeTracker.onMediaStoreChanged()
                 scheduleLocalAutoSync()
             }
+        }
+    }
+
+    /**
+     * Storage-change and catch-up syncs use KEEP, so a request made while a sync is running is
+     * dropped, and that sync may already have read MediaStore. When the sync finishes and
+     * MediaStore changed after it started reading, schedule one follow-up local sync.
+     */
+    private fun observeSyncCompletion() {
+        sharingScope.launch {
+            workManager.getWorkInfosForUniqueWorkFlow(SyncWorker.WORK_NAME)
+                // Keep the work id so a new run that finishes in the same state as the
+                // previous one is still seen as a separate completion.
+                .map { workInfos -> workInfos.map { it.id to it.state } }
+                .distinctUntilChanged()
+                .collect { work ->
+                    val states = work.map { (_, state) -> state }
+                    if (states.any { !it.isFinished }) return@collect
+                    if (!localLibraryChangeTracker.hasUnscannedChanges()) {
+                        localLibraryChangeTracker.resetFollowUps()
+                        return@collect
+                    }
+                    if (!userPreferencesRepository.initialSetupDoneFlow.first()) return@collect
+
+                    val followUps = localLibraryChangeTracker.consecutiveFollowUps()
+                    when (
+                        followUpSyncDecision(
+                            states = states,
+                            hasUnscannedChanges = true,
+                            consecutiveFollowUps = followUps
+                        )
+                    ) {
+                        FollowUpSyncDecision.NONE -> Unit
+                        FollowUpSyncDecision.NOW -> {
+                            localLibraryChangeTracker.recordFollowUp()
+                            Timber.tag(TAG).i(
+                                "MediaStore changed during the last sync - scheduling a follow-up local sync"
+                            )
+                            // Picks up files that landed during the previous sync, often one the
+                            // user is waiting on; a cheap delta scan, so it also runs during playback.
+                            enqueueBypassLocalSync()
+                        }
+                        FollowUpSyncDecision.AFTER_BACKOFF -> scheduleBackoffFollowUpSync(followUps)
+                    }
+                }
+        }
+    }
+
+    /**
+     * Past the follow-up cap MediaStore changed during every sync, as during a long copy. The
+     * last of those changes must not be dropped, so check again once after
+     * [FOLLOW_UP_CAP_BACKOFF_MS]. The counter stays at the cap until a sync finishes with nothing
+     * left to scan, so a feedback loop costs one sync per backoff period. Only called from the
+     * [observeSyncCompletion] collector, which also owns [cappedFollowUpJob].
+     */
+    private fun scheduleBackoffFollowUpSync(followUps: Int) {
+        if (cappedFollowUpJob?.isActive == true) return
+        Timber.tag(TAG).w(
+            "MediaStore keeps changing during syncs ($followUps follow-ups in a row) - checking again in ${FOLLOW_UP_CAP_BACKOFF_MS / 1_000}s"
+        )
+        cappedFollowUpJob = sharingScope.launch {
+            delay(FOLLOW_UP_CAP_BACKOFF_MS)
+            // A sync that ran in the meantime may already have picked the changes up.
+            if (!localLibraryChangeTracker.hasUnscannedChanges()) return@launch
+            if (!userPreferencesRepository.initialSetupDoneFlow.first()) return@launch
+            Timber.tag(TAG).i("Scheduling a delayed follow-up local sync")
+            enqueueBypassLocalSync()
         }
     }
 
@@ -347,17 +437,35 @@ class SyncManager @Inject constructor(
             return
         }
         Timber.tag(TAG).i("Storage change detected - scheduling local incremental sync")
-        enqueueSyncWork(
-            request = SyncWorker.incrementalSyncWork(runMaintenance = false),
-            policy = ExistingWorkPolicy.KEEP,
-            notifyObserver = false
-        )
+        // Auto-add of a just-downloaded/added file: the user is looking at the
+        // library expecting it to appear, so bypass the playback-active deferral.
+        enqueueBypassLocalSync()
     }
 
     private fun observeAppForeground() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
-                maybeRunForegroundCatchUpSync()
+                sharingScope.launch(foregroundCheckDispatcher) {
+                    val changedWhileAway = mediaStoreGenerationsChanged(
+                        before = backgroundMediaStoreGenerations,
+                        after = readExternalMediaStoreGenerations(context)
+                    )
+                    if (changedWhileAway) {
+                        Timber.tag(TAG).i("MediaStore changed while the app was in the background")
+                        // A sync that is still running gets a follow-up for this change too.
+                        localLibraryChangeTracker.onMediaStoreChanged()
+                    }
+                    maybeRunForegroundCatchUpSync(mediaStoreChangedWhileAway = changedWhileAway)
+                }
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                // The ContentObserver stops listening now; remember where MediaStore was so the
+                // next onStart can tell whether anything changed in between.
+                sharingScope.launch(foregroundCheckDispatcher) {
+                    backgroundMediaStoreGenerations =
+                        readExternalMediaStoreGenerations(context).takeIf { it.isNotEmpty() }
+                }
             }
         })
     }
@@ -366,27 +474,58 @@ class SyncManager @Inject constructor(
      * Fast, maintenance-free incremental sync triggered when the app returns to the
      * foreground. Catches files MediaStore indexed while we were backgrounded (the
      * ContentObserver is only registered in the foreground). Guarded by an in-memory
-     * cooldown so quick minimize/restore cycles don't pile up redundant work.
+     * cooldown so quick minimize/restore cycles don't pile up redundant work, unless
+     * MediaStore changed while the app was in the background.
      */
-    private fun maybeRunForegroundCatchUpSync() {
+    private suspend fun maybeRunForegroundCatchUpSync(mediaStoreChangedWhileAway: Boolean) {
         val now = System.currentTimeMillis()
-        if (now - lastForegroundSyncTime < FOREGROUND_SYNC_COOLDOWN_MS) {
+        if (
+            !shouldRunForegroundCatchUp(
+                nowMs = now,
+                lastCatchUpMs = lastForegroundSyncTime,
+                cooldownMs = FOREGROUND_SYNC_COOLDOWN_MS,
+                mediaStoreChangedWhileAway = mediaStoreChangedWhileAway
+            )
+        ) {
             Timber.tag(TAG).d("Skipping foreground catch-up sync (cooldown active)")
             return
         }
-        sharingScope.launch {
-            if (!userPreferencesRepository.initialSetupDoneFlow.first()) {
-                Timber.tag(TAG).d("Skipping foreground catch-up sync: initial setup not finished")
-                return@launch
-            }
-            lastForegroundSyncTime = now
-            Timber.tag(TAG).i("Foreground catch-up - scheduling local incremental sync")
-            enqueueSyncWork(
-                request = SyncWorker.incrementalSyncWork(runMaintenance = false),
-                policy = ExistingWorkPolicy.KEEP,
-                notifyObserver = false
-            )
+        if (!userPreferencesRepository.initialSetupDoneFlow.first()) {
+            Timber.tag(TAG).d("Skipping foreground catch-up sync: initial setup not finished")
+            return
         }
+        lastForegroundSyncTime = now
+        Timber.tag(TAG).i("Foreground catch-up - scheduling local incremental sync")
+        // User just returned to the app; surface anything indexed while backgrounded
+        // without waiting for playback to stop.
+        enqueueBypassLocalSync()
+    }
+
+    /**
+     * Enqueues a maintenance-free local delta scan that runs even during playback. KEEP merges it
+     * into sync work that is already pending, except for a sync that is only waiting out its
+     * playback deferral (see [playbackDeferredSyncWorkIds]): KEEP would leave the scan stuck
+     * behind it for up to about 15 minutes, so that work is cancelled first. Its maintenance pass,
+     * if it had one, is left to the daily periodic maintenance. Cancelling by id rather than
+     * enqueueing with REPLACE never cancels sync work another caller enqueued in the meantime.
+     */
+    private suspend fun enqueueBypassLocalSync() {
+        val request = SyncWorker.incrementalSyncWork(
+            runMaintenance = false,
+            bypassPlaybackDeferral = true
+        )
+        val deferredWorkIds = playbackDeferredSyncWorkIds(
+            workManager.getWorkInfosForUniqueWorkFlow(SyncWorker.WORK_NAME).first()
+        )
+        if (deferredWorkIds.isNotEmpty()) {
+            Timber.tag(TAG).i("Replacing a sync that is waiting for playback to stop")
+            deferredWorkIds.forEach { workManager.cancelWorkById(it) }
+        }
+        enqueueSyncWork(
+            request = request,
+            policy = ExistingWorkPolicy.KEEP,
+            notifyObserver = false
+        )
     }
 
     private fun enqueueSyncWork(
@@ -410,6 +549,7 @@ class SyncManager @Inject constructor(
         private const val MIN_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L
         private const val MEDIASTORE_CHANGE_DEBOUNCE_MS = 1_500L
         private const val FOREGROUND_SYNC_COOLDOWN_MS = 60_000L
+        private const val FOLLOW_UP_CAP_BACKOFF_MS = 30_000L
 
         private val CHANGE_PHASES = setOf(
             SyncProgress.SyncPhase.IDLE,

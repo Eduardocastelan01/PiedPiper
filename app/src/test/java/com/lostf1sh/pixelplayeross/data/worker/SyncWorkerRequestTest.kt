@@ -34,6 +34,53 @@ class SyncWorkerRequestTest {
     }
 
     @Test
+    fun `default incremental and startup sync requests keep playback deferral`() {
+        listOf(
+            SyncWorker.incrementalSyncWork(),
+            SyncWorker.incrementalSyncWork(runMaintenance = false)
+        ).forEach { request ->
+            assertFalse(
+                request.workSpec.input.getBoolean(SyncWorker.INPUT_BYPASS_PLAYBACK_DEFERRAL, true)
+            )
+        }
+        // The startup request doesn't set the flag; the worker reads a missing flag as false.
+        assertFalse(
+            SyncWorker.startUpSyncWork().workSpec.input
+                .getBoolean(SyncWorker.INPUT_BYPASS_PLAYBACK_DEFERRAL, false)
+        )
+    }
+
+    @Test
+    fun `user facing incremental sync request bypasses playback deferral`() {
+        val request = SyncWorker.incrementalSyncWork(
+            runMaintenance = false,
+            bypassPlaybackDeferral = true
+        )
+
+        assertEquals(SyncMode.INCREMENTAL.name, request.workSpec.input.getString(SyncWorker.INPUT_SYNC_MODE))
+        assertFalse(request.workSpec.input.getBoolean(SyncWorker.INPUT_RUN_MAINTENANCE, true))
+        assertTrue(request.workSpec.input.getBoolean(SyncWorker.INPUT_BYPASS_PLAYBACK_DEFERRAL, false))
+    }
+
+    @Test
+    fun `only requests that defer during playback carry the deferrable tag`() {
+        listOf(
+            SyncWorker.startUpSyncWork(),
+            SyncWorker.incrementalSyncWork(),
+            SyncWorker.incrementalSyncWork(runMaintenance = false)
+        ).forEach { request ->
+            assertTrue(SyncWorker.TAG_PLAYBACK_DEFERRABLE in request.tags)
+        }
+        listOf(
+            SyncWorker.incrementalSyncWork(runMaintenance = false, bypassPlaybackDeferral = true),
+            SyncWorker.fullSyncWork(),
+            SyncWorker.rebuildDatabaseWork()
+        ).forEach { request ->
+            assertFalse(SyncWorker.TAG_PLAYBACK_DEFERRABLE in request.tags)
+        }
+    }
+
+    @Test
     fun `full sync and rebuild requests run maintenance`() {
         val fullRequest = SyncWorker.fullSyncWork()
         val rebuildRequest = SyncWorker.rebuildDatabaseWork()
@@ -139,4 +186,71 @@ class SyncWorkerRequestTest {
 
         assertEquals(119L, incrementalFetchTimestampSeconds(lastSyncMs))
     }
+
+    @Test
+    fun `indexed incremental sync keeps the timestamp cutoff`() {
+        val lastSyncMs = TimeUnit.SECONDS.toMillis(120)
+
+        assertEquals(
+            incrementalFetchTimestampSeconds(lastSyncMs),
+            localFetchTimestampSeconds(
+                plan = incrementalPlan(),
+                hasUnindexedSongs = false,
+                metadataCharsetRepairPending = false,
+                lastSyncTimestampMs = lastSyncMs
+            )
+        )
+    }
+
+    @Test
+    fun `pending charset repair reads MediaStore without a cutoff but keeps the incremental plan`() {
+        val plan = incrementalPlan()
+
+        assertEquals(
+            0L,
+            localFetchTimestampSeconds(
+                plan = plan,
+                hasUnindexedSongs = false,
+                metadataCharsetRepairPending = true,
+                lastSyncTimestampMs = TimeUnit.SECONDS.toMillis(120)
+            )
+        )
+        // Only rows whose stored text differs are reprocessed, not every song.
+        assertEquals(LocalScanMode.INCREMENTAL_CHANGES, plan.localScanMode)
+        assertFalse(plan.forceProcessAll)
+        assertFalse(plan.forceMetadata)
+    }
+
+    @Test
+    fun `unindexed songs or a forced full pass read MediaStore without a cutoff`() {
+        val lastSyncMs = TimeUnit.SECONDS.toMillis(120)
+
+        assertEquals(
+            0L,
+            localFetchTimestampSeconds(
+                plan = incrementalPlan(),
+                hasUnindexedSongs = true,
+                metadataCharsetRepairPending = false,
+                lastSyncTimestampMs = lastSyncMs
+            )
+        )
+        assertEquals(
+            0L,
+            localFetchTimestampSeconds(
+                plan = incrementalPlan(directoryRulesChanged = true),
+                hasUnindexedSongs = false,
+                metadataCharsetRepairPending = false,
+                lastSyncTimestampMs = lastSyncMs
+            )
+        )
+    }
+
+    private fun incrementalPlan(directoryRulesChanged: Boolean = false) = buildSyncExecutionPlan(
+        requestedMode = SyncMode.INCREMENTAL,
+        requestedForceMetadata = false,
+        requestedRunMaintenance = false,
+        rescanRequired = false,
+        directoryRulesChanged = directoryRulesChanged,
+        isFreshInstall = false
+    )
 }

@@ -20,6 +20,7 @@ import com.google.common.truth.Truth.assertThat
 import com.lostf1sh.pixelplayeross.data.database.MusicDao
 import com.lostf1sh.pixelplayeross.data.database.PixelPlayerDatabase
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
+import com.lostf1sh.pixelplayeross.data.service.PlaybackActivityTracker
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -32,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class SyncWorkerTest {
@@ -53,7 +55,8 @@ class SyncWorkerTest {
 
     class TestSyncWorkerFactory(
         private val dao: MusicDao,
-        private val preferences: UserPreferencesRepository = createTestPreferencesRepository()
+        private val preferences: UserPreferencesRepository = createTestPreferencesRepository(),
+        private val tracker: LocalLibraryChangeTracker = LocalLibraryChangeTracker()
     ) : WorkerFactory() {
         override fun createWorker(
             appContext: Context,
@@ -68,7 +71,8 @@ class SyncWorkerTest {
                     userPreferencesRepository = preferences,
                     lyricsRepository = mockk(relaxed = true),
                     cloudSyncCoordinator = mockk(relaxed = true),
-                    artistImageRepository = mockk(relaxed = true)
+                    artistImageRepository = mockk(relaxed = true),
+                    localLibraryChangeTracker = tracker
                 )
             } else {
                 null
@@ -91,6 +95,7 @@ class SyncWorkerTest {
     @After
     @Throws(IOException::class)
     fun tearDown() {
+        PlaybackActivityTracker.setPlaybackActive(false)
         database.close()
     }
 
@@ -272,6 +277,209 @@ class SyncWorkerTest {
         assertThat(songSelections.last()).contains("${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
     }
 
+    @Test
+    fun incrementalSync_flagsChangesThatArriveWhileScanning() = runBlocking {
+        val tracker = LocalLibraryChangeTracker()
+        var visibleTrackCount = 3
+        var songQueries = 0
+        every { mockContentResolver.query(any(), any(), any(), any(), any()) } answers {
+            val projection = secondArg<Array<String>>()
+            val cursor = MatrixCursor(projection)
+            if (firstArg<Uri>() == MediaStore.Audio.Media.EXTERNAL_CONTENT_URI) {
+                addMadeOfGlassRows(cursor, projection, trackCount = visibleTrackCount)
+                if (MediaStore.Audio.Media.TITLE in projection && songQueries++ == 0) {
+                    // MediaStore finishes indexing the rest of the copy after this scan read it.
+                    tracker.onMediaStoreChanged()
+                    visibleTrackCount = 16
+                }
+            }
+            cursor
+        }
+
+        val testContext = object : ContextWrapper(context) {
+            override fun getContentResolver() = mockContentResolver
+        }
+        suspend fun sync(): ListenableWorker.Result =
+            TestListenableWorkerBuilder<SyncWorker>(testContext)
+                .setWorkerFactory(TestSyncWorkerFactory(musicDao, tracker = tracker))
+                .setInputData(workDataOf(SyncWorker.INPUT_RUN_MAINTENANCE to false))
+                .build()
+                .doWork()
+
+        assertSuccessfulSongCount(sync(), expectedCount = 3)
+        assertThat(tracker.hasUnscannedChanges()).isTrue()
+
+        // The follow-up sync SyncManager schedules for that change picks up the rest.
+        assertSuccessfulSongCount(sync(), expectedCount = 16)
+        assertThat(musicDao.getSongsByAlbumId(201L).first()).hasSize(16)
+        assertThat(tracker.hasUnscannedChanges()).isFalse()
+    }
+
+    @Test
+    fun incrementalSync_defersDuringPlayback_unlessBypassRequested() = runBlocking {
+        every { mockContentResolver.query(any(), any(), any(), any(), any()) } answers {
+            when (firstArg<Uri>().toString()) {
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI.toString() -> createMockSongCursor()
+                else -> createMockGenreCursor()
+            }
+        }
+        val testContext = object : ContextWrapper(context) {
+            override fun getContentResolver() = mockContentResolver
+        }
+        suspend fun sync(
+            bypassPlaybackDeferral: Boolean,
+            runAttemptCount: Int = 0
+        ): ListenableWorker.Result =
+            TestListenableWorkerBuilder<SyncWorker>(testContext)
+                .setWorkerFactory(TestSyncWorkerFactory(musicDao))
+                .setInputData(
+                    workDataOf(
+                        SyncWorker.INPUT_RUN_MAINTENANCE to false,
+                        SyncWorker.INPUT_BYPASS_PLAYBACK_DEFERRAL to bypassPlaybackDeferral
+                    )
+                )
+                .setRunAttemptCount(runAttemptCount)
+                .build()
+                .doWork()
+
+        PlaybackActivityTracker.setPlaybackActive(true)
+
+        assertThat(sync(bypassPlaybackDeferral = false)).isEqualTo(ListenableWorker.Result.retry())
+        assertThat(musicDao.getSongCount().first()).isEqualTo(0)
+
+        assertSuccessfulSongCount(sync(bypassPlaybackDeferral = true), expectedCount = 2)
+
+        // Background syncs still run once the deferral budget is spent.
+        assertSuccessfulSongCount(
+            sync(
+                bypassPlaybackDeferral = false,
+                runAttemptCount = SyncWorker.MAX_PLAYBACK_DEFERRALS
+            ),
+            expectedCount = 2
+        )
+    }
+
+    @Test
+    fun incrementalSync_repairsMetadataTextDamagedBeforeTheCharsetFix() = runBlocking {
+        val preferences = createTestPreferencesRepository()
+        var repairVersion = SyncWorker.CURRENT_METADATA_CHARSET_REPAIR_VERSION
+        coEvery { preferences.getMetadataCharsetRepairVersion() } answers { repairVersion }
+        coEvery { preferences.setMetadataCharsetRepairVersion(any()) } answers {
+            repairVersion = firstArg()
+        }
+        var lastSyncTimestamp = 0L
+        coEvery { preferences.getLastSyncTimestamp() } answers { lastSyncTimestamp }
+
+        var damaged = true
+        val songSelections = mutableListOf<String>()
+        every { mockContentResolver.query(any(), any(), any(), any(), any()) } answers {
+            val projection = secondArg<Array<String>>()
+            val cursor = MatrixCursor(projection)
+            if (firstArg<Uri>() == MediaStore.Audio.Media.EXTERNAL_CONTENT_URI) {
+                val selection = thirdArg<String>()
+                val selectionArgs = arg<Array<String>>(3)
+                val usesTimestamp = selection.contains("${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
+                if (MediaStore.Audio.Media.TITLE in projection) {
+                    songSelections += selection
+                }
+                if (!usesTimestamp || 100L > selectionArgs.last().toLong()) {
+                    // Older builds stored U+FFFD where the accented letter was; MediaStore
+                    // itself still has the correct text.
+                    val replacement = '\uFFFD'
+                    val titles = if (damaged) {
+                        listOf("Ch${replacement}teau", "For${replacement}t", "Plain Song")
+                    } else {
+                        listOf("Château", "Forêt", "Plain Song")
+                    }
+                    val artist = if (damaged) "C${replacement}line" else "Céline"
+                    val album = if (damaged) "Ch${replacement}teau Rouge" else "Château Rouge"
+                    titles.forEachIndexed { index, title ->
+                        val track = index + 1
+                        val values = mapOf(
+                            MediaStore.Audio.Media._ID to track.toLong(),
+                            MediaStore.Audio.Media.TITLE to title,
+                            MediaStore.Audio.Media.ARTIST to artist,
+                            MediaStore.Audio.Media.ARTIST_ID to 1L,
+                            MediaStore.Audio.Media.ALBUM to album,
+                            MediaStore.Audio.Media.ALBUM_ID to 301L,
+                            MediaStore.Audio.Media.ALBUM_ARTIST to artist,
+                            MediaStore.Audio.Media.DURATION to 180_000L,
+                            MediaStore.Audio.Media.DATA to "/storage/emulated/0/Music/Chateau/$track.m4a",
+                            MediaStore.Audio.Media.MIME_TYPE to "audio/mp4",
+                            MediaStore.Audio.Media.TRACK to track,
+                            MediaStore.Audio.Media.YEAR to 2026,
+                            MediaStore.Audio.Media.DATE_ADDED to 100L,
+                            MediaStore.Audio.Media.DATE_MODIFIED to 100L
+                        )
+                        cursor.addRow(projection.map { values[it] })
+                    }
+                }
+            }
+            cursor
+        }
+
+        val testContext = object : ContextWrapper(context) {
+            override fun getContentResolver() = mockContentResolver
+        }
+        suspend fun sync(): ListenableWorker.Result =
+            TestListenableWorkerBuilder<SyncWorker>(testContext)
+                .setWorkerFactory(TestSyncWorkerFactory(musicDao, preferences))
+                .setInputData(workDataOf(SyncWorker.INPUT_RUN_MAINTENANCE to false))
+                .build()
+                .doWork()
+
+        // A library synced by an older build, with one title edited by the user afterwards.
+        assertSuccessfulSongCount(sync(), expectedCount = 3)
+        assertThat(musicDao.getSongByIdOnce(1L)?.title).isEqualTo("Ch\uFFFDteau")
+        musicDao.updateSongs(
+            listOf(musicDao.getSongByIdOnce(2L)!!.copy(title = "My title", titleUserEdited = true))
+        )
+
+        // After the update: the repair has not run yet, and every file is older than the
+        // last sync, so a plain incremental sync would not read any of them.
+        damaged = false
+        repairVersion = 0
+        lastSyncTimestamp = TimeUnit.DAYS.toMillis(365L * 1000)
+
+        assertSuccessfulSongCount(sync(), expectedCount = 3)
+        assertThat(songSelections.last()).doesNotContain("${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
+        assertThat(musicDao.getSongByIdOnce(1L)?.title).isEqualTo("Château")
+        assertThat(musicDao.getSongByIdOnce(1L)?.artistName).isEqualTo("Céline")
+        assertThat(musicDao.getSongByIdOnce(2L)?.title).isEqualTo("My title")
+        assertThat(musicDao.getSongByIdOnce(2L)?.albumName).isEqualTo("Château Rouge")
+        assertThat(musicDao.getAlbumById(301L).first()?.title).isEqualTo("Château Rouge")
+        assertThat(musicDao.getAlbumCount().first()).isEqualTo(1)
+        // The artist stored under the damaged name is left without songs and removed.
+        assertThat(musicDao.getAllArtistsListRaw().map { it.name }).containsExactly("Céline")
+        assertThat(repairVersion).isEqualTo(SyncWorker.CURRENT_METADATA_CHARSET_REPAIR_VERSION)
+
+        // The repair runs once; the next sync is an ordinary timestamp-filtered one.
+        assertSuccessfulSongCount(sync(), expectedCount = 3)
+        assertThat(songSelections.last()).contains("${MediaStore.Audio.Media.DATE_MODIFIED} > ?")
+    }
+
+    private fun addMadeOfGlassRows(cursor: MatrixCursor, projection: Array<String>, trackCount: Int) {
+        for (track in 1..trackCount) {
+            val values = mapOf(
+                MediaStore.Audio.Media._ID to track.toLong(),
+                MediaStore.Audio.Media.TITLE to "Track $track",
+                MediaStore.Audio.Media.ARTIST to "milet",
+                MediaStore.Audio.Media.ARTIST_ID to 1L,
+                MediaStore.Audio.Media.ALBUM to "Made of Glass",
+                MediaStore.Audio.Media.ALBUM_ID to 201L,
+                MediaStore.Audio.Media.ALBUM_ARTIST to "milet",
+                MediaStore.Audio.Media.DURATION to 180_000L,
+                MediaStore.Audio.Media.DATA to "/storage/emulated/0/Music/milet - Made of Glass/$track.flac",
+                MediaStore.Audio.Media.MIME_TYPE to "audio/flac",
+                MediaStore.Audio.Media.TRACK to track,
+                MediaStore.Audio.Media.YEAR to 2026,
+                MediaStore.Audio.Media.DATE_ADDED to 100L,
+                MediaStore.Audio.Media.DATE_MODIFIED to 100L
+            )
+            cursor.addRow(projection.map { values[it] })
+        }
+    }
+
     private fun assertSuccessfulSongCount(
         result: ListenableWorker.Result,
         expectedCount: Int,
@@ -299,6 +507,10 @@ private fun createTestPreferencesRepository(): UserPreferencesRepository {
     coEvery { repository.getLastAppliedDirectoryRulesVersion() } returns 0
     coEvery { repository.getLastSyncTimestamp() } returns 0L
     coEvery { repository.getMinSongDuration() } returns 10_000
+    // The one-time charset repair reads MediaStore without a timestamp cutoff, which would hide
+    // what the timestamp-based tests check. Tests that cover the repair override this.
+    coEvery { repository.getMetadataCharsetRepairVersion() } returns
+        SyncWorker.CURRENT_METADATA_CHARSET_REPAIR_VERSION
     return repository
 }
 
