@@ -10,6 +10,75 @@ import java.nio.ByteOrder
 class SurroundDownmixProcessorTest {
 
     @Test
+    fun queueInput_reusesDrainedPcm16BufferWithoutReturningOldSamples() {
+        val processor = SurroundDownmixProcessor()
+        processor.configure(AudioFormat(48_000, 6, C.ENCODING_PCM_16BIT))
+        processor.queueInput(shortBufferOf(100, 200, 0, 0, 0, 0))
+        val first = processor.getOutput()
+        assertThat(readShorts(first)).containsExactly(100, 200).inOrder()
+        first.position(first.limit())
+        assertThat(processor.getOutput().hasRemaining()).isFalse()
+
+        processor.queueInput(shortBufferOf(300, 400, 0, 0, 0, 0))
+        val second = processor.getOutput()
+        assertThat(second).isSameInstanceAs(first)
+        assertThat(readShorts(second)).containsExactly(300, 400).inOrder()
+    }
+
+    @Test
+    fun queueInput_growsFloatBufferThenReusesItForSmallerChunks() {
+        val processor = SurroundDownmixProcessor()
+        processor.configure(AudioFormat(48_000, 8, C.ENCODING_PCM_FLOAT))
+        processor.queueInput(floatBufferOf(0.1f, 0.2f, 0f, 0f, 0f, 0f, 0f, 0f))
+        val first = processor.getOutput()
+        first.position(first.limit())
+
+        processor.queueInput(floatBufferOf(
+            0.3f, 0.4f, 0f, 0f, 0f, 0f, 0f, 0f,
+            0.5f, 0.6f, 0f, 0f, 0f, 0f, 0f, 0f
+        ))
+        val grown = processor.getOutput()
+        assertThat(grown).isNotSameInstanceAs(first)
+        assertThat(readFloats(grown)).containsExactly(0.3f, 0.4f, 0.5f, 0.6f).inOrder()
+        grown.position(grown.limit())
+
+        processor.queueInput(floatBufferOf(0.7f, 0.8f, 0f, 0f, 0f, 0f, 0f, 0f))
+        val smaller = processor.getOutput()
+        assertThat(smaller).isSameInstanceAs(grown)
+        assertThat(readFloats(smaller)).containsExactly(0.7f, 0.8f).inOrder()
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun flush_discardsPendingOutputButRetainsStorageUntilReset() {
+        val processor = SurroundDownmixProcessor()
+        val format = AudioFormat(48_000, 6, C.ENCODING_PCM_16BIT)
+        processor.configure(format)
+        processor.queueInput(shortBufferOf(100, 200, 0, 0, 0, 0))
+        val first = processor.getOutput()
+        first.position(first.limit())
+
+        processor.queueInput(shortBufferOf(300, 400, 0, 0, 0, 0))
+        processor.queueEndOfStream()
+        processor.flush()
+        assertThat(processor.getOutput().hasRemaining()).isFalse()
+        assertThat(processor.isEnded()).isFalse()
+        processor.queueInput(shortBufferOf(500, 600, 0, 0, 0, 0))
+        val afterFlush = processor.getOutput()
+        assertThat(afterFlush).isSameInstanceAs(first)
+        assertThat(readShorts(afterFlush)).containsExactly(500, 600).inOrder()
+        afterFlush.position(afterFlush.limit())
+
+        processor.reset()
+        assertThat(processor.isActive()).isFalse()
+        processor.configure(format)
+        processor.queueInput(shortBufferOf(700, 800, 0, 0, 0, 0))
+        val afterReset = processor.getOutput()
+        assertThat(afterReset).isNotSameInstanceAs(first)
+        assertThat(readShorts(afterReset)).containsExactly(700, 800).inOrder()
+    }
+
+    @Test
     fun queueInput_downmixes51Pcm16BitToStereo() {
         val processor = SurroundDownmixProcessor()
         val outputFormat = processor.configure(AudioFormat(48_000, 6, C.ENCODING_PCM_16BIT))

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library sort method labels -->
+    <string name="sort_method_default_order">Standardrekkefølge</string>
+    <string name="sort_method_title">Tittel</string>
+    <string name="sort_method_artist">Artist</string>
+    <string name="sort_method_album">Album</string>
+    <string name="sort_method_date_added">Dato lagt til</string>
+    <string name="sort_method_duration">Varighet</string>
+    <string name="sort_method_release_year">Utgivelsesår</string>
+    <string name="sort_method_song_count">Antall sanger</string>
+    <string name="sort_method_name">Navn</string>
+    <string name="sort_method_num_songs">Antall sanger</string>
+    <string name="sort_method_date_created">Dato opprettet</string>
+    <string name="sort_method_date_liked">Dato likt</string>
+    <string name="sort_method_subfolder_count">Antall undermapper</string>
+</resources>

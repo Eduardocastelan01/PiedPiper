@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -80,8 +81,19 @@ class PixelPlayerGlanceWidget : GlanceAppWidget() {
             Timber.tag("PixelPlayerGlanceWidget")
                 .d("Providing Glance. PlayerInfo: title='${playerInfo.songTitle}', artist='${playerInfo.artistName}', isPlaying=${playerInfo.isPlaying}, hasBitmap=${playerInfo.albumArtBitmapData != null}, progress=${playerInfo.currentPositionMs}/${playerInfo.totalDurationMs}")
 
-            GlanceTheme {
-                WidgetUi(playerInfo = playerInfo, size = currentSize, context = context)
+            // themeColors is null when there is no palette (nothing playing, or no
+            // artwork), in which case the regular dynamic Glance theme applies.
+            val albumColors = remember(playerInfo.themeColors) {
+                playerInfo.themeColors?.toGlanceColorProviders()
+            }
+            if (albumColors != null) {
+                GlanceTheme(colors = albumColors) {
+                    WidgetUi(playerInfo = playerInfo, size = currentSize, context = context)
+                }
+            } else {
+                GlanceTheme {
+                    WidgetUi(playerInfo = playerInfo, size = currentSize, context = context)
+                }
             }
         }
     }

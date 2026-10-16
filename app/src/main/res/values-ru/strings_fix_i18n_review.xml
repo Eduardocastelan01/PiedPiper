@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Космический вихрь</string>
+    <string name="collage_pattern_honeycomb_groove">Ритм сот</string>
+    <string name="collage_pattern_vinyl_stack">Стопка пластинок</string>
+    <string name="collage_pattern_pixel_mosaic">Пиксельная мозаика</string>
+    <string name="collage_pattern_stardust_scatter">Россыпь звёздной пыли</string>
+    <string name="collage_pattern_soft_orbit">Мягкая орбита</string>
+    <string name="collage_pattern_arrow_fanfare">Фанфары стрелок</string>
+    <string name="collage_pattern_sunny_bloom">Солнечное цветение</string>
+    <string name="collage_pattern_pixel_cookie">Пиксельное печенье</string>
+    <string name="collage_pattern_heart_garden">Сад сердец</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">Готовим %1$d трек из облака к прослушиванию офлайн</item>
+        <item quantity="few">Готовим %1$d трека из облака к прослушиванию офлайн</item>
+        <item quantity="many">Готовим %1$d треков из облака к прослушиванию офлайн</item>
+        <item quantity="other">Готовим %1$d трека из облака к прослушиванию офлайн</item>
+    </plurals>
+</resources>

@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -131,27 +132,29 @@ private fun PlayerInternalNavigationItemsRow(
             } else {
                 item.iconResId
             }
-            val iconLambda: @Composable () -> Unit = remember(iconPainterResId, item.label) {
+            // Keyed on the resolved text so a language change rebuilds the lambdas.
+            val label = stringResource(item.labelResId)
+            val iconLambda: @Composable () -> Unit = remember(iconPainterResId, label) {
                 {
                     Icon(
                         painter = painterResource(id = iconPainterResId),
-                        contentDescription = item.label
+                        contentDescription = label
                     )
                 }
             }
-            val selectedIconLambda: @Composable () -> Unit = remember(iconPainterResId, item.label) {
+            val selectedIconLambda: @Composable () -> Unit = remember(iconPainterResId, label) {
                 {
                     Icon(
                         painter = painterResource(id = iconPainterResId),
-                        contentDescription = item.label
+                        contentDescription = label
                     )
                 }
             }
             val labelLambda: (@Composable () -> Unit)? = if (compactMode) {
                 null
             } else {
-                remember(item.label) {
-                    { Text(item.label) }
+                remember(label) {
+                    { Text(label) }
                 }
             }
             val onClickLambda: () -> Unit = remember(item.screen.route, navController, scope) {
@@ -205,7 +208,7 @@ private fun PlayerInternalNavigationItemsRow(
                 icon = iconLambda,
                 selectedIcon = selectedIconLambda,
                 label = labelLambda,
-                contentDescription = item.label,
+                contentDescription = label,
                 alwaysShowLabel = true,
                 selectedIconColor = selectedColor,
                 unselectedIconColor = unselectedColor,

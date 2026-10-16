@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">Sesuaikan mix hari ini</string>
+    <string name="mix_daily_subtitle">Pratinjau perubahan sebelum menggunakannya hari ini</string>
+    <string name="mix_library_subtitle">Buat mix dari pustaka musik Anda</string>
+    <string name="mix_close">Tutup mix</string>
+    <string name="mix_request_label">Apa yang ingin Anda dengarkan?</string>
+    <string name="mix_request_placeholder">Artis, genre, suasana hati, atau aktivitas</string>
+    <string name="mix_suggest_recent">Permintaan terbaru: %1$s</string>
+    <string name="mix_suggest_rediscover">Temukan kembali %1$s</string>
+    <string name="mix_back">Kembali ke permintaan Anda</string>
+    <string name="mix_done">Selesai</string>
+    <string name="mix_thinking">Berpikir…</string>
+    <string name="mix_refine">Sempurnakan mix Anda</string>
+    <string name="mix_length">Panjang playlist</string>
+    <string name="mix_auto">Otomatis</string>
+    <string name="mix_up_to">Hingga %1$d</string>
+    <string name="mix_energy">Energi</string>
+    <string name="mix_energy_calm">Tenang</string>
+    <string name="mix_energy_steady">Sedang</string>
+    <string name="mix_energy_energetic">Energik</string>
+    <string name="mix_refine_hint">Otomatis mengikuti permintaan Anda. Memilih energi menambah syarat; lagu yang cocok mungkin lebih sedikit.</string>
+    <string name="mix_selection_summary">Panjang: %1$s · Energi: %2$s</string>
+    <string name="mix_edit_request">Edit permintaan</string>
+    <string name="mix_playlist_name">Nama playlist</string>
+    <string name="mix_short_result">Pustaka Anda memiliki lebih sedikit lagu yang cocok daripada yang diminta. Kami tetap mempertahankan syarat Anda.</string>
+    <string name="mix_preview_action">Pratinjau mix</string>
+    <string name="mix_play">Putar</string>
+    <string name="mix_use_today">Gunakan untuk hari ini</string>
+    <string name="mix_save">Simpan playlist</string>
+    <string name="mix_saved_action">Tersimpan</string>
+    <string name="mix_saved">Disimpan sebagai %1$s</string>
+    <string name="mix_save_failed">Tidak dapat menyimpan playlist ini. Pratinjau Anda masih ada; coba simpan lagi.</string>
+    <string name="mix_no_matches">Tidak ditemukan lagu yang cocok. Edit permintaan Anda atau atur energi ke Otomatis.</string>
+    <string name="mix_daily_updated">Daily Mix diperbarui</string>
+    <string name="mix_undo">Urungkan</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="one">%1$d lagu cocok · %2$d mnt</item>
+        <item quantity="other">%1$d lagu cocok · %2$d mnt</item>
+    </plurals>
+</resources>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mix_title">Smart Mix</string>
+    <string name="mix_tune_today">调整今日精选</string>
+    <string name="mix_daily_subtitle">先预览更改，再应用到今天</string>
+    <string name="mix_library_subtitle">用你的音乐库生成混音歌单</string>
+    <string name="mix_close">关闭混音</string>
+    <string name="mix_request_label">你想听什么？</string>
+    <string name="mix_request_placeholder">艺术家、流派、心情或活动</string>
+    <string name="mix_suggest_recent">最近请求：%1$s</string>
+    <string name="mix_suggest_rediscover">重温 %1$s</string>
+    <string name="mix_back">返回你的请求</string>
+    <string name="mix_done">完成</string>
+    <string name="mix_thinking">思考中…</string>
+    <string name="mix_refine">细化你的混音</string>
+    <string name="mix_length">歌单长度</string>
+    <string name="mix_auto">自动</string>
+    <string name="mix_up_to">最多 %1$d 首</string>
+    <string name="mix_energy">能量</string>
+    <string name="mix_energy_calm">平静</string>
+    <string name="mix_energy_steady">适中</string>
+    <string name="mix_energy_energetic">活力</string>
+    <string name="mix_refine_hint">“自动”会遵循你的请求。选择能量会增加一项要求，匹配的歌曲可能会减少。</string>
+    <string name="mix_selection_summary">长度：%1$s · 能量：%2$s</string>
+    <string name="mix_edit_request">编辑请求</string>
+    <string name="mix_playlist_name">歌单名称</string>
+    <string name="mix_short_result">音乐库中匹配的歌曲少于请求数量。我们保留了你的要求。</string>
+    <string name="mix_preview_action">预览混音</string>
+    <string name="mix_play">播放</string>
+    <string name="mix_use_today">用作今日精选</string>
+    <string name="mix_save">保存歌单</string>
+    <string name="mix_saved_action">已保存</string>
+    <string name="mix_saved">已保存为 %1$s</string>
+    <string name="mix_save_failed">无法保存此歌单。预览仍保留在这里，请重新保存。</string>
+    <string name="mix_no_matches">未找到匹配的歌曲。请编辑你的请求，或将能量设为“自动”。</string>
+    <string name="mix_daily_updated">每日精选已更新</string>
+    <string name="mix_undo">撤销</string>
+    <plurals name="mix_matching_songs">
+        <item quantity="other">%1$d 首匹配歌曲 · %2$d 分钟</item>
+    </plurals>
+</resources>

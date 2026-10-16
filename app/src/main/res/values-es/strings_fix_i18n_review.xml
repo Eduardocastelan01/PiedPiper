@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Remolino cósmico</string>
+    <string name="collage_pattern_honeycomb_groove">Ritmo de panal</string>
+    <string name="collage_pattern_vinyl_stack">Pila de vinilos</string>
+    <string name="collage_pattern_pixel_mosaic">Mosaico de píxeles</string>
+    <string name="collage_pattern_stardust_scatter">Lluvia de polvo estelar</string>
+    <string name="collage_pattern_soft_orbit">Órbita suave</string>
+    <string name="collage_pattern_arrow_fanfare">Fanfarria de flechas</string>
+    <string name="collage_pattern_sunny_bloom">Flor soleada</string>
+    <string name="collage_pattern_pixel_cookie">Galleta de píxeles</string>
+    <string name="collage_pattern_heart_garden">Jardín de corazones</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">Preparando %1$d canción de la nube para escuchar sin conexión</item>
+        <item quantity="many">Preparando %1$d canciones de la nube para escuchar sin conexión</item>
+        <item quantity="other">Preparando %1$d canciones de la nube para escuchar sin conexión</item>
+    </plurals>
+</resources>

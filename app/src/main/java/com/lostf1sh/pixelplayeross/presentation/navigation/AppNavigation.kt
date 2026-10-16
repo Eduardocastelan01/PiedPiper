@@ -46,6 +46,7 @@ import com.lostf1sh.pixelplayeross.presentation.screens.DailyMixScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.EditTransitionScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.EasterEggScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.ExperimentalSettingsScreen
+import com.lostf1sh.pixelplayeross.presentation.screens.LyricsSettingsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.GenreDetailScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.HomeScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.LibraryScreen
@@ -56,6 +57,7 @@ import com.lostf1sh.pixelplayeross.presentation.screens.PlaylistDetailScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.RecentlyPlayedScreen
 
 import com.lostf1sh.pixelplayeross.presentation.screens.AboutScreen
+import com.lostf1sh.pixelplayeross.presentation.screens.LicensesScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.SearchScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.StatsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.DuplicateSongsScreen
@@ -64,8 +66,13 @@ import com.lostf1sh.pixelplayeross.presentation.screens.SettingsCategoryScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.EqualizerScreen
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lostf1sh.pixelplayeross.presentation.screens.ExcludedDirectoriesScreen
 import com.lostf1sh.pixelplayeross.presentation.components.ScreenWrapper
+import com.lostf1sh.pixelplayeross.presentation.settings.search.ProvideSettingsHighlight
 
 @OptIn(UnstableApi::class)
 @SuppressLint("UnrememberedGetBackStackEntry")
@@ -258,13 +265,15 @@ fun AppNavigation(
                     val categoryId = backStackEntry.arguments?.getString("categoryId")
                     val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                     if (categoryId != null) {
-                        SettingsCategoryScreen(
-                            categoryId = categoryId,
-                            highlightKey = highlightKey,
-                            navController = navController,
-                            playerViewModel = playerViewModel,
-                            onBackClick = { navController.popBackStack() }
-                        )
+                        ProvideSettingsHighlight(highlightKey) {
+                            SettingsCategoryScreen(
+                                categoryId = categoryId,
+                                highlightKey = highlightKey,
+                                navController = navController,
+                                playerViewModel = playerViewModel,
+                                onBackClick = { navController.popBackStack() }
+                            )
+                        }
                     }
                 }
             }
@@ -297,6 +306,25 @@ fun AppNavigation(
                         playerViewModel = playerViewModel,
                         onNavigationIconClick = { navController.popBackStack() }
                     )
+                }
+            }
+            composable(
+                route = Screen.LyricsSettings.route,
+                arguments = listOf(navArgument("highlightKey") { type = NavType.StringType; nullable = true; defaultValue = null }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val highlightKey = backStackEntry.arguments?.getString("highlightKey")
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    ProvideSettingsHighlight(highlightKey) {
+                        LyricsSettingsScreen(
+                            navController = navController,
+                            playerViewModel = playerViewModel,
+                            highlightKey = highlightKey
+                        )
+                    }
                 }
             }
             composable(
@@ -336,7 +364,8 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     StatsScreen(
-                        navController = navController
+                        navController = navController,
+                        playerViewModel = playerViewModel
                     )
                 }
             }
@@ -492,6 +521,19 @@ fun AppNavigation(
                 }
             }
             composable(
+                Screen.Licenses.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    LicensesScreen(
+                        onNavigationIconClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
                 Screen.EasterEgg.route,
                 enterTransition = { enterTransition() },
                 exitTransition = { exitTransition() },
@@ -512,9 +554,15 @@ fun AppNavigation(
                 exitTransition = { exitTransition() },
                 popEnterTransition = { popEnterTransition() },
                 popExitTransition = { popExitTransition() },
-            ) {
+            ) { backStackEntry ->
+                val highlightKey = backStackEntry.arguments?.getString("highlightKey")
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
-                    ArtistSettingsScreen(navController = navController)
+                    ProvideSettingsHighlight(highlightKey) {
+                        ArtistSettingsScreen(
+                            navController = navController,
+                            highlightKey = highlightKey
+                        )
+                    }
                 }
             }
             composable(
@@ -537,6 +585,30 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     WordDelimiterConfigScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.ExcludedDirectories.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                val initialMiniplayerVisible = remember(playerViewModel) {
+                    playerViewModel.stablePlayerState.value.currentSong != null
+                }
+                val isMiniplayerVisible by remember(playerViewModel) {
+                    playerViewModel.stablePlayerState
+                        .map { state -> state.currentSong != null }
+                        .distinctUntilChanged()
+                }.collectAsStateWithLifecycle(initialValue = initialMiniplayerVisible)
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    ExcludedDirectoriesScreen(
+                        onNavigateBack = {
+                            navController.popBackStack(Screen.ExcludedDirectories.route, inclusive = true)
+                        },
+                        isMiniplayerVisible = isMiniplayerVisible
+                    )
                 }
             }
             composable(

@@ -74,5 +74,67 @@ class CloudStreamSecurityTest {
         assertTrue(CloudStreamSecurity.isSupportedAudioContentType("audio/mpeg"))
         assertTrue(CloudStreamSecurity.isSupportedAudioContentType("application/octet-stream"))
         assertFalse(CloudStreamSecurity.isSupportedAudioContentType("text/html"))
+        listOf("application/json", "text/plain", "video/quicktime").forEach { type ->
+            assertFalse(CloudStreamSecurity.isSupportedAudioContentType(type), "$type should be rejected")
+        }
+    }
+
+    @Test
+    fun `isSupportedAudioContentType accepts audio-only containers reported under video or application types`() {
+        listOf(
+            "application/ogg",
+            "video/ogg",
+            "video/webm",
+            "video/x-matroska",
+            "video/3gpp",
+            "application/x-flac",
+            "video/webm; codecs=opus",
+            "Video/WebM",
+        ).forEach { type ->
+            assertTrue(CloudStreamSecurity.isSupportedAudioContentType(type), "$type should be accepted")
+        }
+    }
+
+    @Test
+    fun `isLocalServerHost accepts local network and vpn hosts`() {
+        listOf(
+            "localhost",
+            "127.0.0.1",
+            "192.168.1.20",
+            "10.0.0.5",
+            "172.20.0.3",
+            "100.101.102.103",
+            "mynas",
+            "nas.local",
+            "nas.lan",
+            "nas.home",
+            "nas.internal",
+            "nas.home.arpa",
+            "box.tailnet.ts.net",
+            "::1",
+            "[::1]",
+            "fd00::1",
+            "fc12:3456::1",
+            "fe80::abcd",
+        ).forEach { host ->
+            assertTrue(CloudStreamSecurity.isLocalServerHost(host), "$host should be local")
+        }
+    }
+
+    @Test
+    fun `isLocalServerHost rejects public hosts including public ipv6 literals`() {
+        listOf(
+            "music.example.com",
+            "notlocal.example.org",
+            "8.8.8.8",
+            "100.32.1.2",
+            "2001:db8::1",
+            "[2001:db8::1]",
+            "2606:4700::1111",
+            "fc::1",
+            "",
+        ).forEach { host ->
+            assertFalse(CloudStreamSecurity.isLocalServerHost(host), "'$host' should not be local")
+        }
     }
 }

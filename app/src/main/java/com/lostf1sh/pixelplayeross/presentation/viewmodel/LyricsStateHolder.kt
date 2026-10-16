@@ -53,7 +53,12 @@ class LyricsStateHolder @Inject constructor(
 ) {
     private var scope: CoroutineScope? = null
     private var loadingJob: Job? = null
+    /** The scope [loadingJob] runs in. */
+    private var loadingScope: CoroutineScope? = null
+    /** The automatic load [loadingJob] is running, so a handover can restart it. */
+    private var pendingLoad: Pair<Song, LyricsSourcePreference>? = null
     private var loadCallback: LyricsLoadCallback? = null
+    private val owners = OwnerStack<Pair<CoroutineScope, LyricsLoadCallback>> { it.first }
 
     private val _currentSongSyncOffset = MutableStateFlow(0)
     val currentSongSyncOffset: StateFlow<Int> = _currentSongSyncOffset.asStateFlow()
@@ -81,6 +86,7 @@ class LyricsStateHolder @Inject constructor(
         callback: LyricsLoadCallback,
         stablePlayerState: StateFlow<com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState>
     ) {
+        owners.push(coroutineScope to callback)
         scope = coroutineScope
         loadCallback = callback
 
@@ -104,6 +110,9 @@ class LyricsStateHolder @Inject constructor(
     fun loadLyricsForSong(song: Song, sourcePreference: LyricsSourcePreference) {
         loadingJob?.cancel()
         val targetSongId = song.id
+        val request = song to sourcePreference
+        pendingLoad = request
+        loadingScope = scope
 
         loadingJob = scope?.launch {
             loadCallback?.onLoadingStarted(targetSongId)
@@ -121,6 +130,7 @@ class LyricsStateHolder @Inject constructor(
                 null
             }
 
+            if (pendingLoad === request) pendingLoad = null
             loadCallback?.onLyricsLoaded(targetSongId, fetchedLyrics)
         }
     }
@@ -130,6 +140,7 @@ class LyricsStateHolder @Inject constructor(
      */
     fun cancelLoading() {
         loadingJob?.cancel()
+        pendingLoad = null
     }
 
     /**
@@ -167,6 +178,8 @@ class LyricsStateHolder @Inject constructor(
         contextHelper: (Int) -> String
     ) {
         loadingJob?.cancel()
+        pendingLoad = null
+        loadingScope = scope
         loadingJob = scope?.launch {
             _searchUiState.value = LyricsSearchUiState.Loading
 
@@ -253,6 +266,8 @@ class LyricsStateHolder @Inject constructor(
     fun searchLyricsManually(title: String, artist: String?) {
         if (title.isBlank()) return
         loadingJob?.cancel()
+        pendingLoad = null
+        loadingScope = scope
         loadingJob = scope?.launch {
             _searchUiState.value = LyricsSearchUiState.Loading
             musicRepository.searchRemoteLyricsByQuery(title, artist)
@@ -393,10 +408,29 @@ class LyricsStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
-        loadingJob?.cancel()
-        scope = null
-        loadCallback = null
+    /**
+     * A stale PlayerViewModel clearing leaves the newer binding alone; the current one clearing
+     * hands lyric loading back to the previous live PlayerViewModel. Its sync-offset collector
+     * from [initialize] is still running in its own scope.
+     */
+    fun onCleared(owner: CoroutineScope) {
+        owners.remove(owner) { next ->
+            if (next == null) loadingJob?.cancel()
+            scope = next?.first
+            loadCallback = next?.second
+        }
+        // A load dies with the scope it was launched in. An interrupted automatic load would
+        // leave the song's lyrics loading, and the survivor doesn't reload an unchanged song,
+        // so restart it in the scope that is current now.
+        if (loadingScope === owner) {
+            val interrupted = pendingLoad
+            loadingJob = null
+            loadingScope = null
+            pendingLoad = null
+            if (interrupted != null && scope != null) {
+                loadLyricsForSong(interrupted.first, interrupted.second)
+            }
+        }
     }
 }
 

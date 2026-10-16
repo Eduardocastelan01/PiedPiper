@@ -37,6 +37,7 @@
 -keep class com.lostf1sh.pixelplayeross.data.database.LyricsEntity { *; }
 -keep class com.lostf1sh.pixelplayeross.data.database.SearchHistoryEntity { *; }
 -keep class com.lostf1sh.pixelplayeross.data.database.TransitionRuleEntity { *; }
+-keep class com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity { *; }
 
 -keep class io.ktor.server.engine.** { *; }
 -keep class io.ktor.server.cio.** { *; }

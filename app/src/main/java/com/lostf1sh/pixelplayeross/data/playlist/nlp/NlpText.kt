@@ -72,8 +72,8 @@ object NlpText {
         var t = token
 
         // English gerund / past tense are terminal — a gerund won't also carry a plural.
-        if (t.endsWith("ing") && t.length - 3 >= MIN_STEM_LENGTH) return t.dropLast(3)
-        if (t.endsWith("ed") && t.length - 2 >= MIN_STEM_LENGTH) return t.dropLast(2)
+        if (t.endsWith("ing") && t.length - 3 >= MIN_STEM_LENGTH) return undouble(t.dropLast(3))
+        if (t.endsWith("ed") && t.length - 2 >= MIN_STEM_LENGTH) return undouble(t.dropLast(2))
 
         // Plural: strip a single trailing `s`. This turns `-es` into `-e`, which the next
         // rule then removes, converging consonant-plurals with their singular.
@@ -89,6 +89,22 @@ object NlpText {
 
         return t
     }
+
+    /**
+     * English doubles the final consonant of a short verb before `-ing`/`-ed` (run -> running,
+     * jog -> jogging), so stripping the suffix alone leaves `runn`, which never meets `run`.
+     * `l`, `s` and `z` are skipped because they double in the base form itself (chill, miss,
+     * buzz). This is the one place a stem may drop below [MIN_STEM_LENGTH]: the base verb is
+     * short enough to be returned untouched, so the gerund has to come down to meet it.
+     */
+    private fun undouble(stem: String): String {
+        val last = stem.last()
+        if (stem.length <= UNDOUBLED_MIN_LENGTH || last != stem[stem.length - 2]) return stem
+        if (last in "aeioulsz") return stem
+        return stem.dropLast(1)
+    }
+
+    private const val UNDOUBLED_MIN_LENGTH = 3
 
     /** Minimum characters a stem may keep. Below this, inflectional stripping is skipped. */
     const val MIN_STEM_LENGTH = 4

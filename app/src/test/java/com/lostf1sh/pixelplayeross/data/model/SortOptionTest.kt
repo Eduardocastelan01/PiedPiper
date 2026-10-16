@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.data.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 
 class SortOptionTest {
@@ -52,4 +53,45 @@ class SortOptionTest {
 
         assertEquals(SortOption.SongArtist, resolved)
     }
+
+    @Test
+    fun `from storage key still resolves the legacy english display name after localization`() {
+        val resolved = SortOption.fromStorageKey(
+            rawValue = "Title (Z-A)",
+            allowed = SortOption.SONGS,
+            fallback = SortOption.SongTitleAZ
+        )
+
+        assertEquals(SortOption.SongTitleZA, resolved)
+    }
+
+    @Test
+    fun `every sort option exposes a method label resource`() {
+        allOptions.forEach { option ->
+            assertNotEquals(0, option.methodLabelRes, "${option.storageKey} has no method label resource")
+        }
+    }
+
+    @Test
+    fun `options sharing a sort method share the same method label resource`() {
+        allOptions.groupBy { it.methodKey }.forEach { (methodKey, options) ->
+            val labels = options.map { it.methodLabelRes }.distinct()
+            assertEquals(1, labels.size, "$methodKey rows resolve to different labels")
+        }
+    }
+
+    @Test
+    fun `flipping direction keeps the method label resource`() {
+        allOptions.forEach { option ->
+            assertEquals(
+                option.methodLabelRes,
+                option.flipDirection().methodLabelRes,
+                "${option.storageKey} changes label when its direction flips"
+            )
+        }
+    }
+
+    private val allOptions: List<SortOption>
+        get() = SortOption.SONGS + SortOption.ALBUMS + SortOption.ARTISTS +
+            SortOption.PLAYLISTS + SortOption.FOLDERS + SortOption.LIKED
 }

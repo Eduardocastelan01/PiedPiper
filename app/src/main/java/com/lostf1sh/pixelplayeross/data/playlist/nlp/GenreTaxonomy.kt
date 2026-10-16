@@ -1,9 +1,8 @@
 package com.lostf1sh.pixelplayeross.data.playlist.nlp
 
 /**
- * Coarse genre "super-families". The point is not musicological precision but *compatibility*:
- * two genres in the same family are safe to mix, two in different families generally are not.
- * A "rock" request should never surface a phonk track, and this is the axis that expresses why.
+ * Coarse genre similarity groups. Concrete genre requirements use finer aliases; belonging to
+ * the same family alone does not make metal, punk and rock interchangeable in a request.
  */
 enum class GenreFamily {
     GUITAR,        // rock, metal, punk, alternative, grunge, emo, post-rock…
@@ -45,10 +44,31 @@ object GenreTaxonomy {
         val energy: Double,
         /** Normalized substrings that identify this genre inside a song's genre tag. */
         val songAliases: List<String>,
-        /** Genre nouns that, when named in a query, mean "I want this family". Empty = never a
-         *  query trigger (used for mood-ish tags like "chill" that [MoodProfile] already owns). */
+        /** Genre nouns that fill a required genre slot. Empty = never a genre query trigger
+         *  (used for mood tags such as "chill" that [MoodProfile] owns). */
         val queryAliases: List<String> = emptyList(),
+    ) {
+        private val evidenceAliases = when (songAliases) {
+            listOf("metal") -> songAliases + listOf("metalcore", "deathcore", "grindcore", "thrash", "djent", "mathcore")
+            listOf("rock") -> songAliases + listOf("grunge", "alternative", "indie", "shoegaze", "rockabilly")
+            else -> songAliases
+        }
+        // Reuse compiled matchers across every song and every request.
+        internal val evidencePatterns by lazy { evidenceAliases.mapNotNull(::phrasePattern) }
+    }
+
+    private val PRECISE_GENRES = listOf(
+        "hard rock", "classic rock", "alternative rock", "indie rock", "progressive rock",
+        "death metal", "black metal", "power metal", "progressive metal", "nu metal",
+        "pop punk", "ska punk", "indie pop", "dance pop", "synth pop", "deep house",
     )
+    private val queryAliases by lazy {
+        val precise = PRECISE_GENRES.mapNotNull { name ->
+            resolve(name)?.let { Entry(it.family, it.energy, listOf(name), listOf(name)) }
+        }
+        (precise + ENTRIES).flatMap { entry -> entry.queryAliases.filter { it != "heavy" }
+            .map { entry to genreWords(it) } }.sortedByDescending { it.second.size }
+    }
 
     /**
      * Ordered most-specific-first: [resolve] returns the first entry any of whose [songAliases]
@@ -73,9 +93,13 @@ object GenreTaxonomy {
         Entry(GenreFamily.URBAN, 0.72, listOf("rap"), listOf("rap")),
 
         // --- Guitar (aggressive first so "death metal" etc. keep their energy) --------------
-        Entry(GenreFamily.GUITAR, 0.96, listOf("metalcore", "deathcore", "grindcore", "thrash", "djent", "screamo", "mathcore"),
-            listOf("metalcore", "deathcore", "grindcore", "thrash", "djent", "screamo")),
-        Entry(GenreFamily.GUITAR, 0.92, listOf("metal"), listOf("metal")), // catches nu/black/death/heavy/power metal
+        *listOf("metalcore", "deathcore", "grindcore", "thrash", "djent", "screamo", "mathcore")
+            .map { Entry(GenreFamily.GUITAR, 0.96, listOf(it), listOf(it)) }.toTypedArray(),
+        // "heavy" is a query alias here because in a music library it names this family and
+        // nothing else ("heavy metal"/"heavy rock"). Without it, a bare "heavy" prompt reads
+        // only as MoodProfile.WORKOUT's energy cue, which spans pop/dance/hip hop — that is how
+        // a "heavy" request used to come back full of pop.
+        Entry(GenreFamily.GUITAR, 0.92, listOf("metal"), listOf("metal", "heavy")), // catches nu/black/death/heavy/power metal
         Entry(GenreFamily.GUITAR, 0.95, listOf("hardcore"), listOf("hardcore")),
         Entry(GenreFamily.GUITAR, 0.90, listOf("punk"), listOf("punk")), // catches pop punk / ska punk
         Entry(GenreFamily.GUITAR, 0.75, listOf("grunge"), listOf("grunge")),
@@ -178,25 +202,62 @@ object GenreTaxonomy {
     /** The super-family of a genre tag, or null when unrecognized (i.e. "no evidence"). */
     fun familyOf(normalizedGenre: String): GenreFamily? = resolve(normalizedGenre)?.family
 
+    /** Concrete genres are eligibility slots; a super-family is only a ranking prior.
+     * `heavy` is an energy adjective, so it retains its broad guitar-family interpretation. */
+    fun queryGenres(stems: Set<String>, query: String): Set<Entry> {
+        val words = genreWords(query)
+        val consumed = HashSet<Int>()
+        val result = HashSet<Entry>()
+        for ((entry, target) in queryAliases) {
+            if (target.isEmpty() || words.size < target.size) continue
+            if (target.size == 1 && target.single() !in stems) continue
+            for (start in 0..words.size - target.size) {
+                if (target.indices.all { start + it !in consumed && words[start + it] == target[it] }) {
+                    result.add(entry)
+                    target.indices.forEach { consumed.add(start + it) }
+                }
+            }
+        }
+        return result
+    }
+
+    /** Match genre evidence, including narrow subgenres, without conflating GUITAR siblings.
+     * Word/stem boundaries keep rap out of trap and punk out of unrelated substrings. */
+    fun matchesGenre(genre: String, requirement: Entry): Boolean {
+        if (requirement.songAliases == listOf("rock") && !requirement.evidencePatterns.first().containsMatchIn(genre)) {
+            // An "alternative metal" tag is metal evidence, even though it contains alternative.
+            val resolved = resolve(genre)?.songAliases.orEmpty()
+            if (resolved.none { it in setOf("grunge", "alternative", "indie", "shoegaze", "rockabilly") }) return false
+        }
+        return requirement.evidencePatterns.any { it.containsMatchIn(genre) }
+    }
+
+    /** Shared boundary-aware matching for genre tags and locally resolved entity names. */
+    fun containsPhrase(text: String, phrase: String): Boolean = phrasePattern(phrase)?.containsMatchIn(text) == true
+
+    fun maskPhrase(text: String, phrase: String): String =
+        phrasePattern(phrase)?.replace(text, "__boundary__") ?: text
+
+    private val PHRASE_WORDS = "[\\p{L}\\p{Nd}#]+".toRegex()
+    private fun genreWords(text: String): List<String> = PHRASE_WORDS.findAll(NlpText.normalize(text))
+        .map { NlpText.stem(it.value) }.toList()
+    private fun phrasePattern(phrase: String): Regex? {
+        val words = PHRASE_WORDS.findAll(NlpText.normalize(phrase)).map { Regex.escape(it.value) }.toList()
+        if (words.isEmpty()) return null
+        return ("(?<![\\p{L}\\p{Nd}])" + words.joinToString("[^\\p{L}\\p{Nd}_]+") +
+            "(?![\\p{L}\\p{Nd}])").toRegex()
+    }
+
     /**
      * Which genre families the user explicitly named in a prompt. Single-word aliases are matched
-     * (stemmed) against the query's content-word stems; multi-word aliases are substring-matched
-     * against the normalized query. Returns empty when the prompt names no concrete genre — the
+     * (stemmed) against the query's content-word stems; multiword aliases require word boundaries.
+     * Returns empty when the prompt names no concrete genre or broad `heavy` cue — the
      * signal that the request is mood/free-text only and genre-family filtering must not kick in.
      */
     fun queryFamilies(queryTokenStems: Set<String>, normalizedQuery: String): Set<GenreFamily> {
         if (queryTokenStems.isEmpty() && normalizedQuery.isBlank()) return emptySet()
-        val families = HashSet<GenreFamily>()
-        for (entry in ENTRIES) {
-            val hit = entry.queryAliases.any { alias ->
-                if (alias.contains(' ') || alias.contains('&') || alias.contains('-')) {
-                    normalizedQuery.contains(alias)
-                } else {
-                    NlpText.stem(alias) in queryTokenStems
-                }
-            }
-            if (hit) families.add(entry.family)
-        }
+        val families = queryGenres(queryTokenStems, normalizedQuery).mapTo(HashSet()) { it.family }
+        if ("heavy" in queryTokenStems) families.add(GenreFamily.GUITAR)
         return families
     }
 }

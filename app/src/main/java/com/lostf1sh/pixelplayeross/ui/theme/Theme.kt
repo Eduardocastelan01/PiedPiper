@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
@@ -16,16 +17,20 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
 
 val LocalPixelPlayerDarkTheme = staticCompositionLocalOf { false }
+val LocalPixelPlayerAmoledTheme = staticCompositionLocalOf { false }
+val LocalShowScrollbar = staticCompositionLocalOf { true }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -107,15 +112,61 @@ val LightColorScheme = lightColorScheme(
     onError = PixelPlayerWhite
 )
 
+fun isAmoledThemePreset(preset: String): Boolean = preset == ThemePreset.AMOLED
+
+/** Keep the source palette's accents and content colors, replacing only its surface hierarchy. */
+fun ColorScheme.withAmoledSurfaces(): ColorScheme = copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceBright = Color(0xFF242424),
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF080808),
+    surfaceContainer = Color(0xFF101010),
+    surfaceContainerHigh = Color(0xFF181818),
+    surfaceContainerHighest = Color(0xFF242424),
+    surfaceVariant = Color(0xFF242424),
+)
+
+/**
+ * AMOLED always uses a dark palette, even when the app is set to light mode. The accents come
+ * from [colorSchemePairOverride] (the app-wide now-playing palette) when the user enabled it,
+ * otherwise from the wallpaper/dynamic dark scheme.
+ */
+internal fun resolveAmoledColorScheme(
+    colorSchemePairOverride: ColorSchemePair?,
+    wallpaperDarkScheme: () -> ColorScheme,
+): ColorScheme = (colorSchemePairOverride?.dark ?: wallpaperDarkScheme()).withAmoledSurfaces()
+
+fun getAmoledColorScheme(
+    context: Context,
+    colorSchemePairOverride: ColorSchemePair? = null,
+): ColorScheme = resolveAmoledColorScheme(colorSchemePairOverride) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        try {
+            dynamicDarkColorScheme(context)
+        } catch (e: Exception) {
+            DarkColorScheme
+        }
+    } else {
+        DarkColorScheme
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PixelPlayerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorSchemePairOverride: ColorSchemePair? = null,
+    themePreset: String = ThemePreset.DEFAULT,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val isAmoled = isAmoledThemePreset(themePreset)
     val finalColorScheme = when {
+        isAmoled -> remember(context, colorSchemePairOverride) {
+            getAmoledColorScheme(context, colorSchemePairOverride)
+        }
         colorSchemePairOverride == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             try {
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -135,7 +186,10 @@ fun PixelPlayerTheme(
         navigationColor = finalColorScheme.background
     )
 
-    CompositionLocalProvider(LocalPixelPlayerDarkTheme provides darkTheme) {
+    CompositionLocalProvider(
+        LocalPixelPlayerDarkTheme provides (darkTheme || isAmoled),
+        LocalPixelPlayerAmoledTheme provides isAmoled
+    ) {
         MaterialTheme(
             colorScheme = finalColorScheme,
             motionScheme = MotionScheme.expressive(),

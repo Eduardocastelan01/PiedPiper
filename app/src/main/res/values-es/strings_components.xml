@@ -99,6 +99,8 @@
     <string name="lyrics_more_show_romanization">Mostrar romanización</string>
     <string name="lyrics_more_show_translations">Mostrar traducciones</string>
     <string name="multi_selection_playlists_count_upper">%1$d LISTAS</string>
+    <string name="multi_selection_genres_count_upper">%1$d GÉNEROS</string>
+    <string name="multi_selection_genres_queue_hint">Realizar operaciones por lotes en todas las canciones de estos géneros.</string>
     <string name="multi_selection_selected">seleccionadas</string>
     <string name="multi_selection_songs_count_upper">%1$d CANCIONES</string>
     <string name="no_internet_dialog_message">Este contenido requiere conexión a internet. Comprueba la red e inténtalo de nuevo.</string>
@@ -117,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">¿Restablecer el orden de las pestañas al predeterminado?</string>
     <string name="reorder_tabs_reset_dialog_title">Restablecer orden</string>
     <string name="reorder_tabs_sheet_title">Reordenar pestañas de la biblioteca</string>
+    <string name="reorder_tabs_visible_title">Pestañas visibles</string>
+    <string name="reorder_tabs_hidden_title">Pestañas ocultas</string>
+    <string name="reorder_tabs_hide_action">Ocultar pestaña</string>
+    <string name="reorder_tabs_show_action">Mostrar pestaña</string>
     <string name="search_playlists_hint">Buscar listas de reproducción…</string>
     <string name="song_field_album">Álbum</string>
     <string name="song_field_album_artist">Artista del álbum</string>

@@ -92,7 +92,11 @@ class M3uSyncCoordinator @Inject constructor(
                         .filter {
                             !it.isQueueGenerated && !it.isSmartPlaylist && it.source == "LOCAL"
                         }
-                        .map { playlist -> playlist.id to playlist.lastModified }
+                        // The songs too: some writes, such as filling in a restored playlist,
+                        // change them and keep lastModified.
+                        .map { playlist ->
+                            Triple(playlist.id, playlist.lastModified, playlist.songIds)
+                        }
                 },
             ) { isEnabled, revision -> isEnabled to revision }
                 .debounce(PLAYLIST_CHANGE_DEBOUNCE_MS)

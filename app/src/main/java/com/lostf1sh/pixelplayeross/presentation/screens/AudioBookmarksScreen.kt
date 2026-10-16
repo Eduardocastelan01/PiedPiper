@@ -1,15 +1,19 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.content.ClipData
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicTextField
@@ -56,6 +60,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.SortByAlpha
 import androidx.compose.material.icons.rounded.Tune
@@ -103,6 +108,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -115,6 +121,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -135,8 +142,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.database.AudioBookmarkEntity
+import com.lostf1sh.pixelplayeross.data.database.backupSongIdOfRestoredBookmark
 import com.lostf1sh.pixelplayeross.data.model.Song
 import androidx.compose.material3.ModalBottomSheet
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -184,6 +193,9 @@ fun AudioBookmarksScreen(
     val folders = remember(rawFolders, sortMode) {
         sortAudioBookmarkFolders(rawFolders, sortMode)
     }
+    // A bookmark loses its song when the file is re-indexed under a new id, or when a backup is
+    // restored before the library was scanned; move those onto the song's current id.
+    LaunchedEffect(Unit) { bookmarksViewModel.relinkOrphanedBookmarks() }
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val isMiniplayerVisible = stablePlayerState.currentSong != null
 
@@ -209,10 +221,39 @@ fun AudioBookmarksScreen(
             label = "BookmarkKeepTopBarSurfaceFraction"
         )
 
+        // Only jump to the top when the query or sort actually changes. A plain
+        // LaunchedEffect(query, sortMode) also runs when the screen re-enters composition after
+        // returning from a bookmark folder, which wiped the restored scroll position.
+        var appliedQuery by rememberSaveable { mutableStateOf(query) }
+        var appliedSortMode by rememberSaveable { mutableStateOf(sortMode) }
         LaunchedEffect(query, sortMode) {
+            if (query == appliedQuery && sortMode == appliedSortMode) return@LaunchedEffect
+            appliedQuery = query
+            appliedSortMode = sortMode
             if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
                 listState.scrollToItem(0)
             }
+        }
+
+        // Long-press a folder to start selecting; while any is selected, taps toggle instead
+        // of opening. Selected ids that a search or deletion hides are dropped.
+        val haptics = LocalHapticFeedback.current
+        var selectedSongIds by remember { mutableStateOf(emptySet<String>()) }
+        val selection = remember(selectedSongIds, folders) {
+            val visibleIds = folders.mapTo(HashSet()) { it.song.id }
+            selectedSongIds.filterTo(LinkedHashSet()) { it in visibleIds }
+        }
+        val isSelecting = selection.isNotEmpty()
+        var confirmDeleteSelection by remember { mutableStateOf(false) }
+
+        // Back collapses the FAB menu before leaving the screen. Registered before the
+        // selection handler so clearing a selection still wins when both could apply.
+        BackHandler(enabled = fabMenuExpanded && !isSelecting) {
+            fabMenuExpanded = false
+        }
+
+        BackHandler(enabled = isSelecting) {
+            selectedSongIds = emptySet()
         }
 
         Box(
@@ -246,12 +287,22 @@ fun AudioBookmarksScreen(
                         key = { _, folder -> folder.song.id },
                         contentType = { _, _ -> "bookmark_folder" }
                     ) { index, folder ->
+                        val folderId = folder.song.id
                         BookmarkFolderCard(
                             folder = folder,
                             visualIndex = index,
                             playerViewModel = playerViewModel,
+                            selected = folderId in selection,
                             onClick = {
-                                navController.navigateSafely(Screen.AudioBookmarkFolder.createRoute(folder.song.id))
+                                if (isSelecting) {
+                                    selectedSongIds = selection.toggled(folderId)
+                                } else {
+                                    navController.navigateSafely(Screen.AudioBookmarkFolder.createRoute(folderId))
+                                }
+                            },
+                            onLongClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                selectedSongIds = selection.toggled(folderId)
                             },
                             modifier = Modifier
                                 .animateItem(
@@ -268,22 +319,41 @@ fun AudioBookmarksScreen(
                 }
             }
 
-            BookmarkKeepSearchTopBar(
-                query = query,
-                onQueryChange = { query = it },
-                surfaceFraction = topBarSurfaceFraction,
-                onNavigationClick = {
-                    if (!navController.popBackStack()) {
-                        onOpenSidebar()
-                    }
-                },
-                onClearQuery = { query = "" },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .height(topBarHeight)
-            )
+            if (isSelecting) {
+                BookmarkSelectionTopBar(
+                    selectedCount = selection.size,
+                    allSelected = selection.size == folders.size,
+                    onClose = { selectedSongIds = emptySet() },
+                    onToggleSelectAll = {
+                        selectedSongIds = if (selection.size == folders.size) {
+                            emptySet()
+                        } else {
+                            folders.mapTo(LinkedHashSet()) { it.song.id }
+                        }
+                    },
+                    onDelete = { confirmDeleteSelection = true },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .height(topBarHeight)
+                )
+            } else {
+                BookmarkKeepSearchTopBar(
+                    query = query,
+                    onQueryChange = { query = it },
+                    surfaceFraction = topBarSurfaceFraction,
+                    onNavigationClick = {
+                        if (!navController.popBackStack()) {
+                            onOpenSidebar()
+                        }
+                    },
+                    onClearQuery = { query = "" },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .height(topBarHeight)
+                )
+            }
 
-            if (fabMenuExpanded) {
+            if (fabMenuExpanded && !isSelecting) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -298,30 +368,32 @@ fun AudioBookmarksScreen(
                 )
             }
 
-            BookmarkActionFabMenu(
-                expanded = fabMenuExpanded,
-                sortMode = sortMode,
-                hasQuery = query.isNotBlank(),
-                canScrollToTop = isListScrolled,
-                onExpandedChange = { fabMenuExpanded = it },
-                onSortModeChange = { selectedMode ->
-                    sortMode = selectedMode
-                    fabMenuExpanded = false
-                },
-                onClearFilter = {
-                    query = ""
-                    fabMenuExpanded = false
-                },
-                onScrollToTop = {
-                    fabMenuExpanded = false
-                    coroutineScope.launch { listState.animateScrollToItem(0) }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .zIndex(11f)
-                    .navigationBarsPadding()
-                    .padding(end = 20.dp, bottom = floatingControlsBottomPadding)
-            )
+            if (!isSelecting) {
+                BookmarkActionFabMenu(
+                    expanded = fabMenuExpanded,
+                    sortMode = sortMode,
+                    hasQuery = query.isNotBlank(),
+                    canScrollToTop = isListScrolled,
+                    onExpandedChange = { fabMenuExpanded = it },
+                    onSortModeChange = { selectedMode ->
+                        sortMode = selectedMode
+                        fabMenuExpanded = false
+                    },
+                    onClearFilter = {
+                        query = ""
+                        fabMenuExpanded = false
+                    },
+                    onScrollToTop = {
+                        fabMenuExpanded = false
+                        coroutineScope.launch { listState.animateScrollToItem(0) }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .zIndex(11f)
+                        .navigationBarsPadding()
+                        .padding(end = 20.dp, bottom = floatingControlsBottomPadding)
+                )
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -345,8 +417,34 @@ fun AudioBookmarksScreen(
 
             }
         }
+
+        if (confirmDeleteSelection && isSelecting) {
+            val doomedFolders = folders.filter { it.song.id in selection }
+            val doomedIds = doomedFolders.flatMap { folder -> folder.bookmarks.map { it.id } }
+            ConfirmDeleteBookmarksDialog(
+                title = pluralStringResource(
+                    R.plurals.audio_bookmarks_delete_folders_title,
+                    doomedFolders.size,
+                    doomedFolders.size
+                ),
+                message = pluralStringResource(
+                    R.plurals.audio_bookmarks_delete_folders_message,
+                    doomedIds.size,
+                    doomedIds.size
+                ),
+                onDismiss = { confirmDeleteSelection = false },
+                onConfirm = {
+                    confirmDeleteSelection = false
+                    selectedSongIds = emptySet()
+                    bookmarksViewModel.deleteBookmarks(doomedIds)
+                }
+            )
+        }
     }
 }
+
+private fun <T> Set<T>.toggled(id: T): Set<T> =
+    if (id in this) this - id else this + id
 
 @Composable
 fun AudioBookmarkFolderScreen(
@@ -369,6 +467,17 @@ fun AudioBookmarkFolderScreen(
     }
     var actionsBookmark by remember { mutableStateOf<AudioBookmarkEntity?>(null) }
     var renamingBookmark by remember { mutableStateOf<AudioBookmarkEntity?>(null) }
+
+    // Same gesture as the folder list: long-press a moment to select, then taps toggle.
+    val haptics = LocalHapticFeedback.current
+    var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+    val selection = remember(selectedIds, songBookmarks) {
+        val existingIds = songBookmarks.mapTo(HashSet()) { it.id }
+        selectedIds.filterTo(LinkedHashSet()) { it in existingIds }
+    }
+    val isSelecting = selection.isNotEmpty()
+    var confirmDeleteSelection by remember { mutableStateOf(false) }
+    BackHandler(enabled = isSelecting) { selectedIds = emptySet() }
 
     ScreenWrapper(
         navController = navController,
@@ -423,12 +532,24 @@ fun AudioBookmarkFolderScreen(
                         ) { bookmark ->
                             BookmarkMomentCard(
                                 bookmark = bookmark,
+                                selectionMode = isSelecting,
+                                selected = bookmark.id in selection,
                                 onPlay = {
-                                    if (song.id.isNotBlank() && song.id != "-1") {
+                                    if (isSelecting) {
+                                        selectedIds = selection.toggled(bookmark.id)
+                                    } else if (
+                                        song.id.isNotBlank() && song.id != "-1" &&
+                                        // A restored bookmark whose song wasn't found names none.
+                                        backupSongIdOfRestoredBookmark(song.id) == null
+                                    ) {
                                         playerViewModel.playSongAtPosition(song, bookmark.timestampMs)
                                     } else {
                                         Toast.makeText(context, "Audio file not found", Toast.LENGTH_SHORT).show()
                                     }
+                                },
+                                onLongClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    selectedIds = selection.toggled(bookmark.id)
                                 },
                                 onMoreClick = { actionsBookmark = bookmark },
                                 modifier = Modifier.padding(horizontal = 20.dp)
@@ -444,6 +565,43 @@ fun AudioBookmarkFolderScreen(
                     headerHeight = topBarState.headerHeight,
                     headerImageRequestSize = headerImageRequestSize,
                     onBackClick = { navController.popBackStack() }
+                )
+
+                if (isSelecting) {
+                    BookmarkSelectionTopBar(
+                        selectedCount = selection.size,
+                        allSelected = selection.size == songBookmarks.size,
+                        onClose = { selectedIds = emptySet() },
+                        onToggleSelectAll = {
+                            selectedIds = if (selection.size == songBookmarks.size) {
+                                emptySet()
+                            } else {
+                                songBookmarks.mapTo(LinkedHashSet()) { it.id }
+                            }
+                        },
+                        onDelete = { confirmDeleteSelection = true },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 78.dp)
+                    )
+                }
+            }
+
+            if (confirmDeleteSelection && isSelecting) {
+                ConfirmDeleteBookmarksDialog(
+                    title = pluralStringResource(
+                        R.plurals.audio_bookmarks_delete_moments_title,
+                        selection.size,
+                        selection.size
+                    ),
+                    message = stringResource(R.string.audio_bookmarks_delete_moments_message),
+                    onDismiss = { confirmDeleteSelection = false },
+                    onConfirm = {
+                        confirmDeleteSelection = false
+                        val doomedIds = selection.toList()
+                        selectedIds = emptySet()
+                        bookmarksViewModel.deleteBookmarks(doomedIds)
+                    }
                 )
             }
 
@@ -1253,6 +1411,152 @@ private fun BookmarkActionFabMenu(
     }
 }
 
+/** Replaces the search bar while bookmarks are selected: close, count, select all, delete. */
+@Composable
+private fun BookmarkSelectionTopBar(
+    selectedCount: Int,
+    allSelected: Boolean,
+    onClose: () -> Unit,
+    onToggleSelectAll: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .zIndex(12f),
+        color = colors.surfaceContainerHigh,
+        contentColor = colors.onSurface,
+        tonalElevation = 4.dp,
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = 14.dp,
+                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                    end = 14.dp,
+                    bottom = 10.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilledIconButton(
+                onClick = onClose,
+                modifier = Modifier.size(42.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = colors.surfaceContainerLow,
+                    contentColor = colors.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.cd_clear_selection)
+                )
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = AbsoluteSmoothCornerShape(28.dp, 60),
+                color = colors.surfaceContainerHighest,
+                contentColor = colors.onSurface
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = stringResource(R.string.audio_bookmarks_selected_count, selectedCount),
+                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = RoundedSans),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            FilledIconButton(
+                onClick = onToggleSelectAll,
+                modifier = Modifier.size(42.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (allSelected) colors.primaryContainer else colors.surfaceContainerLow,
+                    contentColor = if (allSelected) colors.onPrimaryContainer else colors.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.SelectAll,
+                    contentDescription = stringResource(
+                        if (allSelected) R.string.presentation_batch_e_deselect_all else R.string.cd_select_all
+                    )
+                )
+            }
+
+            FilledIconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(42.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = colors.errorContainer,
+                    contentColor = colors.onErrorContainer
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.audio_bookmarks_cd_delete_selected)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDeleteBookmarksDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = {
+            Text(
+                text = title,
+                fontFamily = RoundedSans,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Text(stringResource(R.string.delete_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    )
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun BookmarkFolderCard(
@@ -1260,7 +1564,9 @@ private fun BookmarkFolderCard(
     visualIndex: Int,
     playerViewModel: PlayerViewModel,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val songScheme = rememberBookmarkCardColorScheme(folder.song, playerViewModel)
     val cardHeight = 154.dp
@@ -1298,7 +1604,6 @@ private fun BookmarkFolderCard(
 
     MaterialTheme(colorScheme = songScheme) {
         Surface(
-            onClick = onClick,
             modifier = modifier
                 .fillMaxWidth()
                 .height(cardHeight),
@@ -1306,12 +1611,17 @@ private fun BookmarkFolderCard(
             color = songScheme.surfaceContainerLow,
             contentColor = songScheme.onSurface,
             tonalElevation = 1.dp,
-            border = BorderStroke(1.dp, songScheme.outlineVariant.copy(alpha = 0.28f))
+            border = if (selected) {
+                BorderStroke(3.dp, songScheme.primary)
+            } else {
+                BorderStroke(1.dp, songScheme.outlineVariant.copy(alpha = 0.28f))
+            }
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(containerShape)
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                     .background(backgroundBrush)
             ) {
 //                Text(
@@ -1389,6 +1699,30 @@ private fun BookmarkFolderCard(
                             songScheme = songScheme,
                             monoFont = monoFont,
                             horizontalAlignment = Alignment.Start
+                        )
+                    }
+                }
+
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(songScheme.primary.copy(alpha = 0.12f))
+                    )
+                    // Over the artwork's corner, clear of the title however long it runs.
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 20.dp, top = 20.dp)
+                            .size(28.dp)
+                            .background(songScheme.primary, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = stringResource(R.string.audio_bookmarks_cd_selected),
+                            tint = songScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -1528,20 +1862,38 @@ private fun BookmarkMomentCard(
     bookmark: AudioBookmarkEntity,
     onPlay: () -> Unit,
     onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectionMode: Boolean = false,
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val formattedTime = remember(bookmark.timestampMs) { formatBookmarkTime(bookmark.timestampMs) }
     val cueLabel = remember(formattedTime) { formattedTime }
+    val cardShape = RoundedCornerShape(26.dp)
 
     Surface(
-        onClick = onPlay,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, cardShape)
+                else Modifier
+            ),
+        shape = cardShape,
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        contentColor = if (selected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
     ) {
         Row(
-            modifier = Modifier.padding(start = 14.dp, top = 14.dp, end = 8.dp, bottom = 14.dp),
+            modifier = Modifier
+                .combinedClickable(onClick = onPlay, onLongClick = onLongClick)
+                .padding(start = 14.dp, top = 14.dp, end = 8.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
@@ -1578,19 +1930,51 @@ private fun BookmarkMomentCard(
                 }
             }
 
-            Surface(
-                modifier = Modifier
-                    .width(30.dp)
-                    .height(44.dp),
-                shape = RoundedCornerShape(30.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                IconButton(onClick = onMoreClick) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "Bookmark actions"
-                    )
+            if (selectionMode) {
+                // Same footprint as the actions button, so rows don't shift when selecting.
+                Box(
+                    modifier = Modifier
+                        .width(30.dp)
+                        .height(44.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .then(
+                                if (selected) {
+                                    Modifier.background(MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = stringResource(R.string.audio_bookmarks_cd_selected),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                Surface(
+                    modifier = Modifier
+                        .width(30.dp)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(30.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ) {
+                    IconButton(onClick = onMoreClick) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.audio_bookmarks_actions)
+                        )
+                    }
                 }
             }
 

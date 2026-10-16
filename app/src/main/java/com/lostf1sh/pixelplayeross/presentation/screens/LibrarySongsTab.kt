@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -25,11 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +53,12 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.LoadState
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
+import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.songFastScrollLabel
 import androidx.compose.ui.text.style.TextOverflow
+import com.lostf1sh.pixelplayeross.presentation.utils.SegmentedItemShapeDefaults
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
 
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -82,7 +83,8 @@ fun LibrarySongsTab(
     storageFilter: StorageFilter = StorageFilter.ALL,
     hasCurrentSong: Boolean = false
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberRestoredLazyListState(songs)
+    val dummyListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val coroutineScope = rememberCoroutineScope()
     val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
@@ -95,9 +97,6 @@ fun LibrarySongsTab(
             )
         }
     }
-    var lastHandledSongSortKey by remember { mutableStateOf(sortOption.storageKey) }
-    var pendingSongSortScrollReset by remember { mutableStateOf(false) }
-    var songSortSawRefreshLoading by remember { mutableStateOf(false) }
     val currentSongId by remember(playerViewModel) {
         playerViewModel.stablePlayerState
             .map { it.currentSong?.id }
@@ -121,7 +120,10 @@ fun LibrarySongsTab(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(playerViewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            playerViewModel.scrollToIndexEvent.collect { index ->
+            playerViewModel.scrollToIndexEvent.collect { request ->
+                // A neighbouring pager page (e.g. Liked) is composed too; ignore its requests.
+                if (request.tab != LibraryTabId.SONGS) return@collect
+                val index = request.index
                 if (index >= 0) {
                     val firstVisible = listState.firstVisibleItemIndex
                     if (Math.abs(index - firstVisible) > 20) {
@@ -139,7 +141,7 @@ fun LibrarySongsTab(
             null
         } else {
             {
-                playerViewModel.requestLocateCurrentSong()
+                playerViewModel.requestLocateCurrentSong(LibraryTabId.SONGS)
             }
         }
     }
@@ -148,25 +150,11 @@ fun LibrarySongsTab(
         registerActionCallback(locateCurrentSongAction)
     }
 
-    LaunchedEffect(sortOption) {
-        val currentSortKey = sortOption.storageKey
-        if (currentSortKey == lastHandledSongSortKey) return@LaunchedEffect
-        lastHandledSongSortKey = currentSortKey
-        pendingSongSortScrollReset = true
-        songSortSawRefreshLoading = false
-        listState.scrollToItem(0)
-    }
-
-    LaunchedEffect(songs.loadState.refresh, pendingSongSortScrollReset) {
-        if (!pendingSongSortScrollReset) return@LaunchedEffect
-        if (songs.loadState.refresh is LoadState.Loading) {
-            songSortSawRefreshLoading = true
-            return@LaunchedEffect
-        }
-        if (!songSortSawRefreshLoading) return@LaunchedEffect
-        listState.scrollToItem(0)
-        pendingSongSortScrollReset = false
-    }
+    ResetScrollOnSortChange(
+        sortKey = sortOption.storageKey,
+        items = songs,
+        scrollToTop = { listState.scrollToItem(0) }
+    )
     
     LaunchedEffect(currentSongListIndex, songs.itemCount, isLoading, listState, currentSongId) {
         if (songs.itemCount == 0 || isLoading) {
@@ -203,11 +191,7 @@ fun LibrarySongsTab(
 
     val refreshState = songs.loadState.refresh
     val reachedEndOfPagination = songs.loadState.append.endOfPaginationReached
-    val shouldShowInitialLoading = songs.itemCount == 0 && (
-        isLoading ||
-            refreshState is LoadState.Loading ||
-            (refreshState is LoadState.NotLoading && !reachedEndOfPagination)
-    )
+    val shouldShowInitialLoading = songs.itemCount == 0 && isLoading
 
     when {
         refreshState is LoadState.Error && songs.itemCount == 0 -> {
@@ -236,24 +220,17 @@ fun LibrarySongsTab(
             LazyColumn(
                 modifier = Modifier
                     .padding(start = 12.dp, end = 24.dp, bottom = 6.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 26.dp,
-                            topEnd = 26.dp,
-                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                        )
-                    )
+                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape)
                     .fillMaxSize(),
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
             ) {
-                items(12, key = { "skeleton_song_$it" }) {
+                items(12, key = { "skeleton_song_$it" }) { index ->
                     EnhancedSongListItem(
                         song = Song.emptySong(),
                         isPlaying = false,
                         isLoading = true,
+                        customShape = getSegmentedItemShape(index, 12),
                         isCurrentSong = false,
                         onMoreOptionsClick = {},
                         onClick = {}
@@ -284,19 +261,13 @@ fun LibrarySongsTab(
                     }
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val activeListState = if (songs.itemCount > 0) listState else dummyListState
                         LazyColumn(
                             modifier = Modifier
-                                .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp, bottom = 6.dp)
-                                .clip(
-                                    RoundedCornerShape(
-                                        topStart = 26.dp,
-                                        topEnd = 26.dp,
-                                        bottomStart = PlayerSheetCollapsedCornerRadius,
-                                        bottomEnd = PlayerSheetCollapsedCornerRadius
-                                    )
-                                ),
-                            state = listState,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                .padding(start = 12.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (activeListState.canScrollForward || activeListState.canScrollBackward), 22.dp, 12.dp), bottom = 6.dp)
+                                .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+                            state = activeListState,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                             contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + 30.dp)
                         ) {
 
@@ -306,6 +277,7 @@ fun LibrarySongsTab(
                                 contentType = { "song" }
                             ) { index ->
                                 val song = songs[index]
+                                val itemShape = getSegmentedItemShape(index, songs.itemCount)
                                 
                                 if (song != null) {
                                     val isSelected = selectedSongIds.contains(song.id)
@@ -332,6 +304,7 @@ fun LibrarySongsTab(
                                         isSelected = isSelected,
                                         isSelectionMode = isSelectionMode,
                                         selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
+                                        customShape = itemShape,
                                         onLongPress = rememberedOnLongPress,
                                         onMoreOptionsClick = rememberedOnMoreOptionsClick,
                                         onClick = rememberedOnClick
@@ -341,6 +314,7 @@ fun LibrarySongsTab(
                                         song = Song.emptySong(),
                                         isPlaying = false,
                                         isLoading = true,
+                                        customShape = itemShape,
                                         isCurrentSong = false,
                                         onMoreOptionsClick = {},
                                         onClick = {}
@@ -358,7 +332,7 @@ fun LibrarySongsTab(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
-                            listState = listState,
+                            listState = activeListState,
                             dragLabelProvider = songFastScrollLabelProvider
                         )
                     }

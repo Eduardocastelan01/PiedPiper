@@ -10,6 +10,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -73,14 +76,17 @@ fun TightWrapText(
     val layoutContainer = remember { TextLayoutContainer() }
 
     Layout(
-        modifier = modifier.drawBehind {
-            layoutContainer.result?.let { result ->
-                val minX = if (result.lineCount > 0) {
-                    (0 until result.lineCount).minOf { result.getLineLeft(it) }
-                } else 0f
-                drawText(result, topLeft = Offset(-minX, 0f))
-            }
-        },
+        // The text is only drawn, so expose it to accessibility services and tests the way Text does.
+        modifier = modifier
+            .semantics { this.text = AnnotatedString(text) }
+            .drawBehind {
+                layoutContainer.result?.let { result ->
+                    val minX = if (result.lineCount > 0) {
+                        (0 until result.lineCount).minOf { result.getLineLeft(it) }
+                    } else 0f
+                    drawText(result, topLeft = Offset(-minX, 0f))
+                }
+            },
         content = {}
     ) { _, constraints ->
         val result = textMeasurer.measure(

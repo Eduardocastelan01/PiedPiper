@@ -96,4 +96,5 @@
     <string name="presentation_batch_d_view_grid">شبكة</string>
     <string name="presentation_batch_d_view_list">قائمة</string>
     <string name="presentation_batch_d_view_section_view">عرض</string>
+    <string name="presentation_batch_d_view_section_layout">التخطيط</string>
 </resources>

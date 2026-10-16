@@ -36,4 +36,64 @@
         <item quantity="one">%d fois</item>
         <item quantity="other">%d fois</item>
     </plurals>
+    <plurals name="stats_active_days_count">
+        <item quantity="one">%d jour actif</item>
+        <item quantity="many">%d jours actifs</item>
+        <item quantity="other">%d jours actifs</item>
+    </plurals>
+    <plurals name="stats_artists_count">
+        <item quantity="one">%d artiste</item>
+        <item quantity="many">%d artistes</item>
+        <item quantity="other">%d artistes</item>
+    </plurals>
+    <plurals name="stats_days_count">
+        <item quantity="one">%d jour</item>
+        <item quantity="many">%d jours</item>
+        <item quantity="other">%d jours</item>
+    </plurals>
+    <plurals name="stats_plays_count">
+        <item quantity="one">%d écoute</item>
+        <item quantity="many">%d écoutes</item>
+        <item quantity="other">%d écoutes</item>
+    </plurals>
+    <plurals name="stats_sessions_count">
+        <item quantity="one">%d session</item>
+        <item quantity="many">%d sessions</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <plurals name="stats_tracks_count">
+        <item quantity="one">%d titre</item>
+        <item quantity="many">%d titres</item>
+        <item quantity="other">%d titres</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_title">
+        <item quantity="one">Supprimer %d liste de lecture ?</item>
+        <item quantity="many">Supprimer %d listes de lecture ?</item>
+        <item quantity="other">Supprimer %d listes de lecture ?</item>
+    </plurals>
+    <plurals name="delete_playlists_confirmation_body">
+        <item quantity="one">Êtes-vous sûr de vouloir supprimer %d liste de lecture ?</item>
+        <item quantity="many">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
+        <item quantity="other">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d chanson</item>
+        <item quantity="many">%d chansons</item>
+        <item quantity="other">%d chansons</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">Il y a %d minute</item>
+        <item quantity="many">Il y a %d minutes</item>
+        <item quantity="other">Il y a %d minutes</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">Il y a %d heure</item>
+        <item quantity="many">Il y a %d heures</item>
+        <item quantity="other">Il y a %d heures</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">Il y a %d jour</item>
+        <item quantity="many">Il y a %d jours</item>
+        <item quantity="other">Il y a %d jours</item>
+    </plurals>
 </resources>

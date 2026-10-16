@@ -37,9 +37,19 @@ class JellyfinCredentialsTest {
             "http://jellyfin.lan:8096",
             "http://media.home.arpa:8096",
             "http://jellyfin.tailnet.ts.net:8096",
+            "http://[fd00::1]:8096",
+            "http://[fe80::1]:8096",
+            "http://nas.home:8096",
+            "http://nas.internal:8096",
         ).forEach { url ->
             assertNull(creds(url).connectionValidationError(), "expected $url to be allowed over http")
         }
+    }
+
+    @Test
+    fun `http on a public ipv6 literal is rejected`() {
+        assertNotNull(creds("http://[2001:db8::1]:8096").connectionValidationError())
+        assertFalse(creds("https://[2001:db8::1]").requiresLocalNetworkAccess)
     }
 
     @Test
@@ -97,5 +107,11 @@ class JellyfinCredentialsTest {
             assertEquals(expected, creds(input).normalizedServerUrl)
             assertNull(creds(input).connectionValidationError())
         }
+    }
+
+    @Test
+    fun `normalization picks the scheme for ipv6 literals by address range`() {
+        assertEquals("https://[2001:db8::1]:8096", creds("[2001:db8::1]:8096").normalizedServerUrl)
+        assertEquals("http://[fd00::1]:8096", creds("[fd00::1]:8096").normalizedServerUrl)
     }
 }

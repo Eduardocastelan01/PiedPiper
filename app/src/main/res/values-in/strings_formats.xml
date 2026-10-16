@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Total durations, such as a playlist's length -->
+    <string name="duration_hours_minutes_long">%1$d jam %2$02d menit</string>
+    <string name="duration_minutes_long">%1$d menit</string>
+    <!-- Listening durations, such as the Stats overview total -->
+    <string name="duration_hours_minutes_medium">%1$d j %2$02d m</string>
+    <string name="duration_hours_medium">%1$d j</string>
+    <string name="duration_minutes_medium">%1$d m</string>
+    <string name="duration_seconds_medium">%1$d d</string>
+    <!-- Compact listening durations for Stats chips and tiles -->
+    <string name="duration_hours_minutes_short">%1$dj %2$02dm</string>
+    <string name="duration_hours_short">%1$dj</string>
+    <string name="duration_minutes_short">%1$dm</string>
+    <string name="duration_seconds_short">%1$dd</string>
+    <!-- Relative times, such as the last sync time -->
+    <string name="time_ago_never">Tidak pernah</string>
+    <string name="time_ago_just_now">Baru saja</string>
+</resources>

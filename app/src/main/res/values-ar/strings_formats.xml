@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Total durations, such as a playlist's length -->
+    <string name="duration_hours_minutes_long">%1$d س %2$02d د</string>
+    <string name="duration_minutes_long">%1$d د</string>
+    <!-- Listening durations, such as the Stats overview total -->
+    <string name="duration_hours_minutes_medium">%1$d س %2$02d د</string>
+    <string name="duration_hours_medium">%1$d س</string>
+    <string name="duration_minutes_medium">%1$d د</string>
+    <string name="duration_seconds_medium">%1$d ث</string>
+    <!-- Compact listening durations for Stats chips and tiles -->
+    <string name="duration_hours_minutes_short">%1$d س %2$02d د</string>
+    <string name="duration_hours_short">%1$d س</string>
+    <string name="duration_minutes_short">%1$d د</string>
+    <string name="duration_seconds_short">%1$d ث</string>
+    <!-- Relative times, such as the last sync time -->
+    <string name="time_ago_never">أبداً</string>
+    <string name="time_ago_just_now">الآن</string>
+</resources>

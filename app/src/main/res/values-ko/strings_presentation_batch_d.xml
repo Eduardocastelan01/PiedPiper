@@ -96,4 +96,5 @@
     <string name="presentation_batch_d_view_grid">그리드</string>
     <string name="presentation_batch_d_view_list">목록</string>
     <string name="presentation_batch_d_view_section_view">보기</string>
+    <string name="presentation_batch_d_view_section_layout">레이아웃</string>
 </resources>

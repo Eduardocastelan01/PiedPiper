@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -44,6 +45,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -102,7 +104,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -166,7 +167,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.subcomps.LibraryActio
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.components.MultiSelectionBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistMultiSelectionBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.DescribePlaylistDialog
+import com.lostf1sh.pixelplayeross.presentation.components.DeletePlaylistsConfirmationDialog
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistCreationTypeDialog
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionActionRow
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.SelectionCountPill
@@ -174,15 +175,21 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.CloudDownloadsViewModel
-import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SongInfoBottomSheetViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixTarget
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.SmartMixViewModel
 import com.lostf1sh.pixelplayeross.data.model.LibraryTabId
 import com.lostf1sh.pixelplayeross.data.model.toLibraryTabIdOrNull
 import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
 import com.lostf1sh.pixelplayeross.data.worker.SyncProgress
 import com.lostf1sh.pixelplayeross.presentation.screens.search.components.GenreTypography
+import com.lostf1sh.pixelplayeross.presentation.utils.SegmentedItemShapeDefaults
+import com.lostf1sh.pixelplayeross.presentation.utils.clipToShapePath
+import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
+import com.lostf1sh.pixelplayeross.presentation.utils.seamlessSelectionScale
 import com.lostf1sh.pixelplayeross.presentation.components.SyncProgressBar
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.LibraryViewModel
 import com.lostf1sh.pixelplayeross.presentation.selection.appendDistinctSelection
@@ -255,8 +262,9 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.LoadState
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
+import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
+import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.LibrarySortBottomSheet
-import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
 import timber.log.Timber
 import java.io.File
 import kotlin.math.abs
@@ -266,6 +274,14 @@ val ListExtraBottomGap = 30.dp
 val PlayerSheetCollapsedCornerRadius = 32.dp
 private const val ENABLE_FOLDERS_SOURCE_TOGGLE = true
 private const val ENABLE_FOLDERS_STORAGE_FILTER = false
+
+/** Tabs whose header shows the quick source filter (all / cloud / on-device). */
+private fun LibraryTabId.hasStorageFilterButton(): Boolean = when (this) {
+    LibraryTabId.SONGS, LibraryTabId.ALBUMS, LibraryTabId.ARTISTS, LibraryTabId.LIKED -> true
+    LibraryTabId.FOLDERS -> ENABLE_FOLDERS_STORAGE_FILTER
+    LibraryTabId.PLAYLISTS -> false
+}
+
 private const val FOLDER_NAVIGATION_ROOT_KEY = "__folder_root__"
 private const val FOLDER_NAVIGATION_FORWARD = 1
 private const val FOLDER_NAVIGATION_BACKWARD = -1
@@ -285,6 +301,7 @@ private data class LibraryScreenPlayerProjection(
     val currentFavoriteSortOption: SortOption = SortOption.LikedSongDateLiked,
     val currentFolderSortOption: SortOption = SortOption.FolderNameAZ,
     val isAlbumsListView: Boolean = false,
+    val isPlaylistsGridView: Boolean = false,
     val isSdCardAvailable: Boolean = false,
     val musicFolders: ImmutableList<MusicFolder> = persistentListOf(),
     val isLoadingLibraryCategories: Boolean = true,
@@ -306,6 +323,7 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
         currentFavoriteSortOption = currentFavoriteSortOption,
         currentFolderSortOption = currentFolderSortOption,
         isAlbumsListView = isAlbumsListView,
+        isPlaylistsGridView = isPlaylistsGridView,
         isSdCardAvailable = isSdCardAvailable,
         musicFolders = musicFolders,
         isLoadingLibraryCategories = isLoadingLibraryCategories,
@@ -320,11 +338,12 @@ private fun PlayerUiState.toLibraryScreenProjection(): LibraryScreenPlayerProjec
 @Composable
 fun LibraryScreen(
     navController: NavController,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel(),
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     songInfoBottomSheetViewModel: SongInfoBottomSheetViewModel = hiltViewModel(),
-    cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel()
+    cloudDownloadsViewModel: CloudDownloadsViewModel = hiltViewModel(),
+    smartMixViewModel: SmartMixViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -365,6 +384,9 @@ fun LibraryScreen(
             )
         }
     }
+    // The pager's tab, available in this frame. currentTabId only catches up after
+    // onLibraryTabSelected runs, so header actions, selection and back read this one instead.
+    val visibleCurrentTabId = resolveVisibleLibraryTabId(tabTitles, currentTabIndex, fallback = currentTabId)
     val isSortSheetVisible by playerViewModel.isSortingSheetVisible.collectAsStateWithLifecycle()
     val canNavigateBackInFolders by remember(playerViewModel) {
         playerViewModel.playerUiState
@@ -373,7 +395,6 @@ fun LibraryScreen(
     }.collectAsStateWithLifecycle(initialValue = false)
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showPlaylistCreationTypeDialog by remember { mutableStateOf(false) }
-    var showDescribePlaylistDialog by remember { mutableStateOf(false) }
 
     val m3uImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -540,6 +561,8 @@ fun LibraryScreen(
     var showPlaylistMultiSelectionSheet by remember { mutableStateOf(false) }
     var showMergePlaylistDialog by remember { mutableStateOf(false) }
     var pendingMergePlaylistIds by remember { mutableStateOf(emptyList<String>()) }
+    var showDeletePlaylistConfirmation by remember { mutableStateOf(false) }
+    var pendingDeletePlaylistIds by remember { mutableStateOf(emptyList<String>()) }
 
     val onPlaylistLongPress: (com.lostf1sh.pixelplayeross.data.model.Playlist) -> Unit = remember(playlistMultiSelectionState, haptic) {
         { playlist ->
@@ -624,7 +647,7 @@ fun LibraryScreen(
         }
     }
 
-    val hasSelectionInCurrentTab = when (currentTabId) {
+    val hasSelectionInCurrentTab = when (visibleCurrentTabId) {
         LibraryTabId.PLAYLISTS -> isPlaylistSelectionMode
         LibraryTabId.ALBUMS -> isAlbumSelectionMode
         LibraryTabId.SONGS,
@@ -632,13 +655,9 @@ fun LibraryScreen(
         LibraryTabId.FOLDERS -> isSelectionMode
         LibraryTabId.ARTISTS -> isArtistSelectionMode
     }
-    val canHandleFolderBack by remember {
-        derivedStateOf {
-            currentTabId == LibraryTabId.FOLDERS &&
-                    canNavigateBackInFolders &&
-                    !isSortSheetVisible
-        }
-    }
+    val canHandleFolderBack = visibleCurrentTabId == LibraryTabId.FOLDERS &&
+            canNavigateBackInFolders &&
+            !isSortSheetVisible
 
     // The coordinator restores this callback as soon as the sheet stops handling back, even if
     // LibraryScreen has not recomposed yet. It also preserves player priority after late registration.
@@ -648,12 +667,14 @@ fun LibraryScreen(
     ) {
         when {
             hasSelectionInCurrentTab -> {
-                when (currentTabId) {
+                when (visibleCurrentTabId) {
                     LibraryTabId.PLAYLISTS -> {
                         playlistMultiSelectionState.clearSelection()
                         showPlaylistMultiSelectionSheet = false
                         showMergePlaylistDialog = false
                         pendingMergePlaylistIds = emptyList()
+                        showDeletePlaylistConfirmation = false
+                        pendingDeletePlaylistIds = emptyList()
                     }
 
                     LibraryTabId.ALBUMS -> {
@@ -702,7 +723,8 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(currentTabIndex) {
+    // Also keyed on the tab itself: editing the tab list can put a different tab at the same index.
+    LaunchedEffect(currentTabIndex, tabTitles.getOrNull(currentTabIndex)) {
         traceSection("LibraryScreen.PageChangeTabLoad") {
             playerViewModel.onLibraryTabSelected(currentTabIndex)
         }
@@ -755,8 +777,7 @@ fun LibraryScreen(
         Brush.verticalGradient(colors = gradientColors)
     }
 
-    val currentTab = tabTitles.getOrNull(currentTabIndex)?.toLibraryTabIdOrNull() ?: currentTabId
-    val currentTabTitle = currentTab.displayTitle()
+    val currentTabTitle = visibleCurrentTabId.displayTitle()
 
     val headerContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
 
@@ -966,10 +987,6 @@ fun LibraryScreen(
 
                         val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
                         val visiblePlaylists = playlistUiState.playlists
-                        val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
-                        val albumsLazyPagingItems = libraryViewModel.albumsPagingFlow.collectAsLazyPagingItems()
-                        val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
-                        val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
                         val isLibraryLoading by libraryViewModel.isLoadingLibrary.collectAsStateWithLifecycle()
                         val hasCurrentSong by remember(playerViewModel) {
                             playerViewModel.stablePlayerState
@@ -991,17 +1008,18 @@ fun LibraryScreen(
                             LibraryTabId.FOLDERS -> playerUiState.currentFolderSortOption
                         }
 
-                        val showLocateButton = when (currentTabId) {
-                            LibraryTabId.SONGS -> songsShowLocateButton
-                            LibraryTabId.LIKED -> likedShowLocateButton
-                            LibraryTabId.FOLDERS -> foldersShowLocateButton
-                            else -> false
-                        }
-                        val locateAction = when (currentTabId) {
+                        val locateAction = when (visibleCurrentTabId) {
                             LibraryTabId.SONGS -> songsLocateAction
                             LibraryTabId.LIKED -> likedLocateAction
                             LibraryTabId.FOLDERS -> foldersLocateAction
                             else -> null
+                        }
+                        // A tab that reports the button without registering an action would show a dead button.
+                        val showLocateButton = locateAction != null && when (visibleCurrentTabId) {
+                            LibraryTabId.SONGS -> songsShowLocateButton
+                            LibraryTabId.LIKED -> likedShowLocateButton
+                            LibraryTabId.FOLDERS -> foldersShowLocateButton
+                            else -> false
                         }
 
                         val onSortOptionChanged: (SortOption) -> Unit = remember(playerViewModel, playlistViewModel, currentTabId) {
@@ -1033,7 +1051,7 @@ fun LibraryScreen(
                                 .heightIn(min = 56.dp)
                         ) { inSelectionMode ->
                             if (inSelectionMode) {
-                                if (currentTabId == LibraryTabId.PLAYLISTS && isPlaylistSelectionMode) {
+                                if (visibleCurrentTabId == LibraryTabId.PLAYLISTS && isPlaylistSelectionMode) {
                                     SelectionActionRow(
                                         selectedCount = selectedPlaylists.size,
                                         onSelectAll = {
@@ -1042,7 +1060,7 @@ fun LibraryScreen(
                                         onDeselect = { playerViewModel.playlistSelectionStateHolder.clearSelection() },
                                         onOptionsClick = { showPlaylistMultiSelectionSheet = true }
                                     )
-                                } else if (currentTabId == LibraryTabId.ALBUMS && isAlbumSelectionMode) {
+                                } else if (visibleCurrentTabId == LibraryTabId.ALBUMS && isAlbumSelectionMode) {
                                     SelectionActionRow(
                                         selectedCount = selectedAlbums.size,
                                         onSelectAll = {
@@ -1061,7 +1079,7 @@ fun LibraryScreen(
                                         },
                                         onOptionsClick = openSelectedAlbumActions
                                     )
-                                } else if (currentTabId == LibraryTabId.ARTISTS && isArtistSelectionMode) {
+                                } else if (visibleCurrentTabId == LibraryTabId.ARTISTS && isArtistSelectionMode) {
                                     SelectionActionRow(
                                         selectedCount = selectedArtists.size,
                                         onSelectAll = {
@@ -1084,9 +1102,14 @@ fun LibraryScreen(
                                     SelectionActionRow(
                                         selectedCount = selectedSongs.size,
                                         onSelectAll = {
-                                            when (tabTitles.getOrNull(currentTabIndex)?.toLibraryTabIdOrNull()) {
+                                            when (visibleCurrentTabId) {
                                                 LibraryTabId.LIKED -> {
-                                                    multiSelectionState.selectAll(favoritePagingItems.itemSnapshotList.items)
+                                                    // The paged list only holds the loaded window, so ask for every favorite.
+                                                    scope.launch {
+                                                        multiSelectionState.selectAll(
+                                                            playerViewModel.getSongsForCurrentFavoriteSelection()
+                                                        )
+                                                    }
                                                 }
                                                 LibraryTabId.FOLDERS -> {
                                                     val songsToSelect =
@@ -1113,7 +1136,7 @@ fun LibraryScreen(
                                         .fillMaxWidth()
                                         .padding(end = 4.dp),
                                     onMainActionClick = {
-                                        when (tabTitles.getOrNull(currentTabIndex)?.toLibraryTabIdOrNull()) {
+                                        when (visibleCurrentTabId) {
                                             LibraryTabId.PLAYLISTS -> showPlaylistCreationTypeDialog = true
                                             LibraryTabId.LIKED -> playerViewModel.shuffleFavoriteSongs()
                                             LibraryTabId.ALBUMS -> playerViewModel.shuffleRandomAlbum()
@@ -1126,8 +1149,8 @@ fun LibraryScreen(
                                     showLocateButton = showLocateButton,
                                     onSortClick = { playerViewModel.showSortingSheet() },
                                     onLocateClick = { locateAction?.invoke() },
-                                    isPlaylistTab = currentTabId == LibraryTabId.PLAYLISTS,
-                                    isFoldersTab = currentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
+                                    isPlaylistTab = visibleCurrentTabId == LibraryTabId.PLAYLISTS,
+                                    isFoldersTab = visibleCurrentTabId == LibraryTabId.FOLDERS && (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null),
                                     onImportM3uClick = { m3uImportLauncher.launch("audio/x-mpegurl") },
                                     currentFolder = playerUiState.currentFolder,
                                     folderRootPath = playerUiState.folderSourceRootPath.ifBlank {
@@ -1137,11 +1160,7 @@ fun LibraryScreen(
                                     onFolderClick = { playerViewModel.navigateToFolder(it) },
                                     onNavigateBack = { playerViewModel.navigateBackFolder() },
                                     isShuffleEnabled = isShuffleEnabled,
-                                    showStorageFilterButton = currentTabId == LibraryTabId.SONGS ||
-                                            currentTabId == LibraryTabId.ALBUMS ||
-                                            currentTabId == LibraryTabId.ARTISTS ||
-                                            currentTabId == LibraryTabId.LIKED ||
-                                            (ENABLE_FOLDERS_STORAGE_FILTER && currentTabId == LibraryTabId.FOLDERS),
+                                    showStorageFilterButton = visibleCurrentTabId.hasStorageFilterButton(),
                                     currentStorageFilter = playerUiState.currentStorageFilter,
                                     onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
                                 )
@@ -1273,6 +1292,47 @@ fun LibraryScreen(
                                     }
                                 } else null,
                                 extraContent = {
+                                    if (currentTabId == LibraryTabId.PLAYLISTS || (isFoldersTab && playerUiState.isFoldersPlaylistView)) {
+                                        Text(
+                                            text = stringResource(R.string.presentation_batch_d_view_section_layout),
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontFamily = com.lostf1sh.pixelplayeross.ui.theme.RoundedSans,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            modifier = Modifier.padding(start = 2.dp, bottom = 8.dp)
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(48.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            val isGrid = playerUiState.isPlaylistsGridView
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = !isGrid,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setPlaylistsGridView(false) },
+                                                text = stringResource(R.string.presentation_batch_d_view_list),
+                                                imageVector = Icons.AutoMirrored.Rounded.ViewList
+                                            )
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = isGrid,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setPlaylistsGridView(true) },
+                                                text = stringResource(R.string.presentation_batch_d_view_grid),
+                                                imageVector = Icons.Rounded.ViewModule
+                                            )
+                                        }
+                                    }
                                     if (!isFoldersTab) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
@@ -1314,6 +1374,10 @@ fun LibraryScreen(
                                 )
                                 when (tabTitles.getOrNull(tabIndex)?.toLibraryTabIdOrNull()) {
                                     LibraryTabId.SONGS -> {
+                                        // Each tab collects its own paging flow, so pages the pager has disposed stop
+                                        // collecting; the flows are cachedIn the view model, so a page that comes back
+                                        // starts from the cached items.
+                                        val allSongsLazyPagingItems = libraryViewModel.songsPagingFlow.collectAsLazyPagingItems()
                                         LibrarySongsTab(
                                             songs = allSongsLazyPagingItems,
                                             isLoading = isLibraryLoading,
@@ -1338,6 +1402,7 @@ fun LibraryScreen(
                                         )
                                     }
                                     LibraryTabId.ALBUMS -> {
+                                        val albumsLazyPagingItems = libraryViewModel.albumsPagingFlow.collectAsLazyPagingItems()
                                         val isLoading = playerUiState.isLoadingLibraryCategories
 
                                         val stableOnAlbumClick: (Long) -> Unit = remember(navController) {
@@ -1368,6 +1433,7 @@ fun LibraryScreen(
                                     }
 
                                     LibraryTabId.ARTISTS -> {
+                                        val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
                                         val isLoading = playerUiState.isLoadingLibraryCategories
 
                                         LibraryArtistsTab(
@@ -1406,11 +1472,13 @@ fun LibraryScreen(
                                             selectedPlaylistIds = selectedPlaylistIds,
                                             onPlaylistLongPress = onPlaylistLongPress,
                                             onPlaylistSelectionToggle = onPlaylistSelectionToggle,
-                                            onPlaylistOptionsClick = { showPlaylistMultiSelectionSheet = true }
+                                            onPlaylistOptionsClick = { showPlaylistMultiSelectionSheet = true },
+                                            isGridView = playerUiState.isPlaylistsGridView
                                         )
                                     }
 
                                     LibraryTabId.LIKED -> {
+                                        val favoritePagingItems = libraryViewModel.favoritesPagingFlow.collectAsLazyPagingItems()
                                         LibraryFavoritesTab(
                                             favoriteSongs = favoritePagingItems,
                                             playerViewModel = playerViewModel,
@@ -1438,7 +1506,6 @@ fun LibraryScreen(
                                         val folders = playerUiState.musicFolders
                                         val currentFolder = playerUiState.currentFolder
                                         val isLoading = playerUiState.isLoadingLibraryCategories
-                                        val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
                                         val defaultFolderName = stringResource(R.string.presentation_batch_d_folder_name_fallback)
 
                                         LibraryFoldersTab(
@@ -1446,7 +1513,7 @@ fun LibraryScreen(
                                             currentFolder = currentFolder,
                                             isLoading = isLoading,
                                             bottomBarHeight = bottomBarHeightDp,
-                                            stablePlayerState = stablePlayerState,
+                                            playerViewModel = playerViewModel,
                                             onNavigateBack = { playerViewModel.navigateBackFolder() },
                                             onFolderClick = { folderPath -> playerViewModel.navigateToFolder(folderPath) },
                                             onFolderAsPlaylistClick = { folder ->
@@ -1467,6 +1534,7 @@ fun LibraryScreen(
                                             },
                                             onMoreOptionsClick = stableOnMoreOptionsClick,
                                             isPlaylistView = playerUiState.isFoldersPlaylistView,
+                                            isPlaylistGridView = playerUiState.isPlaylistsGridView,
                                             currentSortOption = playerUiState.currentFolderSortOption,
                                             isRefreshing = isRefreshing,
                                             onRefresh = onRefresh,
@@ -1490,7 +1558,7 @@ fun LibraryScreen(
                                 }
                             }
 
-                            val selectionCount = when (currentTabId) {
+                            val selectionCount = when (visibleCurrentTabId) {
                                 LibraryTabId.PLAYLISTS -> selectedPlaylists.size.takeIf { isPlaylistSelectionMode } ?: 0
                                 LibraryTabId.ALBUMS -> selectedAlbums.size.takeIf { isAlbumSelectionMode } ?: 0
                                 LibraryTabId.ARTISTS -> selectedArtists.size.takeIf { isArtistSelectionMode } ?: 0
@@ -1548,25 +1616,9 @@ fun LibraryScreen(
             showPlaylistCreationTypeDialog = false
             showCreatePlaylistDialog = true
         },
-        onDescribeSelected = {
+        onSmartMixSelected = {
             showPlaylistCreationTypeDialog = false
-            showDescribePlaylistDialog = true
-        }
-    )
-
-    val nlpPlaylistPreviewState by playlistViewModel.nlpPlaylistPreviewState.collectAsStateWithLifecycle()
-    DescribePlaylistDialog(
-        visible = showDescribePlaylistDialog,
-        state = nlpPlaylistPreviewState,
-        onGenerate = playlistViewModel::generateNlpPlaylistPreview,
-        onSave = { name, songIds ->
-            playlistViewModel.createPlaylist(name = name, songIds = songIds)
-            playlistViewModel.resetNlpPlaylistPreview()
-            showDescribePlaylistDialog = false
-        },
-        onDismiss = {
-            playlistViewModel.resetNlpPlaylistPreview()
-            showDescribePlaylistDialog = false
+            smartMixViewModel.open(SmartMixTarget.Library)
         }
     )
 
@@ -1747,7 +1799,11 @@ fun LibraryScreen(
                 multiSelectionState.clearSelection()
                 clearResolvedCategorySelection()
                 playerViewModel.sendToast(
-                    context.getString(R.string.cloud_download_selected_started, cloudSongCount)
+                    context.resources.getQuantityString(
+                        R.plurals.cloud_download_selected_started,
+                        cloudSongCount,
+                        cloudSongCount
+                    )
                 )
                 showMultiSelectionSheet = false
             },
@@ -1774,9 +1830,10 @@ fun LibraryScreen(
                 showPlaylistMultiSelectionSheet = false
             },
             onDeleteAll = {
-                playlistViewModel.deletePlaylistsInBatch(selectedPlaylistIds.toList())
+                // Keep the selection until the deletion is confirmed, so Cancel leaves it as it was.
+                pendingDeletePlaylistIds = selectedPlaylistIds.toList()
                 showPlaylistMultiSelectionSheet = false
-                playlistMultiSelectionState.clearSelection()
+                showDeletePlaylistConfirmation = true
             },
             onExportAll = {
                 playlistViewModel.exportPlaylistsAsM3u(selectedPlaylistIds.toList())
@@ -1833,6 +1890,22 @@ fun LibraryScreen(
                 playerViewModel.resetLibraryTabsOrder()
             },
             onDismiss = { showReorderTabsSheet = false }
+        )
+    }
+
+    if (showDeletePlaylistConfirmation && pendingDeletePlaylistIds.isNotEmpty()) {
+        DeletePlaylistsConfirmationDialog(
+            count = pendingDeletePlaylistIds.size,
+            onConfirm = {
+                playlistViewModel.deletePlaylistsInBatch(pendingDeletePlaylistIds)
+                playlistMultiSelectionState.clearSelection()
+                showDeletePlaylistConfirmation = false
+                pendingDeletePlaylistIds = emptyList()
+            },
+            onDismiss = {
+                showDeletePlaylistConfirmation = false
+                pendingDeletePlaylistIds = emptyList()
+            }
         )
     }
 
@@ -2485,6 +2558,13 @@ private fun resolveTabIndex(page: Int, tabCount: Int, compactMode: Boolean): Int
     return if (compactMode) positiveMod(page, tabCount) else page.coerceIn(0, tabCount - 1)
 }
 
+/** The tab stored at [index], or [fallback] when the index or the stored identifier is unknown. */
+internal fun resolveVisibleLibraryTabId(
+    tabs: List<String>,
+    index: Int,
+    fallback: LibraryTabId
+): LibraryTabId = tabs.getOrNull(index)?.toLibraryTabIdOrNull() ?: fallback
+
 private fun targetPageForTabIndex(
     currentPage: Int,
     targetTabIndex: Int,
@@ -2528,11 +2608,45 @@ internal fun resolveFolderNavigationDirection(initialPath: String?, targetPath: 
     }
 
 private fun isDescendantFolderPath(ancestorPath: String, candidatePath: String): Boolean {
-    val normalizedAncestor = ancestorPath.trimEnd(File.separatorChar)
-    val normalizedCandidate = candidatePath.trimEnd(File.separatorChar)
+    // These are Android storage paths, including when unit tests run on a Windows host.
+    val normalizedAncestor = ancestorPath.trimEnd('/')
+    val normalizedCandidate = candidatePath.trimEnd('/')
     if (normalizedAncestor == normalizedCandidate) return false
-    return normalizedCandidate.startsWith("$normalizedAncestor${File.separatorChar}")
+    return normalizedCandidate.startsWith("$normalizedAncestor/")
 }
+
+internal fun isSongParentInFolderScope(
+    songParentPath: String?,
+    currentFolderPath: String?,
+    rootFolders: List<MusicFolder>
+): Boolean {
+    if (songParentPath == null) return false
+    fun containsSongParent(folderPath: String): Boolean =
+        folderPath.trimEnd('/') == songParentPath.trimEnd('/') ||
+            isDescendantFolderPath(folderPath, songParentPath)
+
+    return currentFolderPath?.let(::containsSongParent)
+        ?: rootFolders.any { containsSongParent(it.path) }
+}
+
+/**
+ * The folder a navigation destination shows; [destinationPath] is null for the root. A destination
+ * that is sliding out keeps [rememberedFolder], the folder it was opened for, instead of switching
+ * to the one being navigated to.
+ */
+internal fun resolveFolderDestination(
+    destinationPath: String?,
+    currentFolder: MusicFolder?,
+    rememberedFolder: MusicFolder?
+): MusicFolder? = when {
+    destinationPath == null -> null
+    currentFolder?.path == destinationPath -> currentFolder
+    else -> rememberedFolder
+}
+
+/** Whether the item at [index] is on screen, or null while the list has not been laid out yet. */
+internal fun isLocateTargetVisible(visibleItems: List<LazyListItemInfo>, index: Int): Boolean? =
+    if (visibleItems.isEmpty()) null else visibleItems.any { it.index == index }
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -2544,10 +2658,11 @@ fun LibraryFoldersTab(
     onFolderClick: (String) -> Unit,
     onFolderAsPlaylistClick: (MusicFolder) -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
-    stablePlayerState: StablePlayerState,
+    playerViewModel: PlayerViewModel,
     bottomBarHeight: Dp,
     onMoreOptionsClick: (Song) -> Unit,
     isPlaylistView: Boolean = false,
+    isPlaylistGridView: Boolean = false,
     currentSortOption: SortOption = SortOption.FolderNameAZ,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -2562,7 +2677,27 @@ fun LibraryFoldersTab(
     onClearPendingLocate: () -> Unit = {},
     onRequestCrossFolderLocate: (String) -> Unit = {}
 ) {
-
+    // Cleared once when the tab leaves; an outgoing folder destination must not clear the
+    // locate state the incoming one has just registered.
+    val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
+    val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)
+    DisposableEffect(Unit) {
+        onDispose {
+            visibilityCallback(false)
+            registerActionCallback(null)
+        }
+    }
+    // Rows observe their own playback state; the tab itself only follows which song is current.
+    // The seed is read once inside remember so the StateFlow is not read during composition.
+    val initialCurrentSong = remember(playerViewModel) {
+        playerViewModel.stablePlayerState.value.currentSong
+    }
+    val currentSong by remember(playerViewModel) {
+        playerViewModel.stablePlayerState
+            .map { it.currentSong }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = initialCurrentSong)
+    val hasCurrentSong = currentSong != null && currentSong != Song.emptySong()
 
     AnimatedContent(
         targetState = Pair(isPlaylistView, currentFolder?.path ?: FOLDER_NAVIGATION_ROOT_KEY),
@@ -2583,10 +2718,12 @@ fun LibraryFoldersTab(
             slideIn.togetherWith(slideOut)
         }
     ) { (playlistMode, targetPath) ->
+        // Each destination keeps its own list; only the one being navigated to drives the toolbar.
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
-        val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)
+        val isActiveDestination = targetPath == (currentFolder?.path ?: FOLDER_NAVIGATION_ROOT_KEY) &&
+            playlistMode == isPlaylistView
+        val requestCrossFolderLocate by rememberUpdatedState(onRequestCrossFolderLocate)
         var lastHandledFolderSortKey by remember { mutableStateOf(currentSortOption.storageKey) }
         var pendingFolderSortScrollReset by remember { mutableStateOf(false) }
 
@@ -2595,9 +2732,14 @@ fun LibraryFoldersTab(
         }
 
         val isRoot = targetPath == FOLDER_NAVIGATION_ROOT_KEY
-        val activeFolder = if (isRoot) null else currentFolder
+        val destinationFolder = remember(targetPath) { currentFolder }
+        val activeFolder = resolveFolderDestination(
+            destinationPath = targetPath.takeUnless { isRoot },
+            currentFolder = currentFolder,
+            rememberedFolder = destinationFolder
+        )
         val showPlaylistCards = playlistMode && activeFolder == null
-        val itemsToShow = remember(activeFolder, folders, flattenedFolders, currentSortOption) {
+        val itemsToShow = remember(showPlaylistCards, activeFolder, folders, flattenedFolders, currentSortOption) {
             when {
                 showPlaylistCards -> flattenedFolders
                 activeFolder != null -> sortMusicFoldersByOption(activeFolder.subFolders, currentSortOption)
@@ -2608,7 +2750,6 @@ fun LibraryFoldersTab(
         val songsToShow = remember(activeFolder, currentSortOption) {
             sortSongsForFolderView(activeFolder?.songs ?: emptyList(), currentSortOption)
         }.toImmutableList()
-        val currentSong = stablePlayerState.currentSong
         val currentSongId = currentSong?.id
         val currentSongIndexInSongs = remember(songsToShow, currentSongId) {
             currentSongId?.let { songId -> songsToShow.indexOfFirst { it.id == songId } } ?: -1
@@ -2626,12 +2767,12 @@ fun LibraryFoldersTab(
             playlistMode,
             songInCurrentFolder,
             currentSongParentPath,
-            currentFolder?.path
+            activeFolder?.path,
+            folders
         ) {
             !playlistMode &&
                 !songInCurrentFolder &&
-                currentSongParentPath != null &&
-                currentSongParentPath != currentFolder?.path
+                isSongParentInFolderScope(currentSongParentPath, activeFolder?.path, folders)
         }
         val locateCurrentSongAction: (() -> Unit)? = remember(
             songInCurrentFolder,
@@ -2649,13 +2790,14 @@ fun LibraryFoldersTab(
                     }
                 }
                 canCrossFolderLocate && currentSongParentPath != null -> {
-                    { onRequestCrossFolderLocate(currentSongParentPath) }
+                    { requestCrossFolderLocate(currentSongParentPath) }
                 }
                 else -> null
             }
         }
 
-        LaunchedEffect(locateCurrentSongAction) {
+        LaunchedEffect(isActiveDestination, locateCurrentSongAction) {
+            if (!isActiveDestination) return@LaunchedEffect
             registerActionCallback(locateCurrentSongAction)
         }
 
@@ -2674,19 +2816,22 @@ fun LibraryFoldersTab(
         }
 
         LaunchedEffect(
-            currentFolder?.path,
+            isActiveDestination,
+            targetPath,
             pendingLocatePath,
             currentSongListIndex,
             songsToShow
         ) {
+            if (!isActiveDestination) return@LaunchedEffect
             val pending = pendingLocatePath ?: return@LaunchedEffect
-            if (currentFolder?.path != pending) return@LaunchedEffect
+            if (targetPath != pending) return@LaunchedEffect
             if (currentSongListIndex < 0) return@LaunchedEffect
             listState.animateScrollToItem(currentSongListIndex)
             onClearPendingLocate()
         }
 
-        LaunchedEffect(currentSongListIndex, itemsToShow, songsToShow, listState, canCrossFolderLocate) {
+        LaunchedEffect(isActiveDestination, currentSongListIndex, itemsToShow, songsToShow, listState, canCrossFolderLocate) {
+            if (!isActiveDestination) return@LaunchedEffect
             if (canCrossFolderLocate) {
                 visibilityCallback(true)
                 return@LaunchedEffect
@@ -2696,25 +2841,12 @@ fun LibraryFoldersTab(
                 return@LaunchedEffect
             }
 
-            snapshotFlow {
-                val visibleItems = listState.layoutInfo.visibleItemsInfo
-                if (visibleItems.isEmpty()) {
-                    false
-                } else {
-                    currentSongListIndex in visibleItems.first().index..visibleItems.last().index
-                }
-            }
+            snapshotFlow { isLocateTargetVisible(listState.layoutInfo.visibleItemsInfo, currentSongListIndex) }
                 .distinctUntilChanged()
                 .collect { isVisible ->
-                    visibilityCallback(!isVisible)
+                    // Unmeasured (null) keeps the button hidden instead of flashing it before layout.
+                    visibilityCallback(isVisible == false)
                 }
-        }
-
-        DisposableEffect(Unit) {
-            onDispose {
-                visibilityCallback(false)
-                registerActionCallback(null)
-            }
         }
 
         val shouldShowLoading = isLoading && itemsToShow.isEmpty() && songsToShow.isEmpty() && isRoot
@@ -2735,6 +2867,30 @@ fun LibraryFoldersTab(
                     )
                 }
 
+                showPlaylistCards && isPlaylistGridView -> {
+                    val foldersPullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = onRefresh,
+                        state = foldersPullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.LoadingIndicator(
+                                state = foldersPullToRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter)
+                            )
+                        }
+                    ) {
+                        FolderPlaylistGrid(
+                            folders = itemsToShow,
+                            hasCurrentSong = hasCurrentSong,
+                            bottomBarHeight = bottomBarHeight,
+                            onFolderClick = onFolderAsPlaylistClick
+                        )
+                    }
+                }
+
                 else -> {
                     val foldersPullToRefreshState = rememberPullToRefreshState()
                     PullToRefreshBox(
@@ -2753,44 +2909,39 @@ fun LibraryFoldersTab(
                         Box(modifier = Modifier.fillMaxSize()) {
                             LazyColumn(
                                 modifier = Modifier
-                                    .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp)
+                                    .padding(start = 12.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward), 22.dp, 12.dp))
                                     .fillMaxSize()
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = 26.dp,
-                                            topEnd = 26.dp,
-                                            bottomStart = PlayerSheetCollapsedCornerRadius,
-                                            bottomEnd = PlayerSheetCollapsedCornerRadius
-                                        )
-                                    ),
+                                    .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
                                 state = listState,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 contentPadding = PaddingValues(
                                     bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap,
                                     top = 0.dp                            )
                             ) {
                                 if (showPlaylistCards) {
-                                    items(itemsToShow, key = { it.path }, contentType = { "folder_card" }) { folder ->
+                                    itemsIndexed(itemsToShow, key = { _, folder -> folder.path }, contentType = { _, _ -> "folder_card" }) { index, folder ->
                                         FolderPlaylistItem(
                                             folder = folder,
-                                            onClick = { onFolderAsPlaylistClick(folder) }
+                                            onClick = { onFolderAsPlaylistClick(folder) },
+                                            customShape = getSegmentedItemShape(index, itemsToShow.size)
                                         )
                                     }
                                 } else {
-                                    items(itemsToShow, key = { it.path }, contentType = { "folder_list" }) { folder ->
+                                    itemsIndexed(itemsToShow, key = { _, folder -> folder.path }, contentType = { _, _ -> "folder_list" }) { index, folder ->
                                         FolderListItem(
                                             folder = folder,
-                                            onClick = { onFolderClick(folder.path) }
+                                            onClick = { onFolderClick(folder.path) },
+                                            customShape = getSegmentedItemShape(index, itemsToShow.size)
                                         )
                                     }
                                 }
 
-                                items(songsToShow, key = { it.id }, contentType = { "song" }) { song ->
-                                    EnhancedSongListItem(
+                                itemsIndexed(songsToShow, key = { _, song -> song.id }, contentType = { _, _ -> "song" }) { index, song ->
+                                    LibraryPlaybackAwareSongItem(
                                         song = song,
-                                        isPlaying = stablePlayerState.currentSong?.id == song.id && stablePlayerState.isPlaying,
-                                        isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                        onMoreOptionsClick = { onMoreOptionsClick(song) },
+                                        playerViewModel = playerViewModel,
+                                        customShape = getSegmentedItemShape(index, songsToShow.size),
+                                        onMoreOptionsClick = onMoreOptionsClick,
                                         isSelected = selectedSongIds.contains(song.id),
                                         selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
                                         isSelectionMode = isSelectionMode,
@@ -2806,7 +2957,7 @@ fun LibraryFoldersTab(
                                 }
                             }
 
-                            val bottomPadding = if (stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong())
+                            val bottomPadding = if (hasCurrentSong)
                                 bottomBarHeight + MiniPlayerHeight + 16.dp
                             else
                                 bottomBarHeight + 16.dp
@@ -2827,12 +2978,17 @@ fun LibraryFoldersTab(
 }
 
 @Composable
-fun FolderPlaylistItem(folder: MusicFolder, onClick: () -> Unit) {
+fun FolderPlaylistItem(
+    folder: MusicFolder,
+    onClick: () -> Unit,
+    customShape: androidx.compose.ui.graphics.Shape? = null
+) {
     val previewSongs = remember(folder) { folder.collectAllSongs().take(9).toImmutableList() }
 
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = customShape ?: SegmentedItemShapeDefaults.CardSingleShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -2867,10 +3023,93 @@ fun FolderPlaylistItem(folder: MusicFolder, onClick: () -> Unit) {
 }
 
 @Composable
-fun FolderListItem(folder: MusicFolder, onClick: () -> Unit) {
+private fun FolderPlaylistGrid(
+    folders: List<MusicFolder>,
+    hasCurrentSong: Boolean,
+    bottomBarHeight: Dp,
+    onFolderClick: (MusicFolder) -> Unit
+) {
+    val gridState = rememberLazyGridState()
+    Box(modifier = Modifier.fillMaxSize()) {
+        val showScrollbar = LocalShowScrollbar.current &&
+            (gridState.canScrollForward || gridState.canScrollBackward)
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
+            state = gridState,
+            modifier = Modifier
+                .padding(start = 12.dp, end = animatedScrollbarInset(showScrollbar, 22.dp, 12.dp))
+                .fillMaxSize()
+                .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + ListExtraBottomGap)
+        ) {
+            items(folders, key = { it.path }, contentType = { "folder_grid_card" }) { folder ->
+                FolderPlaylistGridItem(folder = folder, onClick = { onFolderClick(folder) })
+            }
+        }
+        val bottomPadding = if (hasCurrentSong) {
+            bottomBarHeight + MiniPlayerHeight + 16.dp
+        } else {
+            bottomBarHeight + 16.dp
+        }
+        ExpressiveScrollBar(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp, top = 16.dp, bottom = bottomPadding),
+            gridState = gridState
+        )
+    }
+}
+
+@Composable
+private fun FolderPlaylistGridItem(folder: MusicFolder, onClick: () -> Unit) {
+    val previewSongs = remember(folder) { folder.collectAllSongs().take(9).toImmutableList() }
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = SegmentedItemShapeDefaults.LibraryContainerShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            PlaylistArtCollage(
+                songs = previewSongs,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                folder.name,
+                style = MaterialTheme.typography.titleMedium.copy(fontFamily = RoundedSans),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Text(
+                formatSongCount(folder.totalSongCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun FolderListItem(
+    folder: MusicFolder,
+    onClick: () -> Unit,
+    customShape: androidx.compose.ui.graphics.Shape? = null
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = customShape ?: SegmentedItemShapeDefaults.CardSingleShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -2968,7 +3207,8 @@ fun AlbumGridItemRedesigned(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -2983,8 +3223,7 @@ fun AlbumGridItemRedesigned(
 
     val gradientBaseColor = itemDesignColorScheme.primaryContainer
     val onGradientColor = itemDesignColorScheme.onPrimaryContainer
-    val cardCornerRadius = 20.dp
-    val cardShape = RoundedCornerShape(cardCornerRadius)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(20.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.985f else 1f,
         animationSpec = tween(durationMillis = 220),
@@ -3047,7 +3286,7 @@ fun AlbumGridItemRedesigned(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .scale(selectionScale)
+                .seamlessSelectionScale(selectionScale)
                 .then(
                     if (isSelected) {
                         Modifier.border(
@@ -3059,7 +3298,7 @@ fun AlbumGridItemRedesigned(
                         Modifier
                     }
                 )
-                .clip(cardShape)
+                .clipToShapePath(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {
@@ -3170,9 +3409,10 @@ fun ArtistListItem(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
-    val cardShape = RoundedCornerShape(18.dp)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(18.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.99f else 1f,
         animationSpec = tween(durationMillis = 200),
@@ -3187,7 +3427,7 @@ fun ArtistListItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(selectionScale)
+            .seamlessSelectionScale(selectionScale)
             .then(
                 if (isSelected) {
                     Modifier.border(
@@ -3199,7 +3439,7 @@ fun ArtistListItem(
                     Modifier
                 }
             )
-            .clip(cardShape)
+            .clipToShapePath(cardShape)
             .combinedClickable(
                 enabled = !isLoading,
                 onClick = {
@@ -3313,7 +3553,8 @@ fun AlbumListItem(
     isSelected: Boolean = false,
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
-    onSelectionToggle: () -> Unit = {}
+    onSelectionToggle: () -> Unit = {},
+    customShape: androidx.compose.ui.graphics.Shape? = null
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -3327,8 +3568,7 @@ fun AlbumListItem(
 
     val gradientBaseColor = itemDesignColorScheme.primaryContainer
     val onGradientColor = itemDesignColorScheme.onPrimaryContainer
-    val cardCornerRadius = 16.dp
-    val cardShape = RoundedCornerShape(cardCornerRadius)
+    val cardShape = remember(customShape) { customShape ?: RoundedCornerShape(16.dp) }
     val selectionScale by animateFloatAsState(
         targetValue = if (isSelected) 0.99f else 1f,
         animationSpec = tween(durationMillis = 200),
@@ -3344,7 +3584,8 @@ fun AlbumListItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(80.dp)
+                .clipToShapePath(cardShape),
             shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
@@ -3381,7 +3622,7 @@ fun AlbumListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(88.dp)
-                .scale(selectionScale)
+                .seamlessSelectionScale(selectionScale)
                 .then(
                     if (isSelected) {
                         Modifier.border(
@@ -3393,7 +3634,9 @@ fun AlbumListItem(
                         Modifier
                     }
                 )
-                .clip(cardShape)
+                // Clipped on the canvas: an outline clip leaves the corners of non-uniform
+                // (segmented first/last) rows square on older render pipelines.
+                .clipToShapePath(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {

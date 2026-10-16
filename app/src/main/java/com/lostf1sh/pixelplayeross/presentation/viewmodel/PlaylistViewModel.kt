@@ -14,7 +14,6 @@ import com.lostf1sh.pixelplayeross.data.model.fromPlaylistSource
 import com.lostf1sh.pixelplayeross.data.model.isSmartPlaylist
 import com.lostf1sh.pixelplayeross.data.model.toPlaylistSource
 import com.lostf1sh.pixelplayeross.data.playlist.M3uManager
-import com.lostf1sh.pixelplayeross.data.playlist.NlpPlaylistGenerator
 import com.lostf1sh.pixelplayeross.data.playlist.SmartPlaylistBuilder
 import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
@@ -68,29 +67,17 @@ sealed class PlaylistSongsOrderMode {
     data class Sorted(val option: SortOption) : PlaylistSongsOrderMode()
 }
 
-/** Preview state for the offline "describe it" playlist creation flow. */
-data class NlpPlaylistPreviewState(
-    val isGenerating: Boolean = false,
-    val songs: ImmutableList<Song> = persistentListOf(),
-    /** True once a generation finished, so the UI can tell "no matches" from "not asked yet". */
-    val hasResult: Boolean = false,
-)
-
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
     private val playlistPreferencesRepository: PlaylistPreferencesRepository,
     private val musicRepository: MusicRepository,
     private val dailyMixManager: DailyMixManager,
     private val m3uManager: M3uManager,
-    private val nlpPlaylistGenerator: NlpPlaylistGenerator,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlaylistUiState())
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
-
-    private val _nlpPlaylistPreviewState = MutableStateFlow(NlpPlaylistPreviewState())
-    val nlpPlaylistPreviewState: StateFlow<NlpPlaylistPreviewState> = _nlpPlaylistPreviewState.asStateFlow()
 
     private val _playlistCreationEvent = MutableSharedFlow<Boolean>(
         extraBufferCapacity = 1,
@@ -329,30 +316,6 @@ class PlaylistViewModel @Inject constructor(
             )
             _playlistCreationEvent.emit(true)
         }
-    }
-
-    /** Runs the offline NLP engine over the library and publishes the ranked preview. */
-    fun generateNlpPlaylistPreview(description: String) {
-        if (description.isBlank()) return
-        viewModelScope.launch {
-            _nlpPlaylistPreviewState.update { it.copy(isGenerating = true) }
-            val songs = try {
-                nlpPlaylistGenerator.generate(description)
-            } catch (e: Exception) {
-                Timber.tag("PlaylistVM").e(e, "NLP playlist generation failed")
-                emptyList()
-            }
-            _nlpPlaylistPreviewState.value = NlpPlaylistPreviewState(
-                isGenerating = false,
-                songs = songs.toImmutableList(),
-                hasResult = true
-            )
-        }
-    }
-
-    /** Clears the "describe it" preview when its dialog closes. */
-    fun resetNlpPlaylistPreview() {
-        _nlpPlaylistPreviewState.value = NlpPlaylistPreviewState()
     }
 
     private suspend fun buildSmartPlaylistSongIds(
@@ -647,7 +610,12 @@ class PlaylistViewModel @Inject constructor(
             playlistPreferencesRepository.removeSongFromPlaylist(playlistId, songIdToRemove)
             if (_uiState.value.currentPlaylistDetails?.id == playlistId) {
                 _uiState.update {
-                    it.copy(currentPlaylistSongs = it.currentPlaylistSongs.filterNot { s -> s.id == songIdToRemove })
+                    it.copy(
+                        currentPlaylistDetails = it.currentPlaylistDetails?.let { details ->
+                            details.copy(songIds = details.songIds.filterNot { id -> id == songIdToRemove })
+                        },
+                        currentPlaylistSongs = it.currentPlaylistSongs.filterNot { s -> s.id == songIdToRemove }
+                    )
                 }
             }
         }
@@ -662,15 +630,31 @@ class PlaylistViewModel @Inject constructor(
             if (fromIndex in currentSongs.indices && toIndex in currentSongs.indices) {
                 val item = currentSongs.removeAt(fromIndex)
                 currentSongs.add(toIndex, item)
-                val newSongOrderIds = currentSongs.map { it.id }
-                playlistPreferencesRepository.reorderSongsInPlaylist(playlistId, newSongOrderIds)
+                // The repository merges the visible order into the stored one, so songs that
+                // are unavailable right now keep their place instead of being dropped.
+                val fullOrder = playlistPreferencesRepository.reorderSongsInPlaylist(
+                    playlistId,
+                    currentSongs.map { it.id }
+                )
+                if (fullOrder == null) {
+                    Timber.tag("PlaylistVM").w("Reorder of playlist $playlistId rejected; reloading it.")
+                    if (_uiState.value.currentPlaylistDetails?.id == playlistId) {
+                        loadPlaylistDetails(playlistId)
+                    }
+                    return@launch
+                }
                 playlistPreferencesRepository.setPlaylistSongOrderMode(
                     playlistId,
                     MANUAL_ORDER_MODE
                 )
                 _uiState.update {
                     val updatedModes = it.playlistOrderModes + (playlistId to PlaylistSongsOrderMode.Manual)
+                    val details = it.currentPlaylistDetails
+                    if (details?.id != playlistId) {
+                        return@update it.copy(playlistOrderModes = updatedModes)
+                    }
                     it.copy(
+                        currentPlaylistDetails = details.copy(songIds = fullOrder),
                         currentPlaylistSongs = currentSongs,
                         playlistSongsOrderMode = PlaylistSongsOrderMode.Manual,
                         playlistOrderModes = updatedModes

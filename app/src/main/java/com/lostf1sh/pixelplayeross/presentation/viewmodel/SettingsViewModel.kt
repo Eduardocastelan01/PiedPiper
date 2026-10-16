@@ -19,7 +19,9 @@ import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
 import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
+import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
+import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.utils.FolderArtworkSettingsCoordinator
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtQuality
@@ -41,6 +43,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import com.lostf1sh.pixelplayeross.di.AppScope
 import javax.inject.Inject
 
 import com.lostf1sh.pixelplayeross.R
@@ -59,6 +64,7 @@ data class SettingsUiState(
     val appLanguageTag: String = AppLanguage.SYSTEM.tag,
     val appThemeMode: String = AppThemeMode.FOLLOW_SYSTEM,
     val globalNowPlayingThemeEnabled: Boolean = false,
+    val themePreset: String = ThemePreset.DEFAULT,
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
     val albumArtPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default,
     val albumArtColorAccuracy: Int = AlbumArtColorAccuracy.DEFAULT,
@@ -88,15 +94,19 @@ data class SettingsUiState(
     val appRebrandDialogShown: Boolean = false,
     val fullPlayerLoadingTweaks: FullPlayerLoadingTweaks = FullPlayerLoadingTweaks(),
     val showPlayerFileInfo: Boolean = true,
+    val showScrollbar: Boolean = true,
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.MEDIUM,
     val albumArtCacheLimitMb: Int = 200,
     val tapBackgroundClosesPlayer: Boolean = false,
+    val miniPlayerSwipeToSkip: Boolean = false,
+    val autoplayOnSkip: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val immersiveLyricsEnabled: Boolean = false,
     val immersiveLyricsTimeout: Long = 4000L,
     val useAnimatedLyrics: Boolean = false,
     val animatedLyricsBlurEnabled: Boolean = true,
     val animatedLyricsBlurStrength: Float = 2.5f,
+    val lyricsFontSizeSp: Float = DEFAULT_LYRICS_FONT_SIZE_SP,
     val backupInfoDismissed: Boolean = false,
     val isDataTransferInProgress: Boolean = false,
     val restorePlan: RestorePlan? = null,
@@ -183,7 +193,8 @@ class SettingsViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
     private val backupManager: BackupManager,
     private val folderArtworkSettingsCoordinator: FolderArtworkSettingsCoordinator,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    @AppScope private val appScope: CoroutineScope
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -201,6 +212,8 @@ class SettingsViewModel @Inject constructor(
     val isExplorerPriming = fileExplorerStateHolder.isPrimingExplorer
     val isExplorerReady = fileExplorerStateHolder.isExplorerReady
     val isCurrentDirectoryResolved = fileExplorerStateHolder.isCurrentDirectoryResolved
+    val allAudioFolders = fileExplorerStateHolder.allAudioFolders
+    val isLoadingAllAudioFolders = fileExplorerStateHolder.isLoadingAllAudioFolders
     private var hasPendingDirectoryRuleChanges = false
     private var latestDirectoryRuleUpdateJob: Job? = null
 
@@ -237,6 +250,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.collageAutoRotateFlow.collect { autoRotate ->
                 _uiState.update { it.copy(collageAutoRotate = autoRotate) }
+            }
+        }
+
+        viewModelScope.launch {
+            themePreferencesRepository.themePresetFlow.collect { preset ->
+                _uiState.update { it.copy(themePreset = preset) }
             }
         }
     }
@@ -401,6 +420,12 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            userPreferencesRepository.lyricsFontSizeFlow.collect { fontSizeSp ->
+                _uiState.update { it.copy(lyricsFontSizeSp = fontSizeSp) }
+            }
+        }
+
+        viewModelScope.launch {
             userPreferencesRepository.externalLyricsEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(externalLyricsEnabled = enabled) }
             }
@@ -443,6 +468,18 @@ class SettingsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            userPreferencesRepository.miniPlayerSwipeToSkipFlow.collect { enabled ->
+                _uiState.update { it.copy(miniPlayerSwipeToSkip = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.autoplayOnSkipFlow.collect { enabled ->
+                _uiState.update { it.copy(autoplayOnSkip = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
             userPreferencesRepository.minSongDurationFlow.collect { duration ->
                 _uiState.update { it.copy(minSongDuration = duration) }
             }
@@ -465,6 +502,12 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(replayGainUseAlbumGain = useAlbum) }
             }
         }
+
+        viewModelScope.launch {
+            userPreferencesRepository.showScrollbarFlow.collect { enabled ->
+                _uiState.update { it.copy(showScrollbar = enabled) }
+            }
+        }
     }
 
     fun setAppRebrandDialogShown(wasShown: Boolean) {
@@ -473,9 +516,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // Directory rules are committed as the user leaves the excluded-directories screen,
+    // which pops that destination and clears this view model in the same frame. Running the
+    // write and the follow-up rescan on the application scope keeps them from being
+    // cancelled halfway, which would drop the user's exclusions.
     fun toggleDirectoryAllowed(file: File) {
         hasPendingDirectoryRuleChanges = true
-        latestDirectoryRuleUpdateJob = viewModelScope.launch {
+        latestDirectoryRuleUpdateJob = appScope.launch(Dispatchers.Main.immediate) {
             fileExplorerStateHolder.toggleDirectoryAllowed(file)
         }
     }
@@ -483,10 +530,18 @@ class SettingsViewModel @Inject constructor(
     fun applyPendingDirectoryRuleChanges() {
         if (!hasPendingDirectoryRuleChanges) return
         hasPendingDirectoryRuleChanges = false
-        viewModelScope.launch {
-            latestDirectoryRuleUpdateJob?.join()
+        val pendingUpdate = latestDirectoryRuleUpdateJob
+        appScope.launch {
+            pendingUpdate?.join()
             syncManager.forceRefresh()
         }
+    }
+
+    // A system Back or predictive-back swipe at the explorer root pops the destination
+    // without going through Done; committing here keeps that exit path from losing changes.
+    override fun onCleared() {
+        applyPendingDirectoryRuleChanges()
+        super.onCleared()
     }
 
     fun loadDirectory(file: File) {
@@ -507,6 +562,10 @@ class SettingsViewModel @Inject constructor(
 
     fun refreshExplorer() {
         fileExplorerStateHolder.refreshCurrentDirectory()
+    }
+
+    fun loadAllAudioFolders(forceRefresh: Boolean = false) {
+        fileExplorerStateHolder.loadAllAudioFolders(forceRefresh)
     }
 
     fun selectStorage(index: Int) {
@@ -530,6 +589,12 @@ class SettingsViewModel @Inject constructor(
     fun setGlobalNowPlayingThemeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             themePreferencesRepository.setGlobalNowPlayingThemeEnabled(enabled)
+        }
+    }
+
+    fun setThemePreset(preset: String) {
+        viewModelScope.launch {
+            themePreferencesRepository.setThemePreset(preset)
         }
     }
 
@@ -593,6 +658,12 @@ class SettingsViewModel @Inject constructor(
     fun setNavBarCompactMode(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setNavBarCompactMode(enabled)
+        }
+    }
+
+    fun setShowScrollbar(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setShowScrollbar(enabled)
         }
     }
 
@@ -801,6 +872,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setLyricsFontSize(fontSizeSp: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLyricsFontSize(fontSizeSp)
+        }
+    }
+
     fun setAnimatedLyricsBlurStrength(strength: Float) {
         viewModelScope.launch {
             userPreferencesRepository.setAnimatedLyricsBlurStrength(strength)
@@ -934,6 +1011,18 @@ class SettingsViewModel @Inject constructor(
     fun setUseSmoothCorners(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setUseSmoothCorners(enabled)
+        }
+    }
+
+    fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setMiniPlayerSwipeToSkip(enabled)
+        }
+    }
+
+    fun setAutoplayOnSkip(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAutoplayOnSkip(enabled)
         }
     }
 

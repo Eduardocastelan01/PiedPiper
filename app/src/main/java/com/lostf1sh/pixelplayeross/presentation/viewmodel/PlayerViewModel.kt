@@ -36,7 +36,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.lostf1sh.pixelplayeross.R
-import com.lostf1sh.pixelplayeross.data.EotStateHolder
 import com.lostf1sh.pixelplayeross.data.database.AlbumArtThemeDao
 import com.lostf1sh.pixelplayeross.data.media.CoverArtUpdate
 import com.lostf1sh.pixelplayeross.data.media.CustomMetadataChanges
@@ -101,6 +100,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -108,6 +108,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -131,6 +132,12 @@ private const val SONG_ID_QUERY_CHUNK_SIZE = 900
 private const val HOME_MIX_PREVIEW_LIMIT = 48
 private const val EXTERNAL_SONG_ID_PREFIX = "external:"
 private val LOCAL_PLAYBACK_SCHEMES = setOf("content", "file", "android.resource")
+// Shuffle All, the shuffle tile and play-random queue up to this many random songs. The queue is
+// attached in batches and the crossfade window is spliced back after each swap, so large queues
+// stay intact.
+private const val SHUFFLE_ALL_SONG_LIMIT = 10_000
+// How long the current queue index has to hold still before the neighbours' palettes are preloaded.
+internal const val PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS = 220L
 
 private fun List<Song>.toPlaybackQueue(): ImmutableList<Song> = when (this) {
     is PersistentList<Song> -> this
@@ -185,6 +192,15 @@ data class PlaybackAudioMetadata(
     val sampleRate: Int? = null,
     val channelCount: Int? = null,
     val bitDepth: Int? = null
+)
+
+/**
+ * A Locate request for one Library list. [index] is the current song's position in [tab]'s own
+ * order, so only that tab's list scrolls; a neighbouring pager page keeps its position.
+ */
+data class LocateScrollRequest(
+    val tab: LibraryTabId,
+    val index: Int
 )
 
 private data class SortOptionsSnapshot(
@@ -558,6 +574,12 @@ class PlayerViewModel @Inject constructor(
     private var pendingMetadataEdit: PendingMetadataEdit? = null
     private var pendingBatchMetadataEdit: PendingBatchMetadataEdit? = null
     private var pendingLyricsSave: PendingLyricsSave? = null
+    /** A write request for songs left cut off by an interrupted save is waiting for its result. */
+    private var pendingInterruptedSaveRestore = false
+    /** Cut-off songs already asked about, so a denied request is not repeated while this ViewModel lives. */
+    private val askedInterruptedSaveRestoreUris = mutableSetOf<String>()
+    /** Counts answered write requests, so a waiting restore prompt can tell one has finished. */
+    private val answeredWriteRequests = MutableStateFlow(0)
     private var pendingDeleteSong: Song? = null
     private var pendingDeleteCallback: ((Boolean) -> Unit)? = null
 
@@ -568,7 +590,7 @@ class PlayerViewModel @Inject constructor(
     private val _searchNavDoubleTapEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val searchNavDoubleTapEvents = _searchNavDoubleTapEvents.asSharedFlow()
     
-    private val _scrollToIndexEvent = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    private val _scrollToIndexEvent = MutableSharedFlow<LocateScrollRequest>(extraBufferCapacity = 1)
     val scrollToIndexEvent = _scrollToIndexEvent.asSharedFlow()
     
     private var albumNavigationJob: Job? = null
@@ -579,16 +601,24 @@ class PlayerViewModel @Inject constructor(
     private var directPlaybackToken: Long = 0L
     private var pendingQueueSegmentsJob: Job? = null
 
-    fun requestLocateCurrentSong() {
+    /**
+     * Finds the current song in [tab]'s list and emits its index on [scrollToIndexEvent].
+     * Liked only holds favourites in its own sort, so its index comes from that order rather
+     * than from the full Songs order.
+     */
+    fun requestLocateCurrentSong(tab: LibraryTabId) {
         val currentSong = stablePlayerState.value.currentSong ?: return
 
         viewModelScope.launch {
             try {
-                val sortOption = playerUiState.value.currentSongSortOption
-                
-                val storageFilter = currentEffectiveLibraryStorageFilter()
+                val state = playerUiState.value
+                val storageFilter = currentEffectiveLibraryStorageFilter(state)
 
-                val sortedIds = musicRepository.getSongIdsSorted(sortOption, storageFilter)
+                val sortedIds = if (tab == LibraryTabId.LIKED) {
+                    musicRepository.getFavoriteSongIdsSorted(state.currentFavoriteSortOption, storageFilter)
+                } else {
+                    musicRepository.getSongIdsSorted(state.currentSongSortOption, storageFilter)
+                }
 
                 val unifiedId = currentSong.id.toLongOrNull()
                     ?: currentSong.contentUriString
@@ -598,7 +628,7 @@ class PlayerViewModel @Inject constructor(
                 val index = unifiedId?.let { sortedIds.indexOf(it) } ?: -1
 
                 if (index != -1) {
-                    _scrollToIndexEvent.emit(index)
+                    _scrollToIndexEvent.emit(LocateScrollRequest(tab = tab, index = index))
                 } else {
                     sendToast(context.getString(R.string.player_song_not_found_in_list))
                 }
@@ -647,6 +677,16 @@ class PlayerViewModel @Inject constructor(
         val state = playerUiState.value
         val sortedIds = musicRepository.getSongIdsSorted(
             state.currentSongSortOption,
+            currentEffectiveLibraryStorageFilter(state),
+        )
+        return resolvePlaybackQueueFromSortedIds(sortedIds)
+    }
+
+    /** Every song in the Liked list as it is sorted and filtered on screen, not just the loaded pages. */
+    suspend fun getSongsForCurrentFavoriteSelection(): List<Song> {
+        val state = playerUiState.value
+        val sortedIds = musicRepository.getFavoriteSongIdsSorted(
+            state.currentFavoriteSortOption,
             currentEffectiveLibraryStorageFilter(state),
         )
         return resolvePlaybackQueueFromSortedIds(sortedIds)
@@ -816,6 +856,7 @@ class PlayerViewModel @Inject constructor(
     lateinit var imageCacheManager: com.lostf1sh.pixelplayeross.data.media.ImageCacheManager
 
     init {
+        viewModelScope.launch { offerToRestoreInterruptedSaves() }
         listeningStatsTracker.initialize(viewModelScope)
         dailyMixStateHolder.initialize(viewModelScope)
         lyricsStateHolder.initialize(viewModelScope, lyricsLoadCallback, playbackStateHolder.stablePlayerState)
@@ -845,12 +886,34 @@ class PlayerViewModel @Inject constructor(
         stablePlayerState
             .map { it.currentSong?.albumArtUriString?.takeIf { uri -> uri.isNotBlank() } }
             .distinctUntilChanged()
-            .onEach { artworkUri ->
+            // mapLatest cancels the in-flight extraction for songs skipped over during a rapid
+            // next/previous burst, so only the latest song's palette is computed. With the
+            // neighbour preload below, that song is usually a cache hit already.
+            .mapLatest { artworkUri ->
                 themeStateHolder.extractAndGenerateColorScheme(
                     albumArtUriAsUri = artworkUri?.toUri(),
                     currentSongUriString = artworkUri,
                     isPreload = false
                 )
+            }
+            .launchIn(viewModelScope)
+
+        // Preload the ±1 queue neighbours' palettes so a skip lands on a cached color scheme and
+        // the color animation starts with the carousel instead of trailing it. The debounce
+        // (mapLatest restarts the delay on every index change) keeps a skip burst from
+        // quantizing every song flicked past. The queue slice is read from _playerUiState rather
+        // than queueFlow so this permanent collector doesn't keep queueFlow subscribed.
+        combine(
+            stablePlayerState.map { it.currentMediaItemIndex }.distinctUntilChanged(),
+            _playerUiState.map { it.currentPlaybackQueue }.distinctUntilChanged()
+        ) { index, queue -> index to queue }
+            .mapLatest { indexAndQueue ->
+                delay(PALETTE_NEIGHBOR_PRELOAD_DEBOUNCE_MS)
+                indexAndQueue
+            }
+            .onEach { (index, queue) ->
+                QueueUtils.neighborArtworkUris(queue, index)
+                    .forEach(themeStateHolder::ensureAlbumColorScheme)
             }
             .launchIn(viewModelScope)
 
@@ -951,7 +1014,9 @@ class PlayerViewModel @Inject constructor(
         .map { orderJson ->
             if (orderJson != null) {
                 try {
+                    // An empty saved order (hand-edited or restored) would leave the library without pages.
                     Json.decodeFromString<List<String>>(orderJson).toImmutableList()
+                        .ifEmpty { persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED") }
                 } catch (e: Exception) {
                     persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
                 }
@@ -1192,7 +1257,8 @@ class PlayerViewModel @Inject constructor(
         val fullPlayerLoadingTweaks: FullPlayerLoadingTweaks = FullPlayerLoadingTweaks(),
         val tapBackgroundClosesPlayer: Boolean = false,
         val useSmoothCorners: Boolean = true,
-        val playerThemePreference: String = ThemePreference.ALBUM_ART
+        val playerThemePreference: String = ThemePreference.ALBUM_ART,
+        val miniPlayerSwipeToSkip: Boolean = false
     )
 
     private val playerConfigSlicePart1 = combine(
@@ -1216,8 +1282,9 @@ class PlayerViewModel @Inject constructor(
     val playerConfigSlice: StateFlow<PlayerConfigSlice> = combine(
         playerConfigSlicePart1,
         useSmoothCorners,
-        playerThemePreference
-    ) { p1, smoothCorners, themePref ->
+        playerThemePreference,
+        userPreferencesRepository.miniPlayerSwipeToSkipFlow
+    ) { p1, smoothCorners, themePref, swipeToSkip ->
         PlayerConfigSlice(
             navBarCornerRadius = p1.navBarCornerRadius,
             navBarStyle = p1.navBarStyle,
@@ -1225,7 +1292,8 @@ class PlayerViewModel @Inject constructor(
             fullPlayerLoadingTweaks = p1.fullPlayerLoadingTweaks,
             tapBackgroundClosesPlayer = p1.tapBackgroundClosesPlayer,
             useSmoothCorners = smoothCorners,
-            playerThemePreference = themePref
+            playerThemePreference = themePref,
+            miniPlayerSwipeToSkip = swipeToSkip
         )
     }
         .distinctUntilChanged()
@@ -1266,7 +1334,7 @@ class PlayerViewModel @Inject constructor(
         Timber.tag("ShuffleDebug").d("shuffleAllSongs called.")
         
         viewModelScope.launch {
-            val randomSongs = musicRepository.getRandomSongs(limit = 500)
+            val randomSongs = musicRepository.getRandomSongs(limit = SHUFFLE_ALL_SONG_LIMIT)
             if (randomSongs.isNotEmpty()) {
                 playSongsShuffled(randomSongs, queueName, startAtZero = true)
             }
@@ -1286,7 +1354,7 @@ class PlayerViewModel @Inject constructor(
         val action: () -> Unit = {
             Timber.d("[TileDebug] action() invoked")
             viewModelScope.launch {
-                var songs = musicRepository.getRandomSongs(limit = 500)
+                var songs = musicRepository.getRandomSongs(limit = SHUFFLE_ALL_SONG_LIMIT)
                 Timber.d("[TileDebug] Repository returned ${songs.size} random songs immediately")
 
                 if (songs.isEmpty()) {
@@ -1295,7 +1363,7 @@ class PlayerViewModel @Inject constructor(
                     songs = withTimeoutOrNull(30_000L) {
                         var refreshedSongs = emptyList<Song>()
                         while (refreshedSongs.isEmpty()) {
-                            refreshedSongs = musicRepository.getRandomSongs(limit = 500)
+                            refreshedSongs = musicRepository.getRandomSongs(limit = SHUFFLE_ALL_SONG_LIMIT)
                             if (refreshedSongs.isEmpty()) {
                                 delay(500L)
                             }
@@ -1327,7 +1395,7 @@ class PlayerViewModel @Inject constructor(
 
     fun playRandomSong() {
         viewModelScope.launch {
-            val randomSongs = musicRepository.getRandomSongs(limit = 500)
+            val randomSongs = musicRepository.getRandomSongs(limit = SHUFFLE_ALL_SONG_LIMIT)
             if (randomSongs.isNotEmpty()) {
                 playSongsShuffled(randomSongs, "All Songs (Shuffled)", startAtZero = true)
             }
@@ -1506,13 +1574,15 @@ class PlayerViewModel @Inject constructor(
                 combine(
                     userPreferencesRepository.folderBackGestureNavigationFlow,
                     userPreferencesRepository.isAlbumsListViewFlow,
-                ) { gestureNav, albumsList ->
-                    Pair(gestureNav, albumsList)
-                }.collect { (gestureNav, albumsList) ->
+                    userPreferencesRepository.isPlaylistsGridViewFlow,
+                ) { gestureNav, albumsList, playlistsGrid ->
+                    Triple(gestureNav, albumsList, playlistsGrid)
+                }.collect { (gestureNav, albumsList, playlistsGrid) ->
                     _playerUiState.update {
                         it.copy(
                             folderBackGestureNavigationEnabled = gestureNav,
                             isAlbumsListView = albumsList,
+                            isPlaylistsGridView = playlistsGrid,
                         )
                     }
                 }
@@ -1536,7 +1606,9 @@ class PlayerViewModel @Inject constructor(
 
             viewModelScope.launch {
                 combine(libraryTabsFlow, lastLibraryTabIndexFlow) { tabs, index ->
-                    tabs.getOrNull(index)?.toLibraryTabIdOrNull() ?: LibraryTabId.SONGS
+                    // Wrap a saved index that outlived a shorter tab list, as LibraryScreen does.
+                    tabs.getOrNull(index.mod(tabs.size.coerceAtLeast(1)))?.toLibraryTabIdOrNull()
+                        ?: LibraryTabId.SONGS
                 }.collect { tabId ->
                     _currentLibraryTabId.value = tabId
                 }
@@ -1635,16 +1707,13 @@ class PlayerViewModel @Inject constructor(
             }, ContextCompat.getMainExecutor(context))
 
 
-            connectivityStateHolder.initialize()
+            connectivityStateHolder.initialize(viewModelScope)
 
-            val currentSongIdFlow = stablePlayerState.map { it.currentSong?.id }
-                .stateIn(viewModelScope, SharingStarted.Eagerly, null)
             sleepTimerStateHolder.initialize(
                 scope = viewModelScope,
                 toastEmitter = { msg -> _toastEvents.emit(msg) },
                 mediaControllerProvider = { mediaController },
-                currentSongIdProvider = { currentSongIdFlow },
-                songTitleResolver = { songId -> libraryStateHolder.allSongsById.value[songId]?.title ?: "Unknown" }
+                songTitleResolver = { songId -> libraryStateHolder.allSongsById.value[songId]?.title }
             )
 
             searchStateHolder.initialize(viewModelScope)
@@ -2294,6 +2363,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun preparePlaybackAudioMetadataForMedia(mediaId: String?) {
+        // Queue-only changes (shuffle/unshuffle, reordering, repeat toggles) re-announce
+        // the same media id while the same track keeps playing. No tracks-changed event
+        // follows, so wiping here would blank the player file info until the next real
+        // transition. Keep the already-resolved format info instead.
+        if (mediaId != null && _playbackAudioMetadata.value.mediaId == mediaId) return
         metadataProbeJob?.cancel()
         metadataProbeJob = null
         metadataProbeMediaId = null
@@ -2573,26 +2647,6 @@ class PlayerViewModel @Inject constructor(
                 transitionSchedulerJob?.cancel()
                 lyricsStateHolder.cancelLoading()
                 transitionSchedulerJob = viewModelScope.launch {
-                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                        val activeEotSongId = EotStateHolder.eotTargetSongId.value
-                        val previousSongId = playerCtrl.run { if (previousMediaItemIndex != C.INDEX_UNSET) getMediaItemAt(previousMediaItemIndex).mediaId else null }
-
-                        if (isEndOfTrackTimerActive.value && activeEotSongId != null && previousSongId != null && previousSongId == activeEotSongId) {
-                            playerCtrl.seekTo(0L)
-                            playerCtrl.pause()
-
-                            val finishedSongTitle = libraryStateHolder.allSongsById.value[previousSongId]?.title
-                                ?: context.getString(R.string.player_default_track_title)
-
-                            viewModelScope.launch {
-                                _toastEvents.emit(
-                                    context.getString(R.string.player_playback_stopped_eot, finishedSongTitle),
-                                )
-                            }
-                            cancelSleepTimer(suppressDefaultToast = true)
-                        }
-                    }
-
                     mediaItem?.let { transitionedItem ->
                         val song = resolveSongFromMediaItem(transitionedItem)
                         
@@ -2752,7 +2806,8 @@ class PlayerViewModel @Inject constructor(
             val validStartSong =
                 validSongs.firstOrNull { it.id == startSong.id } ?: validSongs.first()
 
-            queueStateHolder.setOriginalQueueOrder(validSongs)
+            // Every entry is queued from playlistId, so shuffle off can put each tag back in place.
+            queueStateHolder.setOriginalQueueOrder(validSongs, List(validSongs.size) { playlistId })
 
             val isPersistent = userPreferencesRepository.persistentShuffleEnabledFlow.first()
             throwIfDirectPlaybackRequestIsStale(requestToken)
@@ -2790,7 +2845,11 @@ class PlayerViewModel @Inject constructor(
         cancelPendingFullQueuePlayback()
         val requestToken = beginDirectPlaybackRequest()
         directPlaybackJob = viewModelScope.launch {
-            val result = queueStateHolder.prepareShuffledQueueSuspending(songsToPlay, startAtZero)
+            val result = queueStateHolder.prepareShuffledQueueSuspending(
+                songsToPlay,
+                startAtZero,
+                playlistId
+            )
             throwIfDirectPlaybackRequestIsStale(requestToken)
             if (result == null) {
                 sendToast(context.getString(R.string.player_no_songs_to_shuffle))
@@ -3202,24 +3261,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun buildPlaybackMediaItem(song: Song, playlistId: String? = null): MediaItem {
-        val baseItem = MediaItemBuilder.build(song)
-        if (playlistId == null) {
-            return baseItem
-        }
-
-        val mergedExtras = Bundle(baseItem.mediaMetadata.extras ?: Bundle()).apply {
-            putString("playlistId", playlistId)
-        }
-
-        return baseItem.buildUpon()
-            .setMediaMetadata(
-                baseItem.mediaMetadata.buildUpon()
-                    .setExtras(mergedExtras)
-                    .build()
-            )
-            .build()
-    }
+    private fun buildPlaybackMediaItem(song: Song, playlistId: String? = null): MediaItem =
+        MediaItemBuilder.withPlaylistId(MediaItemBuilder.build(song), playlistId)
 
     /**
      * Plays all selected songs, preserving their selection order.
@@ -3349,6 +3392,79 @@ class PlayerViewModel @Inject constructor(
             } catch (e: Exception) {
                 Timber.tag("PlayerViewModel").e(e, "Error adding selected albums to queue")
                 _toastEvents.emit(context.getString(R.string.player_could_not_add_albums_queue))
+            }
+        }
+    }
+
+    suspend fun getSongsForAlbums(albums: List<Album>): List<Song> {
+        return resolveSelectedAlbumSongs(albums).songs
+    }
+
+    /** Resolves the selected genres to their songs, in selection order and without duplicates. */
+    suspend fun getSongsForGenres(genres: List<Genre>): List<Song> {
+        return withContext(Dispatchers.IO) {
+            genres.flatMap { genre ->
+                musicRepository.getMusicByGenre(genre.name).first()
+            }.distinctBy { it.id }
+        }
+    }
+
+    fun playSelectedGenres(genres: List<Genre>) {
+        if (genres.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val songs = getSongsForGenres(genres)
+                if (songs.isNotEmpty()) {
+                    playSongs(songs, songs.first(), context.getString(R.string.player_queue_name_selected_genres))
+                    _isSheetVisible.value = true
+                } else {
+                    _toastEvents.emit(context.getString(R.string.player_no_playable_songs_in_genres))
+                }
+            } catch (e: Exception) {
+                Timber.tag("PlayerViewModel").e(e, "Error playing selected genres")
+                _toastEvents.emit(context.getString(R.string.player_could_not_queue_genres))
+            }
+        }
+    }
+
+    fun addSelectedGenresToQueue(genres: List<Genre>) {
+        if (genres.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val songs = getSongsForGenres(genres)
+                if (songs.isNotEmpty()) {
+                    songs.forEach { addSongToQueue(it) }
+                    val n = songs.size
+                    _toastEvents.emit(
+                        context.resources.getQuantityString(R.plurals.n_songs_added_to_queue, n, n),
+                    )
+                } else {
+                    _toastEvents.emit(context.getString(R.string.player_no_playable_songs_in_genres))
+                }
+            } catch (e: Exception) {
+                Timber.tag("PlayerViewModel").e(e, "Error adding selected genres to queue")
+                _toastEvents.emit(context.getString(R.string.player_could_not_queue_genres))
+            }
+        }
+    }
+
+    fun addSelectedGenresAsNext(genres: List<Genre>) {
+        if (genres.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val songs = getSongsForGenres(genres)
+                if (songs.isNotEmpty()) {
+                    songs.asReversed().forEach { addSongNextToQueue(it) }
+                    val n = songs.size
+                    _toastEvents.emit(
+                        context.resources.getQuantityString(R.plurals.n_songs_will_play_next, n, n),
+                    )
+                } else {
+                    _toastEvents.emit(context.getString(R.string.player_no_playable_songs_in_genres))
+                }
+            } catch (e: Exception) {
+                Timber.tag("PlayerViewModel").e(e, "Error adding selected genres as next")
+                _toastEvents.emit(context.getString(R.string.player_could_not_queue_genres))
             }
         }
     }
@@ -3845,6 +3961,15 @@ class PlayerViewModel @Inject constructor(
         playbackStateHolder.previousSong()
     }
 
+    /** Steps back to the previous track even past the restart threshold of [previousSong]. */
+    fun forcePreviousSong() {
+        AdvancedPerformanceDiagnostics.recordEventIfEnabled(
+            type = AdvancedPerformanceDiagnostics.EventTypes.PLAYBACK,
+            name = "previous_requested",
+        )
+        playbackStateHolder.forcePreviousSong()
+    }
+
     private fun startProgressUpdates() {
         playbackStateHolder.startProgressUpdates()
     }
@@ -3943,6 +4068,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun setPlaylistsGridView(isGrid: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setPlaylistsGridView(isGrid)
+        }
+    }
+
     fun updateSearchFilter(filterType: SearchFilterType) {
         searchStateHolder.updateSearchFilter(filterType)
     }
@@ -3983,6 +4114,9 @@ class PlayerViewModel @Inject constructor(
 
 
     override fun onCleared() {
+        // Captured before super.onCleared() so the owner checks below compare against the
+        // exact scope this instance bound the singleton holders to.
+        val ownerScope = viewModelScope
         val controllerToRelease = mediaController
         mediaControllerPlaybackListener?.let { listener ->
             controllerToRelease?.removeListener(listener)
@@ -3993,16 +4127,19 @@ class PlayerViewModel @Inject constructor(
         mediaController = null
         mediaControllerFuture.cancel(true)
         super.onCleared()
-        stopProgressUpdates()
-        playbackStateHolder.onCleared()
-        listeningStatsTracker.onCleared()
-        dailyMixStateHolder.onCleared()
-        lyricsStateHolder.onCleared()
-        themeStateHolder.onCleared()
-        searchStateHolder.onCleared()
-        libraryStateHolder.onCleared()
-        sleepTimerStateHolder.onCleared()
-        connectivityStateHolder.onCleared()
+        // The holder moves progress updates to the PlayerViewModel left bound, or stops them when
+        // none is; stopping them here would freeze the seek bar of the surviving instance.
+        playbackStateHolder.onCleared(ownerScope)
+        // The listening session belongs to MusicService, which finalizes it on track end,
+        // stop/unload and onDestroy. Finalizing here would split a session that keeps
+        // playing in the background after the activity finishes.
+        dailyMixStateHolder.onCleared(ownerScope)
+        lyricsStateHolder.onCleared(ownerScope)
+        themeStateHolder.onCleared(ownerScope)
+        searchStateHolder.onCleared(ownerScope)
+        libraryStateHolder.onCleared(ownerScope)
+        sleepTimerStateHolder.onCleared(ownerScope)
+        connectivityStateHolder.onCleared(ownerScope)
         queueUndoStateHolder.onCleared()
         playlistDismissUndoStateHolder.onCleared()
     }
@@ -4373,6 +4510,15 @@ class PlayerViewModel @Inject constructor(
 
     /** Called from the UI after the user approves or denies the MediaStore write permission. */
     fun onWritePermissionResult(granted: Boolean) {
+        try {
+            dispatchWritePermissionResult(granted)
+        } finally {
+            // Lets a restore prompt that waited for this request ask next.
+            answeredWriteRequests.update { it + 1 }
+        }
+    }
+
+    private fun dispatchWritePermissionResult(granted: Boolean) {
         val batchMetadata = pendingBatchMetadataEdit
         if (batchMetadata != null) {
             pendingBatchMetadataEdit = null
@@ -4428,7 +4574,11 @@ class PlayerViewModel @Inject constructor(
             return
         }
 
-        val pending = pendingMetadataEdit ?: return
+        val pending = pendingMetadataEdit
+        if (pending == null) {
+            if (pendingInterruptedSaveRestore) onInterruptedSaveRestorePermissionResult(granted)
+            return
+        }
         pendingMetadataEdit = null
         if (!granted) {
             viewModelScope.launch {
@@ -4444,6 +4594,50 @@ class PlayerViewModel @Inject constructor(
                 pending.replayGainTrackGainDb, pending.replayGainAlbumGainDb, pending.coverArtUpdate,
                 pending.customMetadataChanges
             )
+        }
+    }
+
+    /**
+     * Asks the user for write access to songs that an interrupted save left cut off, when the
+     * app can no longer write to them (its write access for the edit ended with the process),
+     * and restores them once it is granted. Each song is asked about once per ViewModel.
+     */
+    private suspend fun offerToRestoreInterruptedSaves() {
+        metadataEditStateHolder.songsAwaitingWriteAccess.collectLatest { uris ->
+            if (uris.all { it.toString() in askedInterruptedSaveRestoreUris }) return@collectLatest
+            // A request emitted while the player sheet is not collecting would be dropped.
+            _writePermissionRequest.subscriptionCount.first { it > 0 }
+            // Only one write request can be in flight; wait for an edit's or lyrics save's own
+            // request to be answered instead of dropping the restore until the next change.
+            while (true) {
+                val answered = answeredWriteRequests.value
+                if (!otherWriteRequestPending()) break
+                answeredWriteRequests.first { it != answered }
+            }
+            val intentSender = com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
+                .createWriteRequestIntentSender(context, uris) ?: return@collectLatest
+            uris.mapTo(askedInterruptedSaveRestoreUris) { it.toString() }
+            pendingInterruptedSaveRestore = true
+            _toastEvents.emit(context.getString(R.string.metadata_restore_permission_prompt))
+            _writePermissionRequest.emit(intentSender)
+        }
+    }
+
+    private fun otherWriteRequestPending(): Boolean =
+        pendingMetadataEdit != null || pendingBatchMetadataEdit != null ||
+            pendingBatchGenreEdit != null || pendingLyricsSave != null
+
+    private fun onInterruptedSaveRestorePermissionResult(granted: Boolean) {
+        pendingInterruptedSaveRestore = false
+        viewModelScope.launch {
+            val message = if (!granted) {
+                R.string.metadata_restore_permission_denied
+            } else if (metadataEditStateHolder.resumeInterruptedWriteBacks().stillPending == 0) {
+                R.string.metadata_restore_done
+            } else {
+                R.string.metadata_restore_incomplete
+            }
+            _toastEvents.emit(context.getString(message))
         }
     }
 
