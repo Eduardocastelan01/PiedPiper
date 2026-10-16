@@ -72,6 +72,7 @@
     <string name="presentation_batch_g_app_tagline">Lettore musicale</string>
     <string name="sidebar_edit_shortcuts">Modifica scorciatoie</string>
     <string name="sidebar_shortcuts_dialog_title">Scorciatoie della barra laterale</string>
+    <string name="sidebar_open">Apri menu</string>
     <string name="presentation_batch_g_artist_cd_configure">Configura</string>
     <string name="presentation_batch_g_artist_ex_1_in">\"Artista1/Artista2\"</string>
     <string name="presentation_batch_g_artist_ex_1_out">Artista1, Artista2</string>
@@ -329,6 +330,7 @@
     <string name="presentation_batch_g_stats_range_month_to_date">Mese in corso</string>
     <string name="presentation_batch_g_stats_range_today">Oggi</string>
     <string name="presentation_batch_g_stats_range_week_to_date">Settimana in corso</string>
+    <string name="presentation_batch_g_stats_week_label">Settimana %1$d</string>
     <string name="presentation_batch_g_stats_range_year_to_date">Anno in corso</string>
     <string name="presentation_batch_g_stats_rhythm_all_time">Progressione complessiva</string>
     <string name="presentation_batch_g_stats_rhythm_daily">Ritmo giornaliero</string>

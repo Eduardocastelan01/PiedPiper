@@ -72,6 +72,7 @@
     <string name="presentation_batch_g_app_tagline">Музыкальный плеер</string>
     <string name="sidebar_edit_shortcuts">Изменить ярлыки</string>
     <string name="sidebar_shortcuts_dialog_title">Ярлыки боковой панели</string>
+    <string name="sidebar_open">Открыть меню</string>
     <string name="presentation_batch_g_artist_cd_configure">Настроить</string>
     <string name="presentation_batch_g_artist_ex_1_in">"Artist1/Artist2"</string>
     <string name="presentation_batch_g_artist_ex_1_out">Artist1, Artist2</string>
@@ -329,6 +330,7 @@
     <string name="presentation_batch_g_stats_range_month_to_date">Текущий месяц</string>
     <string name="presentation_batch_g_stats_range_today">Сегодня</string>
     <string name="presentation_batch_g_stats_range_week_to_date">Текущая неделя</string>
+    <string name="presentation_batch_g_stats_week_label">Неделя %1$d</string>
     <string name="presentation_batch_g_stats_range_year_to_date">Текущий год</string>
     <string name="presentation_batch_g_stats_rhythm_all_time">Прогресс за всё время</string>
     <string name="presentation_batch_g_stats_rhythm_daily">Ежедневный ритм</string>

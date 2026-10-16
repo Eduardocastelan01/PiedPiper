@@ -72,6 +72,7 @@
     <string name="presentation_batch_g_app_tagline">Musikkspiller</string>
     <string name="sidebar_edit_shortcuts">Rediger snarveier</string>
     <string name="sidebar_shortcuts_dialog_title">Snarveier i sidepanelet</string>
+    <string name="sidebar_open">Åpne meny</string>
     <string name="presentation_batch_g_artist_cd_configure">Konfigurer</string>
     <string name="presentation_batch_g_artist_ex_1_in">\"Artist1/Artist2\"</string>
     <string name="presentation_batch_g_artist_ex_1_out">Artist1, Artist2</string>
@@ -329,6 +330,7 @@
     <string name="presentation_batch_g_stats_range_month_to_date">Denne måneden</string>
     <string name="presentation_batch_g_stats_range_today">I dag</string>
     <string name="presentation_batch_g_stats_range_week_to_date">Denne uken</string>
+    <string name="presentation_batch_g_stats_week_label">Uke %1$d</string>
     <string name="presentation_batch_g_stats_range_year_to_date">I år</string>
     <string name="presentation_batch_g_stats_rhythm_all_time">Progresjon over tid</string>
     <string name="presentation_batch_g_stats_rhythm_daily">Dagsrytme</string>

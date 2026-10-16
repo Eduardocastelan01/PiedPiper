@@ -72,6 +72,7 @@
     <string name="presentation_batch_g_app_tagline">뮤직 플레이어</string>
     <string name="sidebar_edit_shortcuts">바로가기 편집</string>
     <string name="sidebar_shortcuts_dialog_title">사이드바 바로가기</string>
+    <string name="sidebar_open">메뉴 열기</string>
     <string name="presentation_batch_g_artist_cd_configure">구성</string>
     <string name="presentation_batch_g_artist_ex_1_in">\"Artist1/Artist2\"</string>
     <string name="presentation_batch_g_artist_ex_1_out">Artist1, Artist2</string>
@@ -328,6 +329,7 @@
     <string name="presentation_batch_g_stats_range_month_to_date">이번 달</string>
     <string name="presentation_batch_g_stats_range_today">오늘</string>
     <string name="presentation_batch_g_stats_range_week_to_date">이번 주</string>
+    <string name="presentation_batch_g_stats_week_label">%1$d주차</string>
     <string name="presentation_batch_g_stats_range_year_to_date">올해</string>
     <string name="presentation_batch_g_stats_rhythm_all_time">전체 진행 상황</string>
     <string name="presentation_batch_g_stats_rhythm_daily">일간 리듬</string>

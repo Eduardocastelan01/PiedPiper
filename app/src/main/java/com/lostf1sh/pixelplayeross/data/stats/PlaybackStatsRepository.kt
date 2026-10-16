@@ -5,6 +5,7 @@ import android.util.AtomicFile
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
+import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -161,7 +162,15 @@ class PlaybackStatsRepository @Inject constructor(
         val peakTimeline: TimelineEntry?,
         val peakDayLabel: String?,
         val peakDayDurationMs: Long
-    )
+    ) {
+        /** True when anything was listened to in [range]; an all-zero summary means no history yet. */
+        fun hasListeningActivity(): Boolean =
+            totalDurationMs > 0L ||
+                totalPlayCount > 0 ||
+                uniqueSongs > 0 ||
+                activeDays > 0 ||
+                totalSessions > 0
+    }
 
     suspend fun recordPlayback(
         songId: String,
@@ -419,7 +428,7 @@ class PlaybackStatsRepository @Inject constructor(
         val peakDay = durationsByDayOfWeek.maxByOrNull { entry ->
             entry.value.sumOf { it.durationMs }
         }
-        val peakDayLabel = peakDay?.key?.getDisplayName(TextStyle.FULL, Locale.US)
+        val peakDayLabel = peakDay?.key?.getDisplayName(TextStyle.FULL, Locale.getDefault())
         val peakDayDuration = peakDay?.value?.sumOf { it.durationMs } ?: 0L
         val dayListeningDistribution = if (range == StatsTimeRange.DAY || range == StatsTimeRange.WEEK) {
             computeDayListeningDistribution(
@@ -920,6 +929,8 @@ class PlaybackStatsRepository @Inject constructor(
 
     private fun createDayBuckets(zoneId: ZoneId, now: Instant): List<TimelineBucket> {
         val dayStart = now.atZone(zoneId).toLocalDate().atStartOfDay(zoneId).toInstant()
+        // Kept as English "7am"-style labels on purpose: StatsScreen.convertHourLabel parses
+        // them and re-formats the hour for the current locale and 12/24-hour setting.
         val formatter = DateTimeFormatter.ofPattern("ha", Locale.US)
         return (0 until 6).map { index ->
             val bucketStart = dayStart.plus(Duration.ofHours((index * 4).toLong()))
@@ -943,7 +954,8 @@ class PlaybackStatsRepository @Inject constructor(
             val start = day.atStartOfDay(zoneId).toInstant()
             val end = day.plusDays(1).atStartOfDay(zoneId).toInstant()
             TimelineBucket(
-                label = day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.US),
+                // Standalone forms: these are chart axis labels, not words inside a date.
+                label = day.dayOfWeek.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()),
                 startMillis = start.toEpochMilli(),
                 endMillis = end.toEpochMilli(),
                 inclusiveEnd = false
@@ -970,7 +982,7 @@ class PlaybackStatsRepository @Inject constructor(
                 val end = yearMonth.atDay(endDay).plusDays(1).atStartOfDay(zoneId).toInstant()
                 add(
                     TimelineBucket(
-                        label = "Week ${index + 1}",
+                        label = context.getString(R.string.presentation_batch_g_stats_week_label, index + 1),
                         startMillis = start.toEpochMilli(),
                         endMillis = end.toEpochMilli(),
                         inclusiveEnd = false
@@ -986,7 +998,8 @@ class PlaybackStatsRepository @Inject constructor(
             val start = year.atMonth(monthIndex).atDay(1).atStartOfDay(zoneId).toInstant()
             val end = year.atMonth(monthIndex).atEndOfMonth().plusDays(1).atStartOfDay(zoneId).toInstant()
             TimelineBucket(
-                label = year.atMonth(monthIndex).month.getDisplayName(TextStyle.SHORT, Locale.US),
+                // Standalone, not the in-date form: Russian would otherwise show "мая" ("of May").
+                label = year.atMonth(monthIndex).month.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()),
                 startMillis = start.toEpochMilli(),
                 endMillis = end.toEpochMilli(),
                 inclusiveEnd = false

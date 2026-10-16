@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.lostf1sh.pixelplayeross.BottomNavItem
@@ -52,6 +53,7 @@ fun PlayerNavigationRail(
         Spacer(Modifier.weight(1f))
         navItems.forEach { item ->
             val isSelected = currentRoute != null && currentRoute == item.screen.route
+            val label = stringResource(item.labelResId)
             val iconPainterResId = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
                 item.selectedIconResId
             } else {
@@ -106,10 +108,10 @@ fun PlayerNavigationRail(
                 icon = {
                     Icon(
                         painter = painterResource(id = iconPainterResId),
-                        contentDescription = item.label
+                        contentDescription = label
                     )
                 },
-                label = { Text(item.label) },
+                label = { Text(label) },
                 colors = NavigationRailItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,

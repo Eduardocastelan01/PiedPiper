@@ -72,6 +72,7 @@
     <string name="presentation_batch_g_app_tagline">مشغل موسيقى</string>
     <string name="sidebar_edit_shortcuts">تعديل الاختصارات</string>
     <string name="sidebar_shortcuts_dialog_title">اختصارات الشريط الجانبي</string>
+    <string name="sidebar_open">فتح القائمة</string>
     <string name="presentation_batch_g_artist_cd_configure">تكوين</string>
     <string name="presentation_batch_g_artist_ex_1_in">\"Artist1/Artist2\"</string>
     <string name="presentation_batch_g_artist_ex_1_out">Artist1، Artist2</string>
@@ -329,6 +330,7 @@
     <string name="presentation_batch_g_stats_range_month_to_date">الشهر الحالي</string>
     <string name="presentation_batch_g_stats_range_today">اليوم</string>
     <string name="presentation_batch_g_stats_range_week_to_date">الأسبوع الحالي</string>
+    <string name="presentation_batch_g_stats_week_label">الأسبوع %1$d</string>
     <string name="presentation_batch_g_stats_range_year_to_date">السنة الحالية</string>
     <string name="presentation_batch_g_stats_rhythm_all_time">التطور على مر الوقت</string>
     <string name="presentation_batch_g_stats_rhythm_daily">الإيقاع اليومي</string>

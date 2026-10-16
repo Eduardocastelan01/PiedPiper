@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -41,7 +41,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -80,6 +79,7 @@ import androidx.navigation.NavController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.CollagePattern
@@ -110,6 +110,8 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
@@ -118,6 +120,7 @@ import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.presentation.components.rememberModalSheetState
 
 private const val HomeLoadingPlaceholderMinDurationMillis = 1200L
+private const val HomeScrollRestoreGraceMillis = 1_500L
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -222,9 +225,16 @@ fun HomeScreen(
 
     val yourMixSong: String = "Today's Mix for you"
 
+    // Seed with the live value: starting from null made the bottom padding grow one frame
+    // after returning to Home, once the scroll position was already restored, which left the
+    // last section under the mini player and nav bar. The seed is read once inside remember
+    // so the StateFlow is not read during composition.
+    val initialCurrentSong = remember(playerViewModel) {
+        playerViewModel.stablePlayerState.value.currentSong
+    }
     val currentSong by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState.map { it.currentSong }
-    }.collectAsStateWithLifecycle(initialValue = null)
+    }.collectAsStateWithLifecycle(initialValue = initialCurrentSong)
 
     val isShuffleEnabled by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState
@@ -245,7 +255,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     LocalContext.current
 
-    val homeStatsOverview by statsViewModel.homeOverview.collectAsStateWithLifecycle()
+    val homeStatsOverviewState by statsViewModel.homeOverviewState.collectAsStateWithLifecycle()
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val density = LocalDensity.current
@@ -257,6 +267,13 @@ fun HomeScreen(
     var savedScrollIndex by rememberSaveable { mutableIntStateOf(0) }
     var savedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     var needsScrollRestore by rememberSaveable { mutableStateOf(false) }
+    // ON_PAUSE fires while Home is still composed (during its exit transition, or before the
+    // window hides), so restoring right away would only re-apply the current position and save
+    // the flag as false. Wait until Home is resumed again; the grace window starts there too.
+    val lifecycleState = lifecycleOwner.lifecycle.currentStateAsState()
+    val isHomeResumed by remember(lifecycleState) {
+        derivedStateOf { lifecycleState.value.isAtLeast(Lifecycle.State.RESUMED) }
+    }
 
     DisposableEffect(lifecycleOwner, listState) {
         val observer = LifecycleEventObserver { _, event ->
@@ -270,22 +287,41 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Sections can re-emit empty values for a moment when returning, so the list is briefly
+    // shorter than when we left it. Keep re-applying the saved position as content arrives
+    // until it is actually reached, the user drags the list, or a short grace window ends.
     LaunchedEffect(
         needsScrollRestore,
+        isHomeResumed,
         yourMixSongs.isNotEmpty(),
         dailyMixSongs.isNotEmpty(),
         recentlyPlayedSongs.size,
-        homeStatsOverview
+        homeStatsOverviewState,
+        bottomPadding
     ) {
-        if (!needsScrollRestore) return@LaunchedEffect
+        if (!needsScrollRestore || !isHomeResumed) return@LaunchedEffect
         val totalItems = listState.layoutInfo.totalItemsCount
         if (totalItems == 0) return@LaunchedEffect
         val targetIndex = savedScrollIndex.coerceIn(0, (totalItems - 1).coerceAtLeast(0))
         listState.scrollToItem(targetIndex, savedScrollOffset)
-        needsScrollRestore = false
+        if (listState.firstVisibleItemIndex == savedScrollIndex &&
+            listState.firstVisibleItemScrollOffset == savedScrollOffset
+        ) {
+            needsScrollRestore = false
+        }
     }
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    LaunchedEffect(needsScrollRestore, isHomeResumed) {
+        if (!needsScrollRestore || !isHomeResumed) return@LaunchedEffect
+        launch {
+            listState.interactionSource.interactions
+                .filterIsInstance<DragInteraction.Start>()
+                .first()
+            needsScrollRestore = false
+        }
+        delay(HomeScrollRestoreGraceMillis)
+        needsScrollRestore = false
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -306,8 +342,7 @@ fun HomeScreen(
                     onStreamingClick = {
                           showStreamingProviderSheet = true
                     },
-                    onMenuClick = {
-                    },
+                    onMenuClick = onOpenSidebar,
                     isScrolled = isScrolledPastThreshold.value
                 )
             }
@@ -458,16 +493,15 @@ fun HomeScreen(
                     }
                 }
 
-                if (homeStatsOverview != null) {
-                    item(
-                        key = "listening_stats_preview",
-                        contentType = "listening_stats_preview"
-                    ) {
-                        StatsOverviewCard(
-                            summary = homeStatsOverview,
-                            onClick = { navController.navigateSafely(Screen.Stats.route) }
-                        )
-                    }
+                // Always shown, even before any listening history, so Stats stays reachable.
+                item(
+                    key = "listening_stats_preview",
+                    contentType = "listening_stats_preview"
+                ) {
+                    StatsOverviewCard(
+                        state = homeStatsOverviewState,
+                        onClick = { navController.navigateSafely(Screen.Stats.route) }
+                    )
                 }
             }
         }

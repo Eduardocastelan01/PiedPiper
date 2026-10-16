@@ -2,6 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="presentation_batch_g_stats_range_today">Today</string>
     <string name="presentation_batch_g_stats_range_week_to_date">Week to Date</string>
+    <string name="presentation_batch_g_stats_week_label">Week %1$d</string>
     <string name="presentation_batch_g_stats_range_month_to_date">Month to Date</string>
     <string name="presentation_batch_g_stats_range_year_to_date">Year to Date</string>
     <string name="presentation_batch_g_stats_range_all_time">All Time</string>
@@ -328,6 +329,7 @@ Backslash (\) can be used to escape character delimiters.</string>
     <string name="presentation_batch_g_app_tagline">Music Player</string>
     <string name="sidebar_edit_shortcuts">Edit shortcuts</string>
     <string name="sidebar_shortcuts_dialog_title">Sidebar shortcuts</string>
+    <string name="sidebar_open">Open menu</string>
     <string name="presentation_batch_g_brick_high">HIGH %1$d</string>
     <string name="presentation_batch_g_brick_cd_close">Close</string>
     <string name="presentation_batch_g_brick_stat_score">SCORE</string>

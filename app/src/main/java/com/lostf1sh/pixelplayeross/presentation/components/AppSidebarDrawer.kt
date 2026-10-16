@@ -1,5 +1,9 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -29,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
@@ -36,23 +42,34 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.preferences.SidebarShortcutKeys
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.launch
+
+/** How far the sheet slides toward its screen edge at full predictive-back progress. */
+private val PredictiveBackMaxOffset = 16.dp
 
 sealed class DrawerDestination(val route: String) {
     object Home : DrawerDestination("home")
+    object Stats : DrawerDestination("stats")
     object Equalizer : DrawerDestination("equalizer")
     object Bookmarks : DrawerDestination("audio_bookmarks")
     object Settings : DrawerDestination("settings")
@@ -68,15 +85,28 @@ fun AppSidebarDrawer(
     content: @Composable () -> Unit
 ) {
     var showConfigDialog by remember { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    // The sheet sits on the right edge in RTL, so it has to slide right to close there.
+    val closingDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1f else -1f
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = false,
+        // Only while open, so the scrim and a swipe can close it. Edge-swipe opening stays
+        // off because it would fight the system back gesture; the Home menu button opens it.
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier
                     .width(300.dp)
                     .fillMaxHeight()
+                    .graphicsLayer {
+                        val scale = 1f - (predictiveBackProgress * 0.08f)
+                        scaleX = scale
+                        scaleY = scale
+                        translationX =
+                            closingDirection * predictiveBackProgress * PredictiveBackMaxOffset.toPx()
+                        alpha = 1f - (predictiveBackProgress * 0.15f)
+                    }
                     .clip(RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)),
                 drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
@@ -91,12 +121,59 @@ fun AppSidebarDrawer(
         content = content
     )
 
+    AppSidebarBackHandler(
+        drawerState = drawerState,
+        onProgressChanged = { predictiveBackProgress = it }
+    )
+
     if (showConfigDialog) {
         ShortcutsConfigDialog(
             enabledShortcuts = enabledShortcuts,
             onDismiss = { showConfigDialog = false },
             onSave = onShortcutsChanged
         )
+    }
+}
+
+/** Back closes the open drawer instead of leaving the current screen or the app. */
+@Composable
+private fun AppSidebarBackHandler(
+    drawerState: DrawerState,
+    onProgressChanged: (Float) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val progressAnim = remember { Animatable(0f) }
+    val fastSpatialSpec = remember { MotionScheme.expressive().fastSpatialSpec<Float>() }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        PredictiveBackHandler(enabled = drawerState.isOpen) { progressFlow ->
+            try {
+                progressFlow.collect { backEvent ->
+                    progressAnim.snapTo(backEvent.progress)
+                    onProgressChanged(backEvent.progress)
+                }
+                scope.launch {
+                    progressAnim.animateTo(
+                        targetValue = 1f,
+                        animationSpec = fastSpatialSpec
+                    ) { onProgressChanged(value) }
+                    drawerState.close()
+                    progressAnim.snapTo(0f)
+                    onProgressChanged(0f)
+                }
+            } catch (_: CancellationException) {
+                scope.launch {
+                    progressAnim.animateTo(
+                        targetValue = 0f,
+                        animationSpec = fastSpatialSpec
+                    ) { onProgressChanged(value) }
+                }
+            }
+        }
+    } else {
+        BackHandler(enabled = drawerState.isOpen) {
+            scope.launch { drawerState.close() }
+        }
     }
 }
 
@@ -141,6 +218,7 @@ private fun DrawerItem(
 @Composable
 private fun shortcutLabel(key: String): String = when (key) {
     SidebarShortcutKeys.HOME -> stringResource(R.string.tab_home)
+    SidebarShortcutKeys.STATS -> stringResource(R.string.presentation_batch_g_stats_title)
     SidebarShortcutKeys.EQUALIZER -> stringResource(R.string.settings_category_equalizer_title)
     SidebarShortcutKeys.AUDIO_BOOKMARKS -> stringResource(R.string.audio_bookmarks_title)
     else -> key
@@ -209,6 +287,15 @@ private fun DrawerContent(
                 label = shortcutLabel(SidebarShortcutKeys.HOME),
                 selected = selectedRoute == DrawerDestination.Home.route,
                 onClick = { onDestinationSelected(DrawerDestination.Home) }
+            )
+        }
+
+        if (SidebarShortcutKeys.STATS in enabledShortcuts) {
+            DrawerItem(
+                icon = rememberVectorPainter(Icons.Rounded.BarChart),
+                label = shortcutLabel(SidebarShortcutKeys.STATS),
+                selected = selectedRoute == DrawerDestination.Stats.route,
+                onClick = { onDestinationSelected(DrawerDestination.Stats) }
             )
         }
 

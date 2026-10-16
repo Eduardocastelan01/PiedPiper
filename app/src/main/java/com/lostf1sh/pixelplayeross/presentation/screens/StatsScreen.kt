@@ -459,9 +459,6 @@ fun StatsScreen(
     }
 }
 
-private fun PlaybackStatsSummary.hasListeningActivity(): Boolean =
-    totalDurationMs > 0L || totalPlayCount > 0
-
 // region Shared building blocks
 
 @OptIn(ExperimentalTextApi::class)
@@ -1584,7 +1581,7 @@ private fun formatTimelineLabelForRange(
     if (label.isBlank()) return blankLabel
     return when (range) {
         StatsTimeRange.DAY -> convertHourLabel(label, use24Hour)
-        StatsTimeRange.YEAR -> monthThreeLetters(label, blankLabel)
+        StatsTimeRange.YEAR -> shortMonthLabel(label, blankLabel)
         else -> label
     }
 }
@@ -1649,10 +1646,15 @@ private fun convertHourLabel(label: String, use24Hour: Boolean): String {
     return label
 }
 
-private fun monthThreeLetters(label: String, blankLabel: String): String {
-    val cleaned = label.trim()
+/**
+ * Month labels come localized from the repository, so they are not cut to three letters:
+ * that turns French "juin" and "juil." into the same "jui" and splits Arabic words. Only the
+ * abbreviation dot is dropped; the YEAR chart wraps long names onto a second line.
+ */
+private fun shortMonthLabel(label: String, blankLabel: String): String {
+    val cleaned = label.trim().trimEnd('.')
     if (cleaned.isEmpty()) return blankLabel
-    return cleaned.take(3)
+    return cleaned
 }
 
 private fun timelineChartSpecFor(
@@ -1686,7 +1688,8 @@ private fun timelineChartSpecFor(
             maxItemWidth = 82.dp,
             maxVisibleItems = 4,
             chartHeight = 232.dp,
-            labelMaxLines = 1,
+            // Localized week labels such as "Settimana 1" can be wider than a bar.
+            labelMaxLines = 2,
             horizontalContentPadding = 16.dp
         )
 

@@ -13,12 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,7 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
 import com.lostf1sh.pixelplayeross.presentation.stats.displayNameRes
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.HomeStatsOverviewState
 import com.lostf1sh.pixelplayeross.utils.formatListeningDurationCompact
 import com.lostf1sh.pixelplayeross.utils.formatListeningDurationLong
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -46,13 +50,25 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import androidx.compose.runtime.remember
 
+private enum class OverviewContentKey { Loading, Empty, Ready }
+
+/**
+ * Home entry point to the Stats screen. It is shown in every state, including before any
+ * listening history exists, and opens Stats when tapped.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsOverviewCard(
-    modifier: Modifier = Modifier,
-    summary: PlaybackStatsRepository.PlaybackStatsSummary?,
-    onClick: () -> Unit
+    state: HomeStatsOverviewState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val summary = (state as? HomeStatsOverviewState.Ready)?.summary
+    val contentKey = when (state) {
+        HomeStatsOverviewState.Loading -> OverviewContentKey.Loading
+        HomeStatsOverviewState.Empty -> OverviewContentKey.Empty
+        is HomeStatsOverviewState.Ready -> OverviewContentKey.Ready
+    }
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val shape = AbsoluteSmoothCornerShape(
         cornerRadiusTL = 28.dp,
@@ -118,14 +134,24 @@ fun StatsOverviewCard(
                     }
                 }
 
+                // Keyed on the kind of content, so a refreshed summary updates in place
+                // instead of fading the whole card out and back in.
                 Crossfade(
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
-                    targetState = summary
-                ) { currentSummary ->
-                    if (currentSummary == null) {
-                        PlaceholderOverviewContent()
-                    } else {
-                        OverviewContent(currentSummary)
+                    targetState = contentKey,
+                    label = "stats_overview_content"
+                ) { key ->
+                    when (key) {
+                        OverviewContentKey.Loading -> PlaceholderOverviewContent()
+                        OverviewContentKey.Empty -> EmptyOverviewContent()
+                        OverviewContentKey.Ready -> {
+                            if (summary != null) {
+                                OverviewContent(summary)
+                            } else {
+                                // Only reached while a Ready -> Empty change fades out.
+                                PlaceholderOverviewContent()
+                            }
+                        }
                     }
                 }
             }
@@ -199,6 +225,49 @@ private fun OverviewContent(summary: PlaybackStatsRepository.PlaybackStatsSummar
             }
         }
         MiniListeningTimeline(summary)
+    }
+}
+
+@Composable
+private fun EmptyOverviewContent() {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.BarChart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.presentation_batch_g_stats_empty_no_timeline_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.presentation_batch_g_stats_empty_no_timeline_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        // Faded empty bars keep the card about as tall as the loading and ready states.
+        Box(modifier = Modifier.alpha(0.5f)) {
+            MiniListeningTimeline(null)
+        }
     }
 }
 
@@ -286,7 +355,8 @@ private fun MonthlyHorizontalListeningTimeline(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    modifier = Modifier.width(56.dp),
+                    // Room for localized week labels such as "Settimana 1".
+                    modifier = Modifier.widthIn(min = 56.dp, max = 88.dp),
                     text = entry.label,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

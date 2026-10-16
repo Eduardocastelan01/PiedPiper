@@ -10,7 +10,9 @@ import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackSt
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,8 +48,12 @@ class StatsViewModel @Inject constructor(
     private val _weeklyOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
     val weeklyOverview: StateFlow<PlaybackStatsSummary?> = _weeklyOverview.asStateFlow()
 
-    private val _homeOverview = MutableStateFlow<PlaybackStatsSummary?>(null)
-    val homeOverview: StateFlow<PlaybackStatsSummary?> = _homeOverview.asStateFlow()
+    private val _homeOverviewState =
+        MutableStateFlow<HomeStatsOverviewState>(HomeStatsOverviewState.Loading)
+    val homeOverviewState: StateFlow<HomeStatsOverviewState> = _homeOverviewState.asStateFlow()
+
+    /** Only the latest home refresh may publish, so an older result never overwrites a newer one. */
+    private var homeOverviewJob: Job? = null
 
     @Volatile
     private var cachedSongs: List<Song>? = null
@@ -90,24 +96,29 @@ class StatsViewModel @Inject constructor(
     }
 
     fun refreshHomeOverview() {
-        viewModelScope.launch {
-            runCatching {
+        homeOverviewJob?.cancel()
+        homeOverviewJob = viewModelScope.launch {
+            val summary = try {
                 withContext(Dispatchers.IO) {
                     val songs = loadSongs()
-                    for (range in HomeOverviewRanges) {
-                        val summary = playbackStatsRepository.loadSummary(range, songs)
-                        if (summary.hasListeningActivity()) {
-                            return@withContext summary
-                        }
+                    firstSummaryWithActivity(HomeOverviewRanges) { range ->
+                        playbackStatsRepository.loadSummary(range, songs)
                     }
-                    null
                 }
-            }.onSuccess { summary ->
-                _homeOverview.value = summary
-            }.onFailure { throwable ->
+            } catch (cancellation: CancellationException) {
+                // A newer refresh replaced this one; it publishes the result instead.
+                throw cancellation
+            } catch (throwable: Exception) {
                 Timber.e(throwable, "Failed to load home stats overview")
-                _homeOverview.value = null
+                // Keep showing the last good summary rather than flashing the empty state.
+                if (_homeOverviewState.value !is HomeStatsOverviewState.Ready) {
+                    _homeOverviewState.value = HomeStatsOverviewState.Empty
+                }
+                return@launch
             }
+            _homeOverviewState.value = summary
+                ?.let { HomeStatsOverviewState.Ready(it) }
+                ?: HomeStatsOverviewState.Empty
         }
     }
 
@@ -232,14 +243,6 @@ class StatsViewModel @Inject constructor(
         loadSongs().any { it.genre == name }
     }
 
-    private fun PlaybackStatsSummary.hasListeningActivity(): Boolean {
-        return totalDurationMs > 0L ||
-            totalPlayCount > 0 ||
-            uniqueSongs > 0 ||
-            activeDays > 0 ||
-            totalSessions > 0
-    }
-
     private companion object {
         /** Matches no artists row, so lookups fall through to the by-name queries. */
         const val UNKNOWN_ARTIST_ID = -1L
@@ -251,4 +254,19 @@ class StatsViewModel @Inject constructor(
             StatsTimeRange.ALL
         )
     }
+}
+
+/**
+ * Loads [ranges] in order and returns the first summary with listening activity, or null when
+ * none has any. Ranges after the first match are never loaded.
+ */
+internal suspend fun firstSummaryWithActivity(
+    ranges: List<StatsTimeRange>,
+    load: suspend (StatsTimeRange) -> PlaybackStatsSummary
+): PlaybackStatsSummary? {
+    for (range in ranges) {
+        val summary = load(range)
+        if (summary.hasListeningActivity()) return summary
+    }
+    return null
 }

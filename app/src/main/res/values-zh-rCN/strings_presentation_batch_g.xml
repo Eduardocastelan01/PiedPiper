@@ -2,6 +2,7 @@
 <resources>
     <string name="presentation_batch_g_stats_range_today">今日</string>
     <string name="presentation_batch_g_stats_range_week_to_date">本周至今</string>
+    <string name="presentation_batch_g_stats_week_label">第 %1$d 周</string>
     <string name="presentation_batch_g_stats_range_month_to_date">本月至今</string>
     <string name="presentation_batch_g_stats_range_year_to_date">本年至今</string>
     <string name="presentation_batch_g_stats_range_all_time">全部时间</string>
@@ -328,6 +329,7 @@
     <string name="presentation_batch_g_app_tagline">音乐播放器</string>
     <string name="sidebar_edit_shortcuts">编辑快捷方式</string>
     <string name="sidebar_shortcuts_dialog_title">侧边栏快捷方式</string>
+    <string name="sidebar_open">打开菜单</string>
     <string name="presentation_batch_g_brick_high">最高分 %1$d</string>
     <string name="presentation_batch_g_brick_cd_close">关闭</string>
     <string name="presentation_batch_g_brick_stat_score">分数</string>
