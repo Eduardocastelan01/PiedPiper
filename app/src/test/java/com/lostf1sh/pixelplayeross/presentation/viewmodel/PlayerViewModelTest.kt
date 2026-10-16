@@ -11,6 +11,7 @@ import com.lostf1sh.pixelplayeross.data.model.SearchHistoryItem
 import com.lostf1sh.pixelplayeross.data.model.SearchResultItem
 import com.lostf1sh.pixelplayeross.data.model.Album
 import com.lostf1sh.pixelplayeross.data.model.Artist
+import com.lostf1sh.pixelplayeross.data.model.LibraryTabId
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.model.SortOption
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
@@ -25,6 +26,7 @@ import androidx.media3.common.Player
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,6 +46,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -674,6 +677,78 @@ class PlayerViewModelTest {
 
             coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
             coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+        }
+    }
+
+    @Nested
+    @DisplayName("Locate current song")
+    inner class LocateCurrentSongTests {
+
+        private val currentSong = Song(id = "42", title = "Song 42", artist = "Artist", genre = "Rock", albumArtUriString = null, artistId = 1L, albumId = 1L, contentUriString = "content://dummy/42", duration = 180000L, bitrate = null, sampleRate = null, album = "Album", path = "/music/42.mp3", mimeType = "audio/mpeg")
+
+        // The song sits at a different position in each list: 3 among all songs, 1 among favorites.
+        private fun stubListOrders() {
+            coEvery { mockMusicRepository.getSongIdsSorted(any(), any()) } returns listOf(1L, 2L, 3L, 42L)
+            coEvery { mockMusicRepository.getFavoriteSongIdsSorted(any(), any()) } returns listOf(7L, 42L)
+            stablePlayerStateFlow.value = StablePlayerState(currentSong = currentSong)
+        }
+
+        @Test
+        fun `a Liked locate emits the favorites-order index tagged for Liked`() = runTest {
+            advanceUntilIdle()
+            stubListOrders()
+            val favoriteSort = playerViewModel.playerUiState.value.currentFavoriteSortOption
+
+            playerViewModel.scrollToIndexEvent.test {
+                playerViewModel.requestLocateCurrentSong(LibraryTabId.LIKED)
+                advanceUntilIdle()
+
+                assertEquals(LocateScrollRequest(tab = LibraryTabId.LIKED, index = 1), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+            coVerify { mockMusicRepository.getFavoriteSongIdsSorted(favoriteSort, any()) }
+            coVerify(exactly = 0) { mockMusicRepository.getSongIdsSorted(any(), any()) }
+        }
+
+        @Test
+        fun `a Songs locate emits the full library index tagged for Songs`() = runTest {
+            advanceUntilIdle()
+            stubListOrders()
+            val songSort = playerViewModel.playerUiState.value.currentSongSortOption
+
+            playerViewModel.scrollToIndexEvent.test {
+                playerViewModel.requestLocateCurrentSong(LibraryTabId.SONGS)
+                advanceUntilIdle()
+
+                assertEquals(LocateScrollRequest(tab = LibraryTabId.SONGS, index = 3), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+            coVerify { mockMusicRepository.getSongIdsSorted(songSort, any()) }
+            coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), any()) }
+        }
+    }
+
+    @Nested
+    @DisplayName("Clearing the view model")
+    inner class ClearingTests {
+
+        @Test
+        fun `clearing does not stop progress updates outside the playback holder's owner check`() = runTest {
+            advanceUntilIdle()
+            val boundScope = slot<CoroutineScope>()
+            verify { mockPlaybackStateHolder.initialize(capture(boundScope)) }
+            // Only the calls made while clearing matter; keep the stubs.
+            clearMocks(mockPlaybackStateHolder, answers = false)
+
+            PlayerViewModel::class.java.getDeclaredMethod("onCleared")
+                .apply { isAccessible = true }
+                .invoke(playerViewModel)
+
+            // A stale view model stopping progress here would freeze a newer owner's seek bar.
+            verify(exactly = 0) { mockPlaybackStateHolder.stopProgressUpdates() }
+            val clearedScope = slot<CoroutineScope>()
+            verify(exactly = 1) { mockPlaybackStateHolder.onCleared(capture(clearedScope)) }
+            assertSame(boundScope.captured, clearedScope.captured)
         }
     }
 

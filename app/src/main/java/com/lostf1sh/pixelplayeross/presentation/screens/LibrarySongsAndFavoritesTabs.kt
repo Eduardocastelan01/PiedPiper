@@ -123,14 +123,19 @@ fun LibraryFavoritesTab(
             null
         } else {
             {
-                playerViewModel.requestLocateCurrentSong()
+                playerViewModel.requestLocateCurrentSong(LibraryTabId.LIKED)
             }
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(playerViewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            playerViewModel.scrollToIndexEvent.collect { index ->
+            playerViewModel.scrollToIndexEvent.collect { request ->
+                // A Songs request carries a Songs-order index, which means nothing in this list.
+                if (request.tab != LibraryTabId.LIKED) return@collect
+                // The list has no header rows and uses paging placeholders, so the
+                // favourites-order index is already the list item index.
+                val index = request.index
                 if (index >= 0) {
                     val firstVisible = listState.firstVisibleItemIndex
                     if (Math.abs(index - firstVisible) > 20) {

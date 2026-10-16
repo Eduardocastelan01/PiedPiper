@@ -927,7 +927,12 @@ class PlaybackStateHolder @Inject constructor(
             }
     }
 
-    fun onCleared() {
+    fun onCleared(owner: CoroutineScope) {
+        // Only the scope that currently owns the binding may sever it. A stale
+        // PlayerViewModel (e.g. ExternalPlayerActivity's) clearing after a newer instance
+        // re-initialized this singleton must not cancel that instance's progress updates or
+        // leave it scope-less (the seek bar would freeze until another PlayerViewModel binds it).
+        if (scope !== owner) return
         stopProgressUpdates()
         shuffleToggleJob?.cancel()
         shuffleToggleJob = null
