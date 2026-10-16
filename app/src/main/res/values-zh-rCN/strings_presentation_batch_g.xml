@@ -339,7 +339,6 @@
     <string name="presentation_batch_g_album_sel_selected">已选择</string>
     <string name="presentation_batch_g_album_sel_queue_hint">加入队列并播放将严格遵循你的选中顺序。</string>
     <string name="presentation_batch_g_album_sel_limit">上限：单次最多选择 %1$d 张专辑。</string>
-    <string name="presentation_batch_g_app_name">PixelPlayerOSS</string>
     <string name="presentation_batch_g_app_tagline">音乐播放器</string>
     <string name="presentation_batch_g_brick_high">最高分 %1$d</string>
     <string name="presentation_batch_g_brick_cd_close">关闭</string>

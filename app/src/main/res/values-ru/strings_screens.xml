@@ -226,4 +226,13 @@
     <string name="word_delimiter_toast_invalid">Уже существует или недопустим</string>
     <string name="word_delimiter_toast_reset">Словесные разделители сброшены</string>
     <string name="word_delimiters_screen_title">Словесные разделители</string>
+    <string name="easter_egg_thank_you">Спасибо, что пользуетесь PixelPlayerOSS!</string>
+    <string name="setup_external_services_subtitle">По умолчанию PixelPlayerOSS работает офлайн. Включайте только те онлайн-запросы, которые вам нужны.</string>
+    <string name="setup_permission_media_description">PixelPlayerOSS нужен доступ к вашим аудиофайлам, чтобы создать музыкальную медиатеку.</string>
+    <string name="setup_permission_alarms_description">Необязательно, но рекомендуется, если вы используете таймер сна и хотите, чтобы PixelPlayerOSS останавливал воспроизведение точно вовремя.</string>
+    <string name="setup_backup_have_description">Если у вас уже есть резервная копия PixelPlayerOSS, восстановите её сейчас и пропустите большую часть оставшейся настройки на этом устройстве.</string>
+    <string name="setup_theme_dark_description">Стандартная тёмная тема Material 3 для PixelPlayerOSS.</string>
+    <string name="home_empty_placeholder_subtitle">Ваш микс появится здесь, когда PixelPlayerOSS найдёт треки или синхронизирует источник.</string>
+    <string name="crash_report_share_subject">Отчёт о сбое PixelPlayerOSS</string>
+    <string name="about_support_title">Поддержите PixelPlayerOSS</string>
 </resources>

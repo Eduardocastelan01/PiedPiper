@@ -374,4 +374,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Stable</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Journal des modifications</string>
     <string name="presentation_batch_g_yes">Oui</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS sépare les balises d\'artistes à l\'aide de délimiteurs de caractères (/, ;, &amp;) et de délimiteurs de mots (feat., ft., vs., x). Les délimiteurs de mots ne sont pas sensibles à la casse.
+
+« Extraire les artistes du titre » détecte les motifs comme (feat. Artiste) dans les titres des chansons.
+
+La barre oblique inverse (\) permet d\'échapper les délimiteurs de caractères.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Bienvenue dans PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Passez à la dernière version de PixelPlayerOSS et vérifiez que le problème persiste.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Version de PixelPlayerOSS :</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>La section Écouté récemment et la restauration de la file d\'attente persistante gardent votre session d\'écoute prête.</item>
+        <item>Les outils de sauvegarde et restauration v3 et de gestion des comptes sont désormais inclus.</item>
+        <item>Les paroles gagnent en intelligence grâce à la recherche manuelle de secours et à un meilleur stockage.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Grande passe de performance sur le démarrage, la bibliothèque, la file d\'attente et les interactions du lecteur.</item>
+        <item>Les parcours de navigation et de recherche sont plus fiables, avec une gestion des routes plus sûre.</item>
+        <item>Compatibilité de la lecture audio améliorée pour davantage d\'appareils et de formats.</item>
+        <item>Les opérations de sélection multiple ont été étendues aux chansons, albums et playlists.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>Le comportement de la file d\'attente et du mode aléatoire est désormais plus stable et prévisible.</item>
+        <item>Correction des problèmes du minuteur de sommeil, de la navigation dans l\'onglet Fichiers et des plantages liés à l\'artiste de l\'album.</item>
+        <item>Amélioration du chargement des widgets et de la stabilité du service pour réduire les problèmes de surchauffe et de mémoire.</item>
+        <item>Corrections de bugs générales et finitions de l\'interface dans toute l\'application.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Mise à jour de l\'interface Material 3 Expressive</item>
+        <item>Égaliseur 10 bandes et effets</item>
+        <item>Nouveau flux de synchronisation de la bibliothèque</item>
+        <item>Import/export de playlists M3U</item>
+        <item>Intégration des visuels d\'artistes Deezer</item>
+        <item>Pochettes de playlist personnalisées</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Refonte de l\'architecture des paramètres</item>
+        <item>Animations de la file d\'attente et du lecteur</item>
+        <item>Baseline Profiles et performances</item>
+        <item>Meilleur système de paroles avec décalage de synchronisation</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Stabilité de la feuille du lecteur</item>
+        <item>Corrections de bugs générales et nettoyage</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Refonte majeure de la navigation</item>
+        <item>Nouvel explorateur de fichiers pour choisir les dossiers sources</item>
+        <item>Continuité fluide entre les appareils distants</item>
+        <item>Transition sans interruption entre les chansons</item>
+        <item>Contrôle du fondu enchaîné</item>
+        <item>Nouvelle fonction de transitions personnalisées (uniquement pour les playlists)</item>
+        <item>La lecture continue après la fermeture de l\'application</item>
+        <item>Optimisations de l\'interface</item>
+        <item>Fonction de statistiques améliorée</item>
+        <item>Contrôle de la file d\'attente repensé avec davantage de fonctions</item>
+        <item>Meilleure prise en charge de différents types de fichiers pour la lecture et la modification des métadonnées</item>
+        <item>Contrôleur d\'autorisations amélioré</item>
+        <item>Corrections de bugs mineurs</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Introduction d\'un centre de statistiques d\'écoute plus riche, avec des analyses plus approfondies de vos sessions.</item>
+        <item>Lancement d\'un lecteur rapide flottant pour ouvrir et écouter instantanément des fichiers locaux.</item>
+        <item>Ajout d\'un onglet Dossiers avec un navigateur en arborescence et une vue prête pour les playlists.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Affinement de l\'interface Material 3 pour une expérience plus propre et plus cohérente.</item>
+        <item>La modification des métadonnées permet désormais de changer la pochette.</item>
+        <item>Animations et transitions adoucies dans toute l\'application pour une navigation plus fluide.</item>
+        <item>Mise en page de l\'écran des artistes améliorée, avec plus de détails et de finitions.</item>
+        <item>Génération de DailyMix et YourMix améliorée, avec des sélections plus intelligentes et plus variées.</item>
+        <item>Pertinence et présentation de la recherche améliorées pour une découverte plus rapide.</item>
+        <item>Prise en charge élargie d\'un plus grand nombre de formats de fichiers audio.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Correction de bizarreries des métadonnées pour que les détails des chansons restent exacts partout.</item>
+        <item>Restauration des raccourcis de notification pour qu\'ils ramènent de façon fiable à la lecture.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Journal des modifications intégré pour vous tenir informé des dernières fonctions.</item>
+        <item>Prise en charge des fichiers .LRC, intégrés et externes.</item>
+        <item>Prise en charge des paroles hors ligne.</item>
+        <item>Paroles synchronisées (avec la chanson).</item>
+        <item>Nouvel écran pour afficher toute la file d\'attente.</item>
+        <item>Réorganisation et suppression de chansons dans la file d\'attente.</item>
+        <item>Gestes du mini-lecteur (balayer vers le bas pour fermer).</item>
+        <item>Ajout de davantage d\'animations Material.</item>
+        <item>Nouveaux réglages pour personnaliser l\'apparence et le comportement.</item>
+        <item>Nouveaux réglages pour vider le cache.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Refonte complète de l\'interface utilisateur.</item>
+        <item>Refonte complète du lecteur.</item>
+        <item>Améliorations des performances dans la bibliothèque.</item>
+        <item>Vitesse de démarrage de l\'application améliorée.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Correction de divers bugs dans l\'éditeur de balises.</item>
+        <item>Correction d\'un bug où la notification de lecture ne disparaissait pas.</item>
+        <item>Correction de plusieurs bugs qui provoquaient des plantages de l\'application.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Première version FOSS publique de PixelPlayerOSS.</item>
+        <item>Comprend la lecture locale, les playlists, les favoris, les paroles, les statistiques d\'écoute, le thème dynamique Material 3, les widgets et la sauvegarde/restauration.</item>
+        <item>Conserve la prise en charge de Navidrome/Subsonic et Jellyfin auto-hébergés, ainsi que les paroles LRCLIB et la recherche de visuels d\'artistes Deezer, en option.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Suppression des dépendances d\'exécution Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, facturation Play Store, Firebase, Crashlytics et Google Play Services.</item>
+        <item>Suppression du scrobbling public Last.fm et ListenBrainz ; le suivi Navidrome/Subsonic auto-hébergé reste limité au serveur de l\'utilisateur.</item>
+        <item>Suppression des traductions intégrées et du sélecteur de langue dans l\'application pour cette première version FOSS ; les ressources en anglais sont livrées en premier.</item>
+        <item>Suppression des chemins de publication qui dépendaient d\'artefacts de signature locaux/privés, de valeurs de signature factices ou d\'hypothèses propres aux magasins d\'applications.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>Ajout des métadonnées F-Droid, des métadonnées de boutique Fastlane, des notes de confidentialité, des notes de sécurité, de la documentation des dépendances/licences et d\'un guide pour les contributeurs.</item>
+        <item>Les versions de production restent non signées en l\'absence de clés de signature locales.</item>
+        <item>Ajout de pixelplayer.disableReleaseSigning=true pour des compilations de vérification non signées et déterministes.</item>
+        <item>Documentation de la traçabilité des licences des ressources et des dépendances, y compris les artefacts Maven natifs/binaires et les dépendances JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>Le streaming cloud en boucle locale exige désormais un jeton par session.</item>
+        <item>La restauration de sauvegarde ignore les clés de préférences gérées par des modules dédiés.</item>
+        <item>Journalisation de production renforcée : les en-têtes de requêtes HTTP et les journaux Android bruts ne contournent plus le filtre de production de Timber.</item>
+        <item>Comprend aussi la persistance des playlists intelligentes, la recherche de pistes en double, le contrôle de la vitesse de lecture, des messages d\'échec de lecture/synchronisation plus clairs et une meilleure accessibilité.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Passe de design Material 3 Expressive : nouveau schéma de mouvement, indicateurs de progression ondulés et animations de transformation de formes dans toute l\'application.</item>
+        <item>Les serveurs Jellyfin en HTTP simple sont désormais autorisés pour les hôtes VPN et du réseau local.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>Application plus légère : des règles de réduction du code plus strictes retirent environ 1,5 Mo de la taille d\'installation.</item>
+        <item>Démarrage plus rapide et plus fluide : les Baseline Profiles ont été régénérés de zéro pour correspondre à la nouvelle interface et aux nouveaux chemins de code.</item>
+        <item>Listes, feuilles et égaliseur plus réactifs grâce à une vaste passe de performance Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Lecture cloud plus fiable : les requêtes Navidrome/Jellyfin annulées ne sont plus signalées à tort comme des erreurs réseau lorsque vous passez rapidement d\'une piste à l\'autre.</item>
+        <item>Les événements de sauvegarde, de restauration et de configuration ne peuvent plus être perdus lors de la rotation de l\'écran.</item>
+        <item>Grand ménage de printemps : code mort supprimé, API obsolètes migrées et dépendances mises à jour.</item>
+    </string-array>
 </resources>

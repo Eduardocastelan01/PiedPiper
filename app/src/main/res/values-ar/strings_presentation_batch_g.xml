@@ -374,4 +374,140 @@
     <string name="presentation_batch_g_topbar_build_stable">مستقر</string>
     <string name="presentation_batch_g_topbar_cd_changelog">سجل التغييرات</string>
     <string name="presentation_batch_g_yes">نعم</string>
+    <string name="presentation_batch_g_artist_info_body">يقسّم PixelPlayerOSS وسوم الفنانين باستخدام محددات الأحرف (/، ;، &amp;) ومحددات الكلمات (feat.، ft.، vs.، x). تتم مطابقة محددات الكلمات دون مراعاة حالة الأحرف.
+
+"استخراج الفنانين من العنوان" يكتشف أنماطاً مثل (feat. Artist) في عناوين الأغاني.
+
+يمكن استخدام الشرطة المائلة العكسية (\) لتعطيل مفعول محددات الأحرف.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">مرحباً بك في PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">حدّث إلى أحدث إصدار من PixelPlayerOSS وتأكد من أن المشكلة لا تزال قائمة.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">إصدار PixelPlayerOSS:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>المشغلة حديثاً واستعادة قائمة الانتظار المحفوظة يُبقيان جلسة الاستماع جاهزة.</item>
+        <item>أدوات النسخ الاحتياطي والاستعادة v3 وإدارة الحسابات متضمنة الآن.</item>
+        <item>أصبحت الكلمات أذكى بفضل البحث اليدوي الاحتياطي وتحسينات التخزين.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>تحسين كبير في الأداء يشمل بدء التشغيل والمكتبة وقائمة الانتظار والتفاعل مع المشغل.</item>
+        <item>أصبحت مسارات التنقل والبحث أكثر موثوقية مع معالجة أكثر أماناً للمسارات.</item>
+        <item>تحسين توافق تشغيل الصوت مع المزيد من الأجهزة والصيغ.</item>
+        <item>توسيع مهام التحديد المتعدد لتشمل الأغاني والألبومات وقوائم التشغيل.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>أصبح سلوك قائمة الانتظار والتشغيل العشوائي أكثر استقراراً وقابلية للتنبؤ.</item>
+        <item>إصلاح مشكلات مؤقت النوم والتنقل في تبويب الملفات وتعطل فنان الألبوم.</item>
+        <item>تحسين تحميل الأدوات واستقرار الخدمة للحد من مشكلات ارتفاع الحرارة والذاكرة.</item>
+        <item>إصلاحات عامة للأخطاء وتحسينات على واجهة التطبيق.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>تحديث واجهة Material 3 Expressive</item>
+        <item>موازن صوت من 10 نطاقات والمؤثرات</item>
+        <item>تدفق جديد لمزامنة المكتبة</item>
+        <item>استيراد/تصدير قوائم التشغيل بصيغة M3U</item>
+        <item>دمج صور الفنانين من Deezer</item>
+        <item>أغلفة مخصصة لقوائم التشغيل</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>إعادة هيكلة بنية الإعدادات</item>
+        <item>حركات قائمة الانتظار والمشغل</item>
+        <item>Baseline Profiles والأداء</item>
+        <item>نظام كلمات أغاني أفضل مع إزاحة المزامنة</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>استقرار شاشة المشغل</item>
+        <item>إصلاحات عامة للأخطاء وتنظيم الكود</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>إعادة تصميم كبيرة للتنقل</item>
+        <item>مستكشف ملفات جديد لاختيار مجلدات المصدر</item>
+        <item>استمرارية سلسة بين الأجهزة البعيدة</item>
+        <item>انتقال بلا فجوات بين الأغاني</item>
+        <item>التحكم في التداخل المتلاشي (Crossfade)</item>
+        <item>ميزة الانتقالات المخصصة الجديدة (لقوائم التشغيل فقط)</item>
+        <item>متابعة التشغيل بعد إغلاق التطبيق</item>
+        <item>تحسينات الواجهة</item>
+        <item>ميزة إحصاءات محسّنة</item>
+        <item>إعادة تصميم التحكم في قائمة الانتظار بميزات أكثر</item>
+        <item>دعم محسّن لأنواع ملفات مختلفة للتشغيل وتعديل البيانات الوصفية</item>
+        <item>وحدة تحكم محسّنة في الأذونات</item>
+        <item>إصلاحات طفيفة للأخطاء</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>إطلاق مركز إحصاءات استماع أغنى يوفر رؤى أعمق عن جلساتك.</item>
+        <item>إطلاق مشغّل سريع عائم لفتح الملفات المحلية ومعاينتها فوراً.</item>
+        <item>إضافة تبويب المجلدات مع متصفح شجري وعرض جاهز لقوائم التشغيل.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>تحسين واجهة Material 3 بالكامل لتجربة أنظف وأكثر تناسقاً.</item>
+        <item>أصبح تعديل البيانات الوصفية يدعم تغيير صورة الغلاف.</item>
+        <item>تنعيم الحركات والانتقالات في التطبيق لتنقل أكثر سلاسة.</item>
+        <item>تحسين تخطيط شاشة الفنان بتفاصيل أغنى ولمسات أدق.</item>
+        <item>ترقية توليد DailyMix وYourMix باختيارات أذكى وأكثر تنوعاً.</item>
+        <item>تحسين صلة نتائج البحث وطريقة عرضها لاكتشاف أسرع.</item>
+        <item>توسيع الدعم ليشمل نطاقاً أوسع من صيغ ملفات الصوت.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>معالجة مشكلات البيانات الوصفية لتبقى تفاصيل الأغاني دقيقة في كل مكان.</item>
+        <item>استعادة اختصارات الإشعارات لتعيدك إلى التشغيل بشكل موثوق.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>سجل تغييرات داخل التطبيق لإبقائك على اطلاع بأحدث الميزات.</item>
+        <item>دعم ملفات .LRC المضمنة والخارجية.</item>
+        <item>دعم الكلمات دون اتصال.</item>
+        <item>كلمات أغاني متزامنة (متزامنة مع الأغنية).</item>
+        <item>شاشة جديدة لعرض قائمة الانتظار كاملة.</item>
+        <item>إعادة ترتيب الأغاني في قائمة الانتظار وإزالتها.</item>
+        <item>إيماءات المشغل المصغر (اسحب للأسفل للإغلاق).</item>
+        <item>إضافة المزيد من حركات Material.</item>
+        <item>إعدادات جديدة لتخصيص المظهر والإحساس.</item>
+        <item>إعدادات جديدة لمسح ذاكرة التخزين المؤقت.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>إعادة تصميم كاملة لواجهة المستخدم.</item>
+        <item>إعادة تصميم كاملة للمشغل.</item>
+        <item>تحسينات في أداء المكتبة.</item>
+        <item>تحسين سرعة بدء التطبيق.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>إصلاح أخطاء متعددة في محرر الوسوم.</item>
+        <item>إصلاح خطأ كان يمنع مسح إشعار التشغيل.</item>
+        <item>إصلاح عدة أخطاء كانت تتسبب في تعطل التطبيق.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>أول إصدار عام مفتوح المصدر (FOSS) من PixelPlayerOSS.</item>
+        <item>يتضمن التشغيل المحلي وقوائم التشغيل والمفضلة وكلمات الأغاني وإحصاءات الاستماع وتنسيق Material 3 الديناميكي والأدوات والنسخ الاحتياطي والاستعادة.</item>
+        <item>يحافظ على دعم Navidrome/Subsonic وJellyfin المستضافة ذاتياً، مع كلمات LRCLIB الاختيارية والبحث عن صور الفنانين من Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>إزالة تبعيات وقت التشغيل الخاصة بـ Telegram وNetEase وQQ Music وGoogle Drive وGemini وCast وWear OS وفوترة Play Store وFirebase وCrashlytics وGoogle Play Services.</item>
+        <item>إزالة تسجيل الاستماع العام عبر Last.fm وListenBrainz؛ ويبقى الإبلاغ عبر Navidrome/Subsonic المستضاف ذاتياً مقتصراً على خادم المستخدم نفسه.</item>
+        <item>إزالة الترجمات المضمنة ومحدد اللغة داخل التطبيق في هذا الإصدار الأول مفتوح المصدر؛ وتصدر الموارد الإنجليزية أولاً.</item>
+        <item>إزالة مسارات الإصدار التي تعتمد على ملفات توقيع محلية أو خاصة، أو قيم توقيع وهمية، أو افتراضات خاصة بمتاجر التطبيقات فقط.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>إضافة بيانات F-Droid الوصفية وبيانات متجر Fastlane وملاحظات الخصوصية والأمان وتوثيق التبعيات والتراخيص وإرشادات المساهمين.</item>
+        <item>تبقى نسخ الإصدار غير موقّعة عند غياب مفاتيح التوقيع المحلية.</item>
+        <item>إضافة pixelplayer.disableReleaseSigning=true لنسخ تحقق غير موقّعة قابلة لإعادة الإنتاج.</item>
+        <item>توثيق مسارات تراخيص الأصول والتبعيات، بما في ذلك مكونات Maven الأصلية/الثنائية وتبعيات JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>يتطلب بث السحابة عبر Loopback الآن رمزاً مميزاً لكل جلسة.</item>
+        <item>تتجاهل استعادة النسخة الاحتياطية مفاتيح التفضيلات التي تملكها معالجات الوحدات المخصصة.</item>
+        <item>تم تشديد تسجيل سجلات الإصدار بحيث لا تتجاوز ترويسات طلبات HTTP وسجلات أندرويد الخام مرشّح Timber الخاص بالإصدار.</item>
+        <item>يتضمن أيضاً حفظ قوائم التشغيل الذكية، وفحص المسارات المكررة، والتحكم في سرعة التشغيل، ورسائل فشل أوضح للتشغيل والمزامنة، وإمكانية وصول محسّنة.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>تحسين تصميم Material 3 Expressive: مخطط حركة جديد ومؤشرات تقدم متموجة وحركات تحويل الأشكال في أرجاء التطبيق.</item>
+        <item>أصبحت خوادم Jellyfin عبر HTTP العادي مسموحة الآن لمضيفي VPN والشبكة المحلية.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>تطبيق أصغر: قواعد تقليص الكود الأخف تقلل حجم التثبيت بنحو 1.5 MB.</item>
+        <item>بدء تشغيل أسرع وأكثر سلاسة: أُعيد توليد Baseline Profiles من الصفر لتتوافق مع الواجهة الجديدة ومسارات الكود الجديدة.</item>
+        <item>قوائم وصفحات سفلية وموازن صوت أكثر استجابة بفضل تحسين شامل لأداء Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>تشغيل سحابي أكثر موثوقية: لم يعد يتم الإبلاغ خطأً عن طلبات Navidrome/Jellyfin الملغاة كأخطاء شبكة عند تخطي المسارات بسرعة.</item>
+        <item>لم يعد من الممكن فقدان أحداث النسخ الاحتياطي والاستعادة والإعداد أثناء تدوير الشاشة.</item>
+        <item>تنظيف شامل: إزالة الكود الميت، وترحيل الواجهات البرمجية المهجورة، وتحديث التبعيات.</item>
+    </string-array>
 </resources>

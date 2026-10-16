@@ -238,4 +238,15 @@
     <string name="cloud_download_selected">Seçili bulut parçalarını indir</string>
     <string name="cloud_download_selected_count">%1$d bulut parçasını indir</string>
     <string name="cloud_download_selected_started">%1$d bulut parçası çevrimdışı dinleme için hazırlanıyor</string>
+    <string name="app_name_change_message">Bu uygulamanın yeni adı PixelPlayerOSS. Keyifli dinlemeler!</string>
+    <string name="all_files_access_description">Şarkı meta verilerini (.mp3 dosyaları) düzenlemek için PixelPlayerOSS\'in tüm dosyalara özel erişime ihtiyacı vardır. Bu, parça etiketlerini doğrudan değiştirmemizi sağlar. Meta veri düzenlemeyi etkinleştirmek için lütfen sonraki ekranda bu izni verin.</string>
+    <string name="musicbrainz_lookup">MusicBrainz\'te bul</string>
+    <string name="musicbrainz_searching">Kayıt eşleşmeleri aranıyor…</string>
+    <string name="musicbrainz_lookup_failed">MusicBrainz sorgusu başarısız oldu</string>
+    <string name="musicbrainz_search_failed_fallback">MusicBrainz araması başarısız oldu</string>
+    <string name="musicbrainz_save_failed_fallback">MusicBrainz meta verileri kaydedilemedi</string>
+    <string name="musicbrainz_choose_match">Bir MusicBrainz eşleşmesi seçin</string>
+    <string name="musicbrainz_no_results">Uygun kayıt bulunamadı.</string>
+    <string name="musicbrainz_match_score">Eşleşme güveni: %%%1$d</string>
+    <string name="musicbrainz_applied">MusicBrainz tanımlayıcıları kaydedildi. Eksik yıl ve yer tutucu adlar tamamlandı.</string>
 </resources>

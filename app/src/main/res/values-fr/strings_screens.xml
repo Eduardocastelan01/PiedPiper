@@ -226,4 +226,13 @@
     <string name="word_delimiter_toast_invalid">Existe déjà ou est invalide</string>
     <string name="word_delimiter_toast_reset">Délimiteurs de mots réinitialisés aux valeurs par défaut</string>
     <string name="word_delimiters_screen_title">Délimiteurs de mots</string>
+    <string name="easter_egg_thank_you">Merci d\'utiliser PixelPlayerOSS !</string>
+    <string name="setup_external_services_subtitle">PixelPlayerOSS fonctionne hors ligne par défaut. Activez uniquement les recherches que vous souhaitez.</string>
+    <string name="setup_permission_media_description">PixelPlayerOSS a besoin d\'accéder à vos fichiers audio pour créer votre bibliothèque musicale.</string>
+    <string name="setup_permission_alarms_description">Facultatif, mais recommandé si vous utilisez le minuteur de sommeil et souhaitez que PixelPlayerOSS arrête la lecture exactement à l\'heure prévue.</string>
+    <string name="setup_backup_have_description">Si vous avez déjà une sauvegarde de PixelPlayerOSS, restaurez-la maintenant pour passer la plupart des étapes de configuration restantes sur cet appareil.</string>
+    <string name="setup_theme_dark_description">L\'apparence sombre Material 3 par défaut de PixelPlayerOSS.</string>
+    <string name="home_empty_placeholder_subtitle">Votre mix apparaîtra ici lorsque PixelPlayerOSS trouvera des chansons ou synchronisera une source.</string>
+    <string name="crash_report_share_subject">Rapport de plantage de PixelPlayerOSS</string>
+    <string name="about_support_title">Soutenir PixelPlayerOSS</string>
 </resources>

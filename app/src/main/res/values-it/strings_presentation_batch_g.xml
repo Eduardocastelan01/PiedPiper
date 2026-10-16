@@ -374,4 +374,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Stabile</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Changelog</string>
     <string name="presentation_batch_g_yes">Sì</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS divide i tag degli artisti usando delimitatori di carattere (/, ;, &amp;) e delimitatori di parola (feat., ft., vs., x). I delimitatori di parola vengono riconosciuti senza distinzione tra maiuscole e minuscole.
+
+"Estrai artisti dal titolo" rileva schemi come (feat. Artista) nei titoli dei brani.
+
+La barra rovesciata (\) può essere usata per l\'escape dei delimitatori di carattere.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Benvenuto in PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Aggiorna all\'ultima versione di PixelPlayerOSS e verifica che il problema si presenti ancora.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Versione di PixelPlayerOSS:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>Riprodotte di recente e il ripristino della coda persistente mantengono pronta la tua sessione di ascolto.</item>
+        <item>Ora sono inclusi Backup e ripristino v3 e gli strumenti di gestione degli account.</item>
+        <item>I testi sono diventati più intelligenti, con ricerca manuale di riserva e miglioramenti dell\'archiviazione.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Grande ottimizzazione delle prestazioni in avvio, libreria, coda e interazioni del player.</item>
+        <item>I flussi di navigazione e ricerca sono più affidabili, con una gestione dei percorsi più sicura.</item>
+        <item>Migliorata la compatibilità della riproduzione audio con più dispositivi e formati.</item>
+        <item>Ampliati i flussi di selezione multipla su brani, album e playlist.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>Il comportamento di coda e riproduzione casuale ora è più stabile e prevedibile.</item>
+        <item>Risolti i problemi del timer di spegnimento, della navigazione nella scheda File e dei crash legati all\'album artist.</item>
+        <item>Migliorati il caricamento dei widget e la stabilità del servizio per ridurre i problemi di surriscaldamento e memoria.</item>
+        <item>Correzioni generali di bug e rifiniture dell\'interfaccia in tutta l\'app.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Aggiornamento dell\'interfaccia Material 3 Expressive</item>
+        <item>Equalizzatore a 10 bande ed effetti</item>
+        <item>Nuovo flusso di sincronizzazione della libreria</item>
+        <item>Importazione/esportazione playlist M3U</item>
+        <item>Integrazione delle immagini artista di Deezer</item>
+        <item>Copertine personalizzate per le playlist</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Refactoring dell\'architettura delle impostazioni</item>
+        <item>Animazioni di coda e player</item>
+        <item>Baseline Profiles e prestazioni</item>
+        <item>Sistema di testi migliorato con offset di sincronizzazione</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Stabilità della schermata del player</item>
+        <item>Correzioni generali di bug e pulizia</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Grande riprogettazione della navigazione</item>
+        <item>Nuovo esplora file per scegliere le cartelle di origine</item>
+        <item>Continuità fluida tra dispositivi remoti</item>
+        <item>Transizione gapless tra i brani</item>
+        <item>Controllo del crossfade</item>
+        <item>Nuova funzione Transizioni personalizzate (solo per le playlist)</item>
+        <item>Continua a riprodurre dopo aver chiuso l\'app</item>
+        <item>Ottimizzazioni dell\'interfaccia</item>
+        <item>Statistiche migliorate</item>
+        <item>Controllo della coda riprogettato con più funzioni</item>
+        <item>Migliorato il supporto di diversi tipi di file per la riproduzione e la modifica dei metadati</item>
+        <item>Gestione dei permessi migliorata</item>
+        <item>Correzioni di bug minori</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Introdotto un hub di statistiche di ascolto più ricco, con approfondimenti più dettagliati sulle tue sessioni.</item>
+        <item>Lanciato un mini player flottante per aprire e visualizzare in anteprima i file locali all\'istante.</item>
+        <item>Aggiunta una scheda Cartelle con navigatore ad albero e vista pronta per le playlist.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Rifinita l\'interfaccia Material 3 per un\'esperienza più pulita e coerente.</item>
+        <item>La modifica dei metadati ora permette di cambiare la copertina.</item>
+        <item>Animazioni e transizioni più fluide in tutta l\'app per una navigazione più scorrevole.</item>
+        <item>Migliorato il layout della schermata artista con più dettagli e cura.</item>
+        <item>Potenziata la generazione di DailyMix e YourMix con selezioni più intelligenti e varie.</item>
+        <item>Migliorate pertinenza e presentazione della ricerca per scoprire la musica più velocemente.</item>
+        <item>Ampliato il supporto a una gamma più ampia di formati di file audio.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Risolte alcune stranezze dei metadati, così i dettagli dei brani restano corretti ovunque.</item>
+        <item>Ripristinate le scorciatoie delle notifiche, che ora tornano alla riproduzione in modo affidabile.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Changelog nell\'app per tenerti aggiornato sulle ultime novità.</item>
+        <item>Supporto ai file .LRC, sia incorporati sia esterni.</item>
+        <item>Supporto ai testi offline.</item>
+        <item>Testi sincronizzati (a tempo con il brano).</item>
+        <item>Nuova schermata per vedere l\'intera coda.</item>
+        <item>Riordina e rimuovi i brani dalla coda.</item>
+        <item>Gesti del mini player (scorri verso il basso per chiudere).</item>
+        <item>Aggiunte altre animazioni Material.</item>
+        <item>Nuove impostazioni per personalizzare aspetto e comportamento.</item>
+        <item>Nuove impostazioni per svuotare la cache.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Riprogettazione completa dell\'interfaccia utente.</item>
+        <item>Riprogettazione completa del player.</item>
+        <item>Miglioramenti delle prestazioni nella libreria.</item>
+        <item>Migliorata la velocità di avvio dell\'applicazione.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Corretti vari bug dell\'editor dei tag.</item>
+        <item>Corretto un bug per cui la notifica di riproduzione non scompariva.</item>
+        <item>Corretti diversi bug che causavano l\'arresto anomalo dell\'app.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Prima release FOSS pubblica di PixelPlayerOSS.</item>
+        <item>Include riproduzione locale, playlist, preferiti, testi, statistiche di ascolto, temi dinamici Material 3, widget e backup/ripristino.</item>
+        <item>Mantiene il supporto a Navidrome/Subsonic e Jellyfin self-hosted, oltre alla ricerca opzionale dei testi su LRCLIB e delle immagini artista su Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Rimosse le dipendenze di runtime da Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, fatturazione Play Store, Firebase, Crashlytics e Google Play Services.</item>
+        <item>Rimosso lo scrobbling pubblico su Last.fm e ListenBrainz; l\'invio dei dati a Navidrome/Subsonic self-hosted resta limitato al server dell\'utente.</item>
+        <item>Rimosse le traduzioni incluse e il selettore della lingua dell\'app per questa prima release FOSS; per ora vengono distribuite le risorse in inglese.</item>
+        <item>Rimossi i percorsi di rilascio che dipendevano da artefatti di firma locali o privati, valori di firma fittizi o presupposti validi solo per gli app store.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>Aggiunti metadati F-Droid, metadati dello store Fastlane, note sulla privacy, note sulla sicurezza, documentazione di dipendenze e licenze e linee guida per i contributori.</item>
+        <item>Le build di release restano non firmate quando mancano le chiavi di firma locali.</item>
+        <item>Aggiunto pixelplayer.disableReleaseSigning=true per build di verifica non firmate e deterministiche.</item>
+        <item>Documentato il percorso delle licenze di risorse e dipendenze, inclusi gli artefatti Maven nativi/binari e le dipendenze JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>Lo streaming cloud in loopback ora richiede un token per sessione.</item>
+        <item>Il ripristino del backup ignora le chiavi delle preferenze gestite da moduli dedicati.</item>
+        <item>Il logging di release è stato rafforzato, così gli header delle richieste HTTP e i log Android grezzi non aggirano il filtro di release di Timber.</item>
+        <item>Include anche la persistenza delle playlist smart, la scansione dei brani duplicati, il controllo della velocità di riproduzione, messaggi di errore di riproduzione e sincronizzazione più chiari e un\'accessibilità migliorata.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Revisione del design Material 3 Expressive: un nuovo schema di movimento, indicatori di avanzamento ondulati e animazioni di trasformazione delle forme in tutta l\'app.</item>
+        <item>Ora i server Jellyfin tramite HTTP semplice sono consentiti per gli host VPN e di rete locale.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>App più leggera: regole di riduzione del codice più snelle tolgono circa 1,5 MB alle dimensioni di installazione.</item>
+        <item>Avvio più rapido e fluido: i Baseline Profiles sono stati rigenerati da zero per adattarsi alla nuova interfaccia e ai nuovi percorsi del codice.</item>
+        <item>Liste, schermate a scorrimento ed equalizzatore più reattivi grazie a un\'ampia ottimizzazione delle prestazioni di Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Riproduzione cloud più affidabile: le richieste Navidrome/Jellyfin annullate non vengono più segnalate erroneamente come errori di rete quando si saltano rapidamente i brani.</item>
+        <item>Gli eventi di backup, ripristino e configurazione non possono più andare persi durante la rotazione dello schermo.</item>
+        <item>Pulizie di primavera: rimosso il codice inutilizzato, migrate le API deprecate e aggiornate le dipendenze.</item>
+    </string-array>
 </resources>
