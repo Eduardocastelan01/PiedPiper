@@ -170,4 +170,14 @@
     <string name="widget_wavy_progress_bar_desc">Barre de progression, %1$d pour cent</string>
     <string name="song_info_tone_picker_body">Choisissez où PixelPlayerOSS doit installer ce son.</string>
     <string name="song_info_ringtone_permission_prompt">Activez l\'option Modifier les paramètres système, puis revenez dans PixelPlayerOSS pour terminer automatiquement.</string>
+    <string name="edit_song_custom_metadata_heading">Métadonnées facultatives</string>
+    <string name="edit_song_custom_metadata_description">Définissez une note de 0 à 5 ou ajoutez des champs de texte tels que MOOD, COMMENT, YEAR ou BPM.</string>
+    <string name="edit_song_rating">Note (0–5)</string>
+    <string name="edit_song_rating_not_set">Non définie</string>
+    <string name="edit_song_custom_field_name">Nom du champ</string>
+    <string name="edit_song_custom_field_value">Valeur</string>
+    <string name="edit_song_add_custom_field">Ajouter un champ de métadonnées</string>
+    <string name="edit_song_remove_custom_field">Supprimer le champ</string>
+    <string name="edit_song_custom_metadata_formats">La note et les champs personnalisés peuvent être écrits dans les fichiers MP3, WAV, AIFF, FLAC, OGG, Opus, M4A, M4B et MP4.</string>
+    <string name="edit_song_custom_metadata_invalid">Vérifiez les champs de métadonnées facultatifs.</string>
 </resources>

@@ -263,4 +263,5 @@
     <string name="musicbrainz_no_results">No se encontraron grabaciones adecuadas.</string>
     <string name="musicbrainz_match_score">Confianza de la coincidencia: %1$d%%</string>
     <string name="musicbrainz_applied">Identificadores de MusicBrainz guardados. Se completaron el año que faltaba y los nombres provisionales.</string>
+    <string name="cloud_playlist_download">Descargar lista de reproducción</string>
 </resources>

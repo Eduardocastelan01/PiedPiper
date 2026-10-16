@@ -263,4 +263,5 @@
     <string name="musicbrainz_no_results">적합한 녹음을 찾지 못했습니다.</string>
     <string name="musicbrainz_match_score">일치도: %1$d%%</string>
     <string name="musicbrainz_applied">MusicBrainz 식별자가 저장되었습니다. 누락된 연도와 임시 이름이 보완되었습니다.</string>
+    <string name="cloud_playlist_download">플레이리스트 다운로드</string>
 </resources>

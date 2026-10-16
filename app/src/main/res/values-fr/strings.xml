@@ -263,4 +263,5 @@
     <string name="musicbrainz_no_results">Aucun enregistrement approprié n\'a été trouvé.</string>
     <string name="musicbrainz_match_score">Fiabilité de la correspondance : %1$d %%</string>
     <string name="musicbrainz_applied">Identifiants MusicBrainz enregistrés. L\'année manquante et les noms génériques ont été complétés.</string>
+    <string name="cloud_playlist_download">Télécharger la playlist</string>
 </resources>

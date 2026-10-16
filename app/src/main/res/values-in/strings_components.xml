@@ -170,4 +170,14 @@
     <string name="widget_wavy_progress_bar_desc">Bilah progres, %1$d persen</string>
     <string name="song_info_tone_picker_body">Pilih tempat PixelPlayerOSS harus memasang suara ini.</string>
     <string name="song_info_ringtone_permission_prompt">Aktifkan Ubah setelan sistem, lalu kembali ke PixelPlayerOSS untuk menyelesaikannya secara otomatis.</string>
+    <string name="edit_song_custom_metadata_heading">Metadata opsional</string>
+    <string name="edit_song_custom_metadata_description">Atur rating 0–5 atau tambahkan kolom teks seperti MOOD, COMMENT, YEAR, atau BPM.</string>
+    <string name="edit_song_rating">Rating (0–5)</string>
+    <string name="edit_song_rating_not_set">Belum diatur</string>
+    <string name="edit_song_custom_field_name">Nama kolom</string>
+    <string name="edit_song_custom_field_value">Nilai</string>
+    <string name="edit_song_add_custom_field">Tambah kolom metadata</string>
+    <string name="edit_song_remove_custom_field">Hapus kolom</string>
+    <string name="edit_song_custom_metadata_formats">Rating dan kolom kustom dapat ditulis ke file MP3, WAV, AIFF, FLAC, OGG, Opus, M4A, M4B, dan MP4.</string>
+    <string name="edit_song_custom_metadata_invalid">Periksa kolom metadata opsional.</string>
 </resources>

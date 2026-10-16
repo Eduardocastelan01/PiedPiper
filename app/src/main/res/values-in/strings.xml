@@ -263,4 +263,5 @@
     <string name="musicbrainz_no_results">Tidak ditemukan rekaman yang sesuai.</string>
     <string name="musicbrainz_match_score">Tingkat kecocokan: %1$d%%</string>
     <string name="musicbrainz_applied">ID MusicBrainz disimpan. Tahun yang hilang dan nama placeholder telah dilengkapi.</string>
+    <string name="cloud_playlist_download">Unduh playlist</string>
 </resources>

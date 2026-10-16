@@ -170,4 +170,14 @@
     <string name="widget_wavy_progress_bar_desc">Fremdriftslinje, %1$d prosent</string>
     <string name="song_info_tone_picker_body">Velg hvor PixelPlayerOSS skal installere denne lyden.</string>
     <string name="song_info_ringtone_permission_prompt">Slå på «Endre systeminnstillinger», og gå deretter tilbake til PixelPlayerOSS for å fullføre automatisk.</string>
+    <string name="edit_song_custom_metadata_heading">Valgfri metadata</string>
+    <string name="edit_song_custom_metadata_description">Angi en vurdering fra 0–5 eller legg til tekstfelt som MOOD, COMMENT, YEAR eller BPM.</string>
+    <string name="edit_song_rating">Vurdering (0–5)</string>
+    <string name="edit_song_rating_not_set">Ikke angitt</string>
+    <string name="edit_song_custom_field_name">Feltnavn</string>
+    <string name="edit_song_custom_field_value">Verdi</string>
+    <string name="edit_song_add_custom_field">Legg til metadatafelt</string>
+    <string name="edit_song_remove_custom_field">Fjern felt</string>
+    <string name="edit_song_custom_metadata_formats">Vurdering og egendefinerte felt kan skrives til MP3-, WAV-, AIFF-, FLAC-, OGG-, Opus-, M4A-, M4B- og MP4-filer.</string>
+    <string name="edit_song_custom_metadata_invalid">Sjekk de valgfrie metadatafeltene.</string>
 </resources>

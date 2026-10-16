@@ -263,4 +263,5 @@
     <string name="musicbrainz_no_results">Подходящие записи не найдены.</string>
     <string name="musicbrainz_match_score">Степень совпадения: %1$d%%</string>
     <string name="musicbrainz_applied">Идентификаторы MusicBrainz сохранены. Отсутствующий год и названия-заглушки были дополнены.</string>
+    <string name="cloud_playlist_download">Скачать плейлист</string>
 </resources>
