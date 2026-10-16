@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library sort method labels -->
+    <string name="sort_method_default_order">الترتيب الافتراضي</string>
+    <string name="sort_method_title">العنوان</string>
+    <string name="sort_method_artist">الفنان</string>
+    <string name="sort_method_album">الألبوم</string>
+    <string name="sort_method_date_added">تاريخ الإضافة</string>
+    <string name="sort_method_duration">المدة</string>
+    <string name="sort_method_release_year">سنة الإصدار</string>
+    <string name="sort_method_song_count">عدد الأغاني</string>
+    <string name="sort_method_name">الاسم</string>
+    <string name="sort_method_num_songs">عدد الأغاني</string>
+    <string name="sort_method_date_created">تاريخ الإنشاء</string>
+    <string name="sort_method_date_liked">تاريخ الإعجاب</string>
+    <string name="sort_method_subfolder_count">عدد المجلدات الفرعية</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Library sort method labels -->
+    <string name="sort_method_default_order">Порядок по умолчанию</string>
+    <string name="sort_method_title">Название</string>
+    <string name="sort_method_artist">Исполнитель</string>
+    <string name="sort_method_album">Альбом</string>
+    <string name="sort_method_date_added">Дата добавления</string>
+    <string name="sort_method_duration">Длительность</string>
+    <string name="sort_method_release_year">Год выпуска</string>
+    <string name="sort_method_song_count">Количество песен</string>
+    <string name="sort_method_name">Имя</string>
+    <string name="sort_method_num_songs">Количество песен</string>
+    <string name="sort_method_date_created">Дата создания</string>
+    <string name="sort_method_date_liked">Дата добавления в избранное</string>
+    <string name="sort_method_subfolder_count">Количество подпапок</string>
+</resources>
