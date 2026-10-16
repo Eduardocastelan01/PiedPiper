@@ -68,4 +68,20 @@
         <item quantity="one">%d çalma listesini silmek istediğinizden emin misiniz?</item>
         <item quantity="other">%d çalma listesini silmek istediğinizden emin misiniz?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d Şarkı</item>
+        <item quantity="other">%d Şarkı</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d dakika önce</item>
+        <item quantity="other">%d dakika önce</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d saat önce</item>
+        <item quantity="other">%d saat önce</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d gün önce</item>
+        <item quantity="other">%d gün önce</item>
+    </plurals>
 </resources>

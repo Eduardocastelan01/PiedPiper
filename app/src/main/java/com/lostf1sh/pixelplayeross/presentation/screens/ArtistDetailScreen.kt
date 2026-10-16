@@ -718,13 +718,14 @@ private fun CollapsibleAlbumSectionHeader(
         animationSpec = tween(durationMillis = 260),
         label = "ArtistAlbumExpandRotation"
     )
-    val subtitle = remember(section.year, section.songs.size) {
+    val songCountText = formatSongCount(section.songs.size)
+    val subtitle = remember(section.year, songCountText) {
         buildString {
             section.year?.takeIf { it > 0 }?.let {
                 append(it.toString())
                 append(" • ")
             }
-            append(formatSongCount(section.songs.size))
+            append(songCountText)
         }
     }
 

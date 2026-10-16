@@ -76,4 +76,24 @@
         <item quantity="many">Sei sicuro di voler eliminare %d playlist?</item>
         <item quantity="other">Sei sicuro di voler eliminare %d playlist?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d brano</item>
+        <item quantity="many">%d brani</item>
+        <item quantity="other">%d brani</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d minuto fa</item>
+        <item quantity="many">%d minuti fa</item>
+        <item quantity="other">%d minuti fa</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d ora fa</item>
+        <item quantity="many">%d ore fa</item>
+        <item quantity="other">%d ore fa</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d giorno fa</item>
+        <item quantity="many">%d giorni fa</item>
+        <item quantity="other">%d giorni fa</item>
+    </plurals>
 </resources>

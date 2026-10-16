@@ -76,4 +76,24 @@
         <item quantity="many">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
         <item quantity="other">Êtes-vous sûr de vouloir supprimer %d listes de lecture ?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d chanson</item>
+        <item quantity="many">%d chansons</item>
+        <item quantity="other">%d chansons</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">Il y a %d minute</item>
+        <item quantity="many">Il y a %d minutes</item>
+        <item quantity="other">Il y a %d minutes</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">Il y a %d heure</item>
+        <item quantity="many">Il y a %d heures</item>
+        <item quantity="other">Il y a %d heures</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">Il y a %d jour</item>
+        <item quantity="many">Il y a %d jours</item>
+        <item quantity="other">Il y a %d jours</item>
+    </plurals>
 </resources>

@@ -68,4 +68,20 @@
         <item quantity="one">%d Playlist wirklich löschen?</item>
         <item quantity="other">%d Playlists wirklich löschen?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d Song</item>
+        <item quantity="other">%d Songs</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">Vor %d Minute</item>
+        <item quantity="other">Vor %d Minuten</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">Vor %d Stunde</item>
+        <item quantity="other">Vor %d Stunden</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">Vor %d Tag</item>
+        <item quantity="other">Vor %d Tagen</item>
+    </plurals>
 </resources>

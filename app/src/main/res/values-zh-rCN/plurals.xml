@@ -51,4 +51,16 @@
     <plurals name="delete_playlists_confirmation_body">
         <item quantity="other">你确定要删除这 %d 个歌单吗？</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="other">%d 首歌曲</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="other">%d 分钟前</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="other">%d 小时前</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="other">%d 天前</item>
+    </plurals>
 </resources>

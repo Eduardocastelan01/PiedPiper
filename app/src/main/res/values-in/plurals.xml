@@ -60,4 +60,16 @@
     <plurals name="delete_playlists_confirmation_body">
         <item quantity="other">Apakah Anda yakin ingin menghapus %d playlist?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="other">%d Lagu</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="other">%d menit yang lalu</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="other">%d jam yang lalu</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="other">%d hari yang lalu</item>
+    </plurals>
 </resources>

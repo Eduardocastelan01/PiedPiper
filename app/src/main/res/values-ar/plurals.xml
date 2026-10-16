@@ -136,4 +136,36 @@
         <item quantity="many">هل أنت متأكد من أنك تريد حذف %d قائمة تشغيل؟</item>
         <item quantity="other">هل أنت متأكد من أنك تريد حذف %d قائمة تشغيل؟</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="zero">%d أغنية</item>
+        <item quantity="one">%d أغنية</item>
+        <item quantity="two">%d أغنيتان</item>
+        <item quantity="few">%d أغانٍ</item>
+        <item quantity="many">%d أغنية</item>
+        <item quantity="other">%d أغنية</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="zero">منذ %d دقيقة</item>
+        <item quantity="one">منذ %d دقيقة</item>
+        <item quantity="two">منذ %d دقيقتين</item>
+        <item quantity="few">منذ %d دقائق</item>
+        <item quantity="many">منذ %d دقيقة</item>
+        <item quantity="other">منذ %d دقيقة</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="zero">منذ %d ساعة</item>
+        <item quantity="one">منذ %d ساعة</item>
+        <item quantity="two">منذ %d ساعتين</item>
+        <item quantity="few">منذ %d ساعات</item>
+        <item quantity="many">منذ %d ساعة</item>
+        <item quantity="other">منذ %d ساعة</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="zero">منذ %d يوم</item>
+        <item quantity="one">منذ %d يوم</item>
+        <item quantity="two">منذ %d يومين</item>
+        <item quantity="few">منذ %d أيام</item>
+        <item quantity="many">منذ %d يوماً</item>
+        <item quantity="other">منذ %d يوم</item>
+    </plurals>
 </resources>

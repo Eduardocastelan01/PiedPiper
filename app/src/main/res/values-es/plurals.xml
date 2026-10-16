@@ -76,4 +76,24 @@
         <item quantity="many">¿Estás seguro de que deseas eliminar %d listas de reproducción?</item>
         <item quantity="other">¿Estás seguro de que deseas eliminar %d listas de reproducción?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d canción</item>
+        <item quantity="many">%d canciones</item>
+        <item quantity="other">%d canciones</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">Hace %d minuto</item>
+        <item quantity="many">Hace %d minutos</item>
+        <item quantity="other">Hace %d minutos</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">Hace %d hora</item>
+        <item quantity="many">Hace %d horas</item>
+        <item quantity="other">Hace %d horas</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">Hace %d día</item>
+        <item quantity="many">Hace %d días</item>
+        <item quantity="other">Hace %d días</item>
+    </plurals>
 </resources>

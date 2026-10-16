@@ -68,4 +68,20 @@
         <item quantity="one">Er du sikker på at du vil slette %d spilleliste?</item>
         <item quantity="other">Er du sikker på at du vil slette %d spillelister?</item>
     </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d sang</item>
+        <item quantity="other">%d sanger</item>
+    </plurals>
+    <plurals name="time_ago_minutes">
+        <item quantity="one">%d minutt siden</item>
+        <item quantity="other">%d minutter siden</item>
+    </plurals>
+    <plurals name="time_ago_hours">
+        <item quantity="one">%d time siden</item>
+        <item quantity="other">%d timer siden</item>
+    </plurals>
+    <plurals name="time_ago_days">
+        <item quantity="one">%d dag siden</item>
+        <item quantity="other">%d dager siden</item>
+    </plurals>
 </resources>
