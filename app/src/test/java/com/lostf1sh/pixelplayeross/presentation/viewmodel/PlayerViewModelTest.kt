@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.viewmodel
 
 import android.content.Context
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Bundle
 import app.cash.turbine.test
@@ -58,6 +59,7 @@ import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
 import com.lostf1sh.pixelplayeross.utils.AppShortcutManager
 import com.lostf1sh.pixelplayeross.utils.MediaItemBuilder
+import com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.*
 import app.cash.turbine.Turbine
 
@@ -779,6 +781,73 @@ class PlayerViewModelTest {
             verify(exactly = 1) { mockLibraryStateHolder.onCleared(owner) }
             verify(exactly = 1) { mockSleepTimerStateHolder.onCleared(owner) }
             verify(exactly = 1) { mockConnectivityStateHolder.onCleared(owner) }
+        }
+    }
+
+    @Nested
+    @DisplayName("Restoring interrupted saves")
+    inner class InterruptedSaveRestoreTests {
+
+        private val songsAwaitingWriteAccess = MutableStateFlow<List<Uri>>(emptyList())
+        private val restoreIntentSender: IntentSender = mockk()
+        private val awaitingUris = listOf<Uri>(mockk(relaxed = true), mockk(relaxed = true))
+
+        @BeforeEach
+        fun stubRestoreSources() {
+            // The view model's init coroutine has not run yet, so it collects this flow.
+            every { mockMetadataEditStateHolder.songsAwaitingWriteAccess } returns songsAwaitingWriteAccess
+            mockkObject(MediaStorePermissionHelper)
+            every {
+                MediaStorePermissionHelper.createWriteRequestIntentSender(any(), any())
+            } returns restoreIntentSender
+        }
+
+        /**
+         * Marks a batch genre edit as waiting for its own write request. The public paths that do
+         * this (batchEditGenre, editSongMetadata, saveLyricsToFile) only ask for permission when
+         * Build.VERSION.SDK_INT >= R, which is 0 on the JVM, so the private field is set directly.
+         */
+        private fun startOtherWriteRequest() {
+            PlayerViewModel::class.java.getDeclaredField("pendingBatchGenreEdit")
+                .apply { isAccessible = true }
+                .set(playerViewModel, emptyList<Song>() to "Rock")
+        }
+
+        @Test
+        fun `restore request waits for another pending write request and asks once it is answered`() = runTest {
+            playerViewModel.writePermissionRequest.test {
+                startOtherWriteRequest()
+                songsAwaitingWriteAccess.value = awaitingUris
+                advanceUntilIdle()
+
+                // Only one write request can be in flight, so the restore must not ask yet.
+                expectNoEvents()
+                verify(exactly = 0) { MediaStorePermissionHelper.createWriteRequestIntentSender(any(), any()) }
+
+                playerViewModel.onWritePermissionResult(granted = false)
+                advanceUntilIdle()
+
+                verify(exactly = 1) { MediaStorePermissionHelper.createWriteRequestIntentSender(any(), any()) }
+                verify(exactly = 1) {
+                    MediaStorePermissionHelper.createWriteRequestIntentSender(any(), awaitingUris)
+                }
+                assertSame(restoreIntentSender, awaitItem())
+                expectNoEvents()
+            }
+        }
+
+        @Test
+        fun `restore request is emitted right away when no other write request is pending`() = runTest {
+            playerViewModel.writePermissionRequest.test {
+                songsAwaitingWriteAccess.value = awaitingUris
+                advanceUntilIdle()
+
+                verify(exactly = 1) {
+                    MediaStorePermissionHelper.createWriteRequestIntentSender(any(), awaitingUris)
+                }
+                assertSame(restoreIntentSender, awaitItem())
+                expectNoEvents()
+            }
         }
     }
 

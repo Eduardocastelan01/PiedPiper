@@ -100,6 +100,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -577,6 +578,8 @@ class PlayerViewModel @Inject constructor(
     private var pendingInterruptedSaveRestore = false
     /** Cut-off songs already asked about, so a denied request is not repeated while this ViewModel lives. */
     private val askedInterruptedSaveRestoreUris = mutableSetOf<String>()
+    /** Counts answered write requests, so a waiting restore prompt can tell one has finished. */
+    private val answeredWriteRequests = MutableStateFlow(0)
     private var pendingDeleteSong: Song? = null
     private var pendingDeleteCallback: ((Boolean) -> Unit)? = null
 
@@ -4507,6 +4510,15 @@ class PlayerViewModel @Inject constructor(
 
     /** Called from the UI after the user approves or denies the MediaStore write permission. */
     fun onWritePermissionResult(granted: Boolean) {
+        try {
+            dispatchWritePermissionResult(granted)
+        } finally {
+            // Lets a restore prompt that waited for this request ask next.
+            answeredWriteRequests.update { it + 1 }
+        }
+    }
+
+    private fun dispatchWritePermissionResult(granted: Boolean) {
         val batchMetadata = pendingBatchMetadataEdit
         if (batchMetadata != null) {
             pendingBatchMetadataEdit = null
@@ -4591,21 +4603,29 @@ class PlayerViewModel @Inject constructor(
      * and restores them once it is granted. Each song is asked about once per ViewModel.
      */
     private suspend fun offerToRestoreInterruptedSaves() {
-        metadataEditStateHolder.songsAwaitingWriteAccess.collect { uris ->
-            if (uris.all { it.toString() in askedInterruptedSaveRestoreUris }) return@collect
+        metadataEditStateHolder.songsAwaitingWriteAccess.collectLatest { uris ->
+            if (uris.all { it.toString() in askedInterruptedSaveRestoreUris }) return@collectLatest
             // A request emitted while the player sheet is not collecting would be dropped.
             _writePermissionRequest.subscriptionCount.first { it > 0 }
-            val otherRequestPending = pendingMetadataEdit != null || pendingBatchMetadataEdit != null ||
-                pendingBatchGenreEdit != null || pendingLyricsSave != null
-            if (otherRequestPending) return@collect
+            // Only one write request can be in flight; wait for an edit's or lyrics save's own
+            // request to be answered instead of dropping the restore until the next change.
+            while (true) {
+                val answered = answeredWriteRequests.value
+                if (!otherWriteRequestPending()) break
+                answeredWriteRequests.first { it != answered }
+            }
             val intentSender = com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
-                .createWriteRequestIntentSender(context, uris) ?: return@collect
+                .createWriteRequestIntentSender(context, uris) ?: return@collectLatest
             uris.mapTo(askedInterruptedSaveRestoreUris) { it.toString() }
             pendingInterruptedSaveRestore = true
             _toastEvents.emit(context.getString(R.string.metadata_restore_permission_prompt))
             _writePermissionRequest.emit(intentSender)
         }
     }
+
+    private fun otherWriteRequestPending(): Boolean =
+        pendingMetadataEdit != null || pendingBatchMetadataEdit != null ||
+            pendingBatchGenreEdit != null || pendingLyricsSave != null
 
     private fun onInterruptedSaveRestorePermissionResult(granted: Boolean) {
         pendingInterruptedSaveRestore = false
