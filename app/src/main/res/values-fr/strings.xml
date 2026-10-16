@@ -180,7 +180,6 @@
     <string name="search_lyrics_online_prompt">Souhaitez-vous rechercher des paroles en ligne ?</string>
     <string name="searched_for_x_format">Recherche de \"%s\"</string>
     <string name="searching_lyrics">Recherche des paroles…</string>
-    <string name="service_processing_action">Traitement de l\'action de lecture…</string>
     <string name="setcat_find_duplicates_subtitle">Analysez votre bibliothèque pour trouver les pistes présentes plusieurs fois.</string>
     <string name="setcat_find_duplicates_title">Trouver les pistes en double</string>
     <string name="setcat_playback_speed">Vitesse de lecture</string>

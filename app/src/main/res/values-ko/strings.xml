@@ -180,7 +180,6 @@
     <string name="search_lyrics_online_prompt">온라인에서 가사를 검색하시겠습니까?</string>
     <string name="searched_for_x_format">\"%s\" 검색 결과</string>
     <string name="searching_lyrics">가사 검색 중…</string>
-    <string name="service_processing_action">재생 작업 처리 중…</string>
     <string name="setcat_find_duplicates_subtitle">라이브러리에서 두 번 이상 나타나는 트랙을 스캔합니다.</string>
     <string name="setcat_find_duplicates_title">중복 트랙 찾기</string>
     <string name="setcat_playback_speed">재생 속도</string>

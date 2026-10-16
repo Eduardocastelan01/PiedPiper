@@ -180,7 +180,6 @@
     <string name="search_lyrics_online_prompt">Çevrimiçi şarkı sözü aramak ister misiniz?</string>
     <string name="searched_for_x_format">\"%s\" için arama yapıldı</string>
     <string name="searching_lyrics">Şarkı sözleri aranıyor…</string>
-    <string name="service_processing_action">Oynatma eylemi işleniyor…</string>
     <string name="setcat_find_duplicates_subtitle">Kitaplığınızı birden fazla kez görünen parçalar için tarayın.</string>
     <string name="setcat_find_duplicates_title">Yinelenen parçaları bul</string>
     <string name="setcat_playback_speed">Oynatma hızı</string>

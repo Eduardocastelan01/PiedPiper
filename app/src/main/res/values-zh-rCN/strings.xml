@@ -120,7 +120,6 @@
 <string name="widget_bar_4x1_desc">简洁播放控制条</string>
 <string name="widget_control_4x2_desc">完整控制，支持随机与循环</string>
 <string name="widget_grid_2x2_desc">简约方形播放器小组件</string>
-<string name="service_processing_action">正在处理播放指令…</string>
 
 <string name="playlist_none_to_share">没有可分享的播放列表</string>
 <string name="playlist_share_chooser_title">分享播放列表</string>

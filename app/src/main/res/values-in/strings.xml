@@ -180,7 +180,6 @@
     <string name="search_lyrics_online_prompt">Apakah Anda ingin mencari lirik secara online?</string>
     <string name="searched_for_x_format">Mencari \"%s\"</string>
     <string name="searching_lyrics">Mencari lirik…</string>
-    <string name="service_processing_action">Memproses tindakan pemutaran…</string>
     <string name="setcat_find_duplicates_subtitle">Pindai pustaka Anda untuk mencari trek yang muncul lebih dari sekali.</string>
     <string name="setcat_find_duplicates_title">Temukan trek duplikat</string>
     <string name="setcat_playback_speed">Kecepatan pemutaran</string>

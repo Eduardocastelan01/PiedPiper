@@ -115,6 +115,27 @@ internal fun shouldContinuePlaybackAfterTaskRemoved(
     return hasForegroundPlaybackIntent && keepPlayingInBackground
 }
 
+/**
+ * A start only needs the temporary foreground placeholder when Android demands one:
+ * an explicit startForegroundService() fallback (forced extra or a marked pending
+ * start), or a media-button start that onCreate has not already promoted while
+ * playback is not foreground yet. Plain startService() widget actions never do, so
+ * they neither flash the placeholder nor stop the service afterwards.
+ */
+internal fun requiresTemporaryForegroundForStart(
+    forcedForegroundStart: Boolean,
+    pendingTemporaryForegroundStart: Boolean,
+    isMediaButtonIntent: Boolean,
+    startedTemporaryForegroundInOnCreate: Boolean,
+    serviceAlreadyForeground: Boolean
+): Boolean {
+    return forcedForegroundStart ||
+        pendingTemporaryForegroundStart ||
+        (isMediaButtonIntent &&
+            !startedTemporaryForegroundInOnCreate &&
+            !serviceAlreadyForeground)
+}
+
 suspend fun loadArtworkBytesViaCoil(context: Context, uri: Uri): ByteArray? {
     val appContext = context.applicationContext
     val request = ImageRequest.Builder(appContext)
@@ -243,7 +264,7 @@ class MusicService : MediaSessionService() {
         private const val MEDIA_SESSION_BUTTON_DEBOUNCE_MS = 250L
         private const val DEFERRED_SERVICE_STARTUP_WORK_DELAY_MS = 1_000L
         private const val PAUSED_RESTORE_PREPARE_QUEUE_LIMIT = 50
-        private val pendingMediaButtonForegroundStarts = AtomicInteger(0)
+        private val pendingTemporaryForegroundStarts = AtomicInteger(0)
 
         private const val APP_PACKAGE_PREFIX = "com.lostf1sh.pixelplayeross"
         private const val DEFAULT_STREAM_BUFFER_SIZE = 8 * 1024
@@ -251,25 +272,25 @@ class MusicService : MediaSessionService() {
         private const val WIDGET_QUEUE_PREVIEW_LIMIT = 4
         private const val HEADSET_RECONNECT_RESUME_WINDOW_MS = 15_000L
 
-        fun markPendingMediaButtonForegroundStart() {
-            pendingMediaButtonForegroundStarts.incrementAndGet()
+        fun markPendingTemporaryForegroundStart() {
+            pendingTemporaryForegroundStarts.incrementAndGet()
         }
 
-        fun unmarkPendingMediaButtonForegroundStart() {
+        fun unmarkPendingTemporaryForegroundStart() {
             while (true) {
-                val currentCount = pendingMediaButtonForegroundStarts.get()
+                val currentCount = pendingTemporaryForegroundStarts.get()
                 if (currentCount <= 0) return
-                if (pendingMediaButtonForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
+                if (pendingTemporaryForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
                     return
                 }
             }
         }
 
-        private fun consumePendingMediaButtonForegroundStart(): Boolean {
+        private fun consumePendingTemporaryForegroundStart(): Boolean {
             while (true) {
-                val currentCount = pendingMediaButtonForegroundStarts.get()
+                val currentCount = pendingTemporaryForegroundStarts.get()
                 if (currentCount <= 0) return false
-                if (pendingMediaButtonForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
+                if (pendingTemporaryForegroundStarts.compareAndSet(currentCount, currentCount - 1)) {
                     return true
                 }
             }
@@ -386,13 +407,12 @@ class MusicService : MediaSessionService() {
             }
         }
 
-        // Only promote to foreground here when a media-button start is actually
-        // pending. Promoting unconditionally made every service creation — including
-        // plain in-app binds when the user opens the app — flash the "Processing
-        // playback action…" placeholder notification. Started paths that require
-        // foreground (widget actions, media buttons) are promoted in onStartCommand,
-        // which runs right after onCreate and well within the FGS grace window.
-        temporaryForegroundStartedInOnCreate = consumePendingMediaButtonForegroundStart()
+        // Marked foreground-service starts (media buttons, and the widget's
+        // startForegroundService() fallback) are promoted here, before super.onCreate(),
+        // so Hilt injection and MediaSession setup cannot use up Android's FGS deadline.
+        // Plain binds and plain startService() starts are never marked, so opening the
+        // app does not flash the temporary placeholder notification.
+        temporaryForegroundStartedInOnCreate = consumePendingTemporaryForegroundStart()
         if (temporaryForegroundStartedInOnCreate) {
             startTemporaryForegroundForCommand()
         }
@@ -758,7 +778,6 @@ class MusicService : MediaSessionService() {
         )
             .setSmallIcon(R.drawable.monochrome_player)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.service_processing_action))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(getOpenAppPendingIntent())
             .setOnlyAlertOnce(true)
@@ -781,8 +800,8 @@ class MusicService : MediaSessionService() {
     /**
      * Media3's notification provider posts under its own id, so promoting the real
      * media notification does not replace the temporary placeholder — without an
-     * explicit cancel the "Processing playback action…" notification stays behind
-     * forever once the session notification takes over the foreground.
+     * explicit cancel the placeholder stays behind forever once the session
+     * notification takes over the foreground.
      */
     private fun clearTemporaryForegroundNotification() {
         if (!temporaryForegroundNotificationVisible) return
@@ -809,25 +828,17 @@ class MusicService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val startedTemporaryForegroundInOnCreate = temporaryForegroundStartedInOnCreate
         temporaryForegroundStartedInOnCreate = false
-        val pendingMediaButtonForegroundStart = consumePendingMediaButtonForegroundStart()
+        val pendingTemporaryForegroundStart = consumePendingTemporaryForegroundStart()
         val forcedForegroundStart =
             intent?.getBooleanExtra(EXTRA_FORCE_FOREGROUND_ON_START, false) == true
         val isMediaButtonIntent = intent?.action == Intent.ACTION_MEDIA_BUTTON
-        val needsTemporaryForeground = forcedForegroundStart ||
-            pendingMediaButtonForegroundStart ||
-            (isMediaButtonIntent &&
-                !startedTemporaryForegroundInOnCreate &&
-                !isServiceAlreadyForeground()) ||
-            when (intent?.action) {
-                PlayerActions.PLAY_PAUSE,
-                PlayerActions.NEXT,
-                PlayerActions.PREVIOUS,
-                PlayerActions.FAVORITE,
-                PlayerActions.PLAY_FROM_QUEUE,
-                PlayerActions.SHUFFLE,
-                PlayerActions.REPEAT -> true
-                else -> false
-            }
+        val needsTemporaryForeground = requiresTemporaryForegroundForStart(
+            forcedForegroundStart = forcedForegroundStart,
+            pendingTemporaryForegroundStart = pendingTemporaryForegroundStart,
+            isMediaButtonIntent = isMediaButtonIntent,
+            startedTemporaryForegroundInOnCreate = startedTemporaryForegroundInOnCreate,
+            serviceAlreadyForeground = isServiceAlreadyForeground()
+        )
         if (needsTemporaryForeground && !startedTemporaryForegroundInOnCreate) {
             startTemporaryForegroundForCommand()
         }

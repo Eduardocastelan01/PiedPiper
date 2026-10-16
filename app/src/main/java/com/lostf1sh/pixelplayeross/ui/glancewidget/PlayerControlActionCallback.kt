@@ -52,7 +52,15 @@ class PlayerControlActionCallback : ActionCallback {
                         action
                     )
                     serviceIntent.putExtra(MusicService.EXTRA_FORCE_FOREGROUND_ON_START, true)
-                    context.startForegroundService(serviceIntent)
+                    // Marking the start lets a cold MusicService promote itself in
+                    // onCreate, before its setup can use up the FGS deadline.
+                    MusicService.markPendingTemporaryForegroundStart()
+                    try {
+                        context.startForegroundService(serviceIntent)
+                    } catch (throwable: Throwable) {
+                        MusicService.unmarkPendingTemporaryForegroundStart()
+                        throw throwable
+                    }
                 }
             } else {
                 context.startService(serviceIntent)

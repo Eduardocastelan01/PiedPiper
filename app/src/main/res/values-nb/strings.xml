@@ -180,7 +180,6 @@
     <string name="search_lyrics_online_prompt">Vil du søke etter sangtekster på nettet?</string>
     <string name="searched_for_x_format">Søkte etter \"%s\"</string>
     <string name="searching_lyrics">Søker etter sangtekster…</string>
-    <string name="service_processing_action">Behandler handling…</string>
     <string name="setcat_find_duplicates_subtitle">Skann biblioteket ditt etter spor som finnes mer enn én gang.</string>
     <string name="setcat_find_duplicates_title">Finn duplikatspor</string>
     <string name="setcat_playback_speed">Avspillingshastighet</string>
