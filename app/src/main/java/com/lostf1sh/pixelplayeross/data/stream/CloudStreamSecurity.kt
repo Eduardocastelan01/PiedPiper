@@ -18,11 +18,22 @@ object CloudStreamSecurity {
     private val NAVIDROME_SONG_ID_REGEX = Regex("^[A-Za-z0-9_-]{1,100}$")
     private val JELLYFIN_ITEM_ID_REGEX = Regex("^[A-Za-z0-9]{1,100}$")
     private val FORBIDDEN_HOSTS = setOf("localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]")
+    private val LOCAL_SERVER_DNS_SUFFIXES =
+        listOf(".local", ".lan", ".home", ".internal", ".home.arpa", ".ts.net")
     private val EXTRA_ALLOWED_AUDIO_TYPES = setOf(
         "application/octet-stream",
         "binary/octet-stream",
         "application/mp4",
-        "video/mp4"
+        "video/mp4",
+        // Containers that media servers commonly report under non-audio/* types even when the
+        // stream is audio-only (.ogg/.oga as application/ogg, .webm/.weba/.mka as video/webm or
+        // video/x-matroska, .3gp as video/3gpp).
+        "application/ogg",
+        "video/ogg",
+        "video/webm",
+        "video/x-matroska",
+        "video/3gpp",
+        "application/x-flac"
     )
 
     data class RangeHeaderValidation(
@@ -154,19 +165,23 @@ object CloudStreamSecurity {
     }
 
     /**
-     * Hosts that can reasonably identify a self-hosted server reached over the local network or a VPN.
-     * `.lan` is commonly assigned by home routers; `.home.arpa` is the reserved home-network suffix.
+     * Hosts that can reasonably identify a self-hosted server reached over the local network or a VPN:
+     * localhost, local DNS suffixes, private/loopback/CGNAT IPv4 literals, loopback, link-local and
+     * unique-local IPv6 literals, and single-label names. `.lan`, `.home` and `.internal` are
+     * commonly assigned by home routers, `.home.arpa` is the reserved home-network suffix and
+     * `.ts.net` is Tailscale MagicDNS. IPv6 literals may be passed with or without brackets.
      */
     internal fun isLocalServerHost(host: String): Boolean {
-        val normalized = host.lowercase()
-        return normalized == "localhost" ||
-            normalized == "127.0.0.1" ||
-            normalized.endsWith(".local") ||
-            normalized.endsWith(".lan") ||
-            normalized.endsWith(".home.arpa") ||
-            normalized.endsWith(".ts.net") ||
-            !normalized.contains('.') ||
-            isPrivateIpv4Literal(normalized)
+        val normalized = host.lowercase().removePrefix("[").removeSuffix("]")
+        if (normalized.isEmpty()) return false
+        if (normalized == "localhost") return true
+        if (LOCAL_SERVER_DNS_SUFFIXES.any { normalized.endsWith(it) }) return true
+        if (isPrivateIpv4Literal(normalized)) return true
+        // IPv6 literals never contain dots, so they must be classified before the single-label rule.
+        if (normalized.contains(':')) return isPrivateIpv6Literal(normalized)
+        // Single-label hostnames have no public DNS meaning; they only resolve via the local
+        // resolver (router DNS, hosts file, mDNS/NetBIOS).
+        return !normalized.contains('.')
     }
 
     /** Used by login-time server-URL validation to decide whether cleartext HTTP is acceptable. */
@@ -187,5 +202,18 @@ object CloudStreamSecurity {
             (first == 169 && second == 254) ||
             (first == 172 && second in 16..31) ||
             (first == 192 && second == 168)
+    }
+
+    /**
+     * Matches loopback (::1), link-local (fe80::/10) and unique-local (fc00::/7) IPv6 literals.
+     * Hosts come from [okhttp3.HttpUrl.host], which is lowercase and compressed, so the first group
+     * must have all four hex digits to fall in either range ("fc::1" is 00fc::1, a public address).
+     */
+    private fun isPrivateIpv6Literal(host: String): Boolean {
+        if (host == "::1" || host == "0:0:0:0:0:0:0:1") return true
+        val firstGroup = host.substringBefore(':')
+        if (firstGroup.length != 4 || !firstGroup.all { it in '0'..'9' || it in 'a'..'f' }) return false
+        val group = firstGroup.toInt(16)
+        return (group and 0xfe00) == 0xfc00 || (group and 0xffc0) == 0xfe80
     }
 }
