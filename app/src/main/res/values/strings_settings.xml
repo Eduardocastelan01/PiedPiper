@@ -212,9 +212,26 @@
     <string name="setcat_tap_bg_closes_subtitle">Tap the blurred background to close the player sheet.</string>
     <string name="setcat_mini_player_swipe_to_skip_title">Swipe to change song</string>
     <string name="setcat_mini_player_swipe_to_skip_subtitle">Swipe the mini player left for the next song and right for the previous one. Dismiss it by swiping down instead.</string>
+    <string name="setcat_playback_behavior">Playback</string>
+    <string name="setcat_autoplay_on_skip_title">Auto-play on skip</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Start playing automatically when you skip to another song while paused.</string>
     <string name="setcat_haptics">Haptics</string>
     <string name="setcat_haptic_feedback_title">Haptic feedback</string>
     <string name="setcat_haptic_feedback_subtitle">Enable vibration feedback across the app.</string>
+
+    <!-- Playback speed -->
+    <string name="playback_speed_description">Pitch stays the same. Applies to everything you play.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s times</string>
+    <string name="playback_speed_decrease">Decrease playback speed</string>
+    <string name="playback_speed_increase">Increase playback speed</string>
+    <string name="playback_speed_presets">Presets</string>
+    <string name="playback_speed_custom_action">Enter exact speed</string>
+    <string name="playback_speed_custom_title">Exact playback speed</string>
+    <string name="playback_speed_custom_field_label">Speed</string>
+    <string name="playback_speed_custom_supporting">From %1$s× to %2$s×, up to two decimals</string>
+    <string name="playback_speed_custom_error">Enter a speed from %1$s× to %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 
 
     <string name="setcat_create_backup">Create Backup</string>

@@ -297,4 +297,19 @@
     <string name="cd_remove_from_history">从历史记录移除</string>
     <string name="cd_clear_search">清空搜索</string>
     <string name="backup_history_modules_line">%1$d个模块 · 版本v%2$s · 数据库架构v%3$d</string>
+    <string name="setcat_playback_behavior">播放</string>
+    <string name="setcat_autoplay_on_skip_title">跳过时自动播放</string>
+    <string name="setcat_autoplay_on_skip_subtitle">暂停时切换到其他歌曲后自动开始播放。</string>
+    <string name="playback_speed_description">音调保持不变。适用于播放的所有内容。</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s 倍</string>
+    <string name="playback_speed_decrease">降低播放速度</string>
+    <string name="playback_speed_increase">提高播放速度</string>
+    <string name="playback_speed_presets">预设</string>
+    <string name="playback_speed_custom_action">输入精确速度</string>
+    <string name="playback_speed_custom_title">精确播放速度</string>
+    <string name="playback_speed_custom_field_label">速度</string>
+    <string name="playback_speed_custom_supporting">%1$s× 至 %2$s×，最多两位小数</string>
+    <string name="playback_speed_custom_error">请输入 %1$s× 至 %2$s× 之间的速度</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

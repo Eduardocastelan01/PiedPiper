@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">Meregenerasi %1$d dari %2$d palet sampul album</string>
     <string name="toast_stats_regeneration_started">Regenerasi statistik dimulai</string>
     <string name="working_ellipsis">Bekerja…</string>
+    <string name="setcat_playback_behavior">Pemutaran</string>
+    <string name="setcat_autoplay_on_skip_title">Putar otomatis saat melewati lagu</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Mulai memutar secara otomatis saat Anda berpindah ke lagu lain ketika dijeda.</string>
+    <string name="playback_speed_description">Nada suara tetap sama. Berlaku untuk semua yang Anda putar.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s kali</string>
+    <string name="playback_speed_decrease">Kurangi kecepatan pemutaran</string>
+    <string name="playback_speed_increase">Tambah kecepatan pemutaran</string>
+    <string name="playback_speed_presets">Preset</string>
+    <string name="playback_speed_custom_action">Masukkan kecepatan persis</string>
+    <string name="playback_speed_custom_title">Kecepatan pemutaran persis</string>
+    <string name="playback_speed_custom_field_label">Kecepatan</string>
+    <string name="playback_speed_custom_supporting">Dari %1$s× hingga %2$s×, maksimal dua desimal</string>
+    <string name="playback_speed_custom_error">Masukkan kecepatan dari %1$s× hingga %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

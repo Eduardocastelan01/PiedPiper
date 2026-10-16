@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">تم إعادة توليد %1$d من أصل %2$d من لوحات ألوان الألبومات</string>
     <string name="toast_stats_regeneration_started">بدأت عملية إعادة توليد الإحصائيات</string>
     <string name="working_ellipsis">جاري العمل…</string>
+    <string name="setcat_playback_behavior">التشغيل</string>
+    <string name="setcat_autoplay_on_skip_title">التشغيل التلقائي عند التخطي</string>
+    <string name="setcat_autoplay_on_skip_subtitle">بدء التشغيل تلقائيًا عند التخطي إلى أغنية أخرى أثناء الإيقاف المؤقت.</string>
+    <string name="playback_speed_description">تبقى طبقة الصوت كما هي. ينطبق على كل ما تشغّله.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s ضعف</string>
+    <string name="playback_speed_decrease">خفض سرعة التشغيل</string>
+    <string name="playback_speed_increase">زيادة سرعة التشغيل</string>
+    <string name="playback_speed_presets">الإعدادات المسبقة</string>
+    <string name="playback_speed_custom_action">إدخال سرعة محددة</string>
+    <string name="playback_speed_custom_title">سرعة تشغيل محددة</string>
+    <string name="playback_speed_custom_field_label">السرعة</string>
+    <string name="playback_speed_custom_supporting">من %1$s× إلى %2$s×، بحد أقصى منزلتين عشريتين</string>
+    <string name="playback_speed_custom_error">أدخل سرعة من %1$s× إلى %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

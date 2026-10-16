@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">Пересоздано палитр обложек: %1$d из %2$d</string>
     <string name="toast_stats_regeneration_started">Пересоздание статистики начато</string>
     <string name="working_ellipsis">Выполняется…</string>
+    <string name="setcat_playback_behavior">Воспроизведение</string>
+    <string name="setcat_autoplay_on_skip_title">Автовоспроизведение при переключении</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Автоматически начинать воспроизведение при переходе к другому треку во время паузы.</string>
+    <string name="playback_speed_description">Высота тона не меняется. Применяется ко всему, что вы слушаете.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">в %1$s раза</string>
+    <string name="playback_speed_decrease">Уменьшить скорость воспроизведения</string>
+    <string name="playback_speed_increase">Увеличить скорость воспроизведения</string>
+    <string name="playback_speed_presets">Пресеты</string>
+    <string name="playback_speed_custom_action">Ввести точную скорость</string>
+    <string name="playback_speed_custom_title">Точная скорость воспроизведения</string>
+    <string name="playback_speed_custom_field_label">Скорость</string>
+    <string name="playback_speed_custom_supporting">От %1$s× до %2$s×, не более двух знаков после запятой</string>
+    <string name="playback_speed_custom_error">Введите скорость от %1$s× до %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

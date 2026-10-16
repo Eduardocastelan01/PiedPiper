@@ -99,6 +99,7 @@ data class SettingsUiState(
     val albumArtCacheLimitMb: Int = 200,
     val tapBackgroundClosesPlayer: Boolean = false,
     val miniPlayerSwipeToSkip: Boolean = false,
+    val autoplayOnSkip: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val immersiveLyricsEnabled: Boolean = false,
     val immersiveLyricsTimeout: Long = 4000L,
@@ -469,6 +470,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.miniPlayerSwipeToSkipFlow.collect { enabled ->
                 _uiState.update { it.copy(miniPlayerSwipeToSkip = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.autoplayOnSkipFlow.collect { enabled ->
+                _uiState.update { it.copy(autoplayOnSkip = enabled) }
             }
         }
 
@@ -1010,6 +1017,12 @@ class SettingsViewModel @Inject constructor(
     fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setMiniPlayerSwipeToSkip(enabled)
+        }
+    }
+
+    fun setAutoplayOnSkip(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAutoplayOnSkip(enabled)
         }
     }
 

@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">%2$d개 중 %1$d개의 앨범 아트 팔레트가 재생성되었습니다</string>
     <string name="toast_stats_regeneration_started">통계 재생성 시작됨</string>
     <string name="working_ellipsis">작업 중…</string>
+    <string name="setcat_playback_behavior">재생</string>
+    <string name="setcat_autoplay_on_skip_title">건너뛸 때 자동 재생</string>
+    <string name="setcat_autoplay_on_skip_subtitle">일시정지 상태에서 다른 곡으로 건너뛰면 자동으로 재생을 시작합니다.</string>
+    <string name="playback_speed_description">음높이는 그대로 유지됩니다. 재생하는 모든 항목에 적용됩니다.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s배</string>
+    <string name="playback_speed_decrease">재생 속도 낮추기</string>
+    <string name="playback_speed_increase">재생 속도 높이기</string>
+    <string name="playback_speed_presets">프리셋</string>
+    <string name="playback_speed_custom_action">정확한 속도 입력</string>
+    <string name="playback_speed_custom_title">정확한 재생 속도</string>
+    <string name="playback_speed_custom_field_label">속도</string>
+    <string name="playback_speed_custom_supporting">%1$s×부터 %2$s×까지, 소수점 둘째 자리까지</string>
+    <string name="playback_speed_custom_error">%1$s×에서 %2$s× 사이의 속도를 입력하세요</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

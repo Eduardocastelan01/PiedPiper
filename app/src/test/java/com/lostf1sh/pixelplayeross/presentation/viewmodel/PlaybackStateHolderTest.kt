@@ -7,10 +7,15 @@ import com.lostf1sh.pixelplayeross.data.model.PlaybackQueueItemSnapshot
 import com.lostf1sh.pixelplayeross.data.model.PlaybackQueueSnapshot
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
+import androidx.media3.common.Player
 import io.mockk.every
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -168,5 +173,142 @@ class PlaybackStateHolderTest {
         holder.syncCurrentPositionFromPlayer("duplicate-song", 0L)
 
         assertEquals(0L, holder.currentPosition.value)
+    }
+
+    // --- Auto-play on skip and Previous ---
+
+    private fun connectedController(
+        playWhenReady: Boolean = false,
+        hasNext: Boolean = true,
+        hasPrevious: Boolean = true,
+        positionMs: Long = 5_000L,
+        state: Int = Player.STATE_READY
+    ): MediaController = mockk<MediaController>(relaxed = true).also { controller ->
+        every { controller.isConnected } returns true
+        every { controller.playWhenReady } returns playWhenReady
+        every { controller.hasNextMediaItem() } returns hasNext
+        every { controller.hasPreviousMediaItem() } returns hasPrevious
+        every { controller.currentPosition } returns positionMs
+        every { controller.playbackState } returns state
+        every { controller.mediaItemCount } returns 3
+        every { controller.currentMediaItem } returns null
+    }
+
+    /** A holder whose "Auto-play on skip" preference is [autoplayOnSkip], driving [controller]. */
+    private fun TestScope.holderFor(
+        controller: MediaController,
+        autoplayOnSkip: Boolean = true
+    ): PlaybackStateHolder {
+        // Finite flows, so the collectors started by initialize() let runTest finish.
+        every { userPreferencesRepository.autoplayOnSkipFlow } returns flowOf(autoplayOnSkip)
+        coEvery { userPreferencesRepository.getPlaybackQueueSnapshotOnce() } returns null
+        return createHolder().also { holder ->
+            holder.initialize(this)
+            advanceUntilIdle()
+            holder.setMediaController(controller)
+        }
+    }
+
+    @Test
+    fun `next while paused starts playback when auto-play on skip is on`() = runTest {
+        val controller = connectedController()
+
+        holderFor(controller).nextSong()
+
+        verifyOrder {
+            controller.seekToNext()
+            controller.play()
+        }
+    }
+
+    @Test
+    fun `next while paused stays paused when auto-play on skip is off`() = runTest {
+        val controller = connectedController()
+
+        holderFor(controller, autoplayOnSkip = false).nextSong()
+
+        verify { controller.seekToNext() }
+        verify(exactly = 0) { controller.play() }
+    }
+
+    @Test
+    fun `next while already playing does not call play again`() = runTest {
+        val controller = connectedController(playWhenReady = true)
+
+        holderFor(controller).nextSong()
+
+        verify { controller.seekToNext() }
+        verify(exactly = 0) { controller.play() }
+    }
+
+    @Test
+    fun `next on the last item does not resume the paused song`() = runTest {
+        val controller = connectedController(hasNext = false)
+
+        holderFor(controller).nextSong()
+
+        verify(exactly = 0) { controller.play() }
+    }
+
+    @Test
+    fun `previous between 3 and 10 seconds moves to the previous track`() = runTest {
+        // Media3's seekToPrevious() restarts the track past 3 s, so it must not be used here.
+        val controller = connectedController(positionMs = 5_000L)
+
+        holderFor(controller).previousSong()
+
+        verifyOrder {
+            controller.seekToPreviousMediaItem()
+            controller.play()
+        }
+        verify(exactly = 0) { controller.seekToPrevious() }
+        verify(exactly = 0) { controller.seekTo(0L) }
+    }
+
+    @Test
+    fun `previous after 10 seconds restarts the track without auto-play`() = runTest {
+        val controller = connectedController(positionMs = 12_000L)
+
+        holderFor(controller).previousSong()
+
+        verify { controller.seekTo(0L) }
+        verify(exactly = 0) { controller.seekToPreviousMediaItem() }
+        verify(exactly = 0) { controller.play() }
+    }
+
+    @Test
+    fun `previous on the first item restarts it instead of doing nothing`() = runTest {
+        val controller = connectedController(hasPrevious = false, positionMs = 1_000L)
+
+        holderFor(controller).previousSong()
+
+        verify { controller.seekTo(0L) }
+        verify(exactly = 0) { controller.seekToPreviousMediaItem() }
+        verify(exactly = 0) { controller.play() }
+    }
+
+    @Test
+    fun `force previous while paused moves back and starts playback`() = runTest {
+        val controller = connectedController(positionMs = 30_000L)
+
+        holderFor(controller).forcePreviousSong()
+
+        verifyOrder {
+            controller.seekToPreviousMediaItem()
+            controller.play()
+        }
+    }
+
+    @Test
+    fun `skip from an idle player prepares it before playing`() = runTest {
+        val controller = connectedController(state = Player.STATE_IDLE)
+
+        holderFor(controller).nextSong()
+
+        verifyOrder {
+            controller.seekToNext()
+            controller.prepare()
+            controller.play()
+        }
     }
 }

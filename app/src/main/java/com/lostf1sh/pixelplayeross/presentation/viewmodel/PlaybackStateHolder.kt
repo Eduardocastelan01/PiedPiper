@@ -58,6 +58,10 @@ class PlaybackStateHolder @Inject constructor(
     @Volatile
     private var scope: CoroutineScope? = null
 
+    /** Mirrors the "Auto-play on skip" preference; the default matches the repository's. */
+    @Volatile
+    private var autoplayOnSkip: Boolean = true
+
     var mediaController: MediaController? = null
         private set
     private val mediaControllerStack = mutableListOf<MediaController>()
@@ -128,6 +132,11 @@ class PlaybackStateHolder @Inject constructor(
         coroutineScope: CoroutineScope
     ) {
         this.scope = coroutineScope
+        scope?.launch {
+            userPreferencesRepository.autoplayOnSkipFlow.collect { enabled ->
+                autoplayOnSkip = enabled
+            }
+        }
         scope?.launch {
             val snapshot = runCatching {
                 userPreferencesRepository.getPlaybackQueueSnapshotOnce()
@@ -368,17 +377,44 @@ class PlaybackStateHolder @Inject constructor(
             // override behind and the displayed position could lag the restart.
             seekTo(0L)
         } else {
-            controller.seekToPrevious()
+            // Not seekToPrevious(): Media3 restarts the track past its own 3 s
+            // maxSeekToPreviousPosition, which made this 10 s rule behave like 3 s.
+            val wasPaused = !controller.playWhenReady
+            if (controller.hasPreviousMediaItem()) {
+                controller.seekToPreviousMediaItem()
+                resumeAfterSkip(controller, wasPaused)
+            } else {
+                seekTo(0L)
+            }
         }
     }
 
     /** Always moves to the previous queue item, never restarting the current track. */
     fun forcePreviousSong() {
-        activeLocalPlayer().seekToPreviousMediaItem()
+        val player = activeLocalPlayer()
+        val wasPaused = !player.playWhenReady
+        val hadPrevious = player.hasPreviousMediaItem()
+        player.seekToPreviousMediaItem()
+        if (hadPrevious) resumeAfterSkip(player, wasPaused)
     }
 
     fun nextSong() {
-        activeLocalPlayer().seekToNext()
+        val player = activeLocalPlayer()
+        val wasPaused = !player.playWhenReady
+        // On the last item with repeat off the seek is a no-op; resuming there would only
+        // unpause the song the user tried to leave.
+        val hadNext = player.hasNextMediaItem()
+        player.seekToNext()
+        if (hadNext) resumeAfterSkip(player, wasPaused)
+    }
+
+    /** Starts playback after a skip from a paused player when "Auto-play on skip" is on. */
+    private fun resumeAfterSkip(player: Player, wasPaused: Boolean) {
+        if (!wasPaused || !autoplayOnSkip) return
+        if (player.playbackState == Player.STATE_IDLE && player.mediaItemCount > 0) {
+            player.prepare()
+        }
+        player.play()
     }
 
     fun cycleRepeatMode() {

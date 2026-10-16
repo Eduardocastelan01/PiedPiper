@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">%1$d sur %2$d palettes de pochettes régénérées</string>
     <string name="toast_stats_regeneration_started">Régénération des statistiques démarrée</string>
     <string name="working_ellipsis">Travail en cours…</string>
+    <string name="setcat_playback_behavior">Lecture</string>
+    <string name="setcat_autoplay_on_skip_title">Lecture auto au changement de chanson</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Lance automatiquement la lecture lorsque vous passez à une autre chanson pendant une pause.</string>
+    <string name="playback_speed_description">La hauteur du son reste la même. S\'applique à tout ce que vous écoutez.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s fois</string>
+    <string name="playback_speed_decrease">Diminuer la vitesse de lecture</string>
+    <string name="playback_speed_increase">Augmenter la vitesse de lecture</string>
+    <string name="playback_speed_presets">Préréglages</string>
+    <string name="playback_speed_custom_action">Saisir une vitesse exacte</string>
+    <string name="playback_speed_custom_title">Vitesse de lecture exacte</string>
+    <string name="playback_speed_custom_field_label">Vitesse</string>
+    <string name="playback_speed_custom_supporting">De %1$s× à %2$s×, deux décimales maximum</string>
+    <string name="playback_speed_custom_error">Saisissez une vitesse comprise entre %1$s× et %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

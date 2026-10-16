@@ -23,6 +23,7 @@ import com.lostf1sh.pixelplayeross.data.model.TransitionSettings
 import com.lostf1sh.pixelplayeross.data.equalizer.EqualizerPreset
 import com.lostf1sh.pixelplayeross.data.model.StorageFilter
 import com.lostf1sh.pixelplayeross.data.update.UpdateChannel
+import com.lostf1sh.pixelplayeross.utils.PlaybackSpeedUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.text.get
@@ -229,6 +230,7 @@ constructor(
         val FOLDER_ALBUM_ART_CACHE_STATE = booleanPreferencesKey("folder_album_art_cache_state")
         val TAP_BACKGROUND_CLOSES_PLAYER = booleanPreferencesKey("tap_background_closes_player")
         val MINI_PLAYER_SWIPE_TO_SKIP = booleanPreferencesKey("mini_player_swipe_to_skip")
+        val AUTOPLAY_ON_SKIP = booleanPreferencesKey("autoplay_on_skip")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val ADVANCED_PERFORMANCE_DIAGNOSTICS_ENABLED =
             booleanPreferencesKey("advanced_performance_diagnostics_enabled")
@@ -363,14 +365,20 @@ constructor(
         }
     }
 
+    /**
+     * Normalized to hundredths on read and write, so legacy noisy values such as 0.74999994f,
+     * NaN or backup imports outside the range come back as a clean, supported speed.
+     */
     val playbackSpeedFlow: Flow<Float> =
             dataStore.data.map { preferences ->
-                (preferences[PreferencesKeys.PLAYBACK_SPEED] ?: 1.0f).coerceIn(0.25f, 3.0f)
-            }
+                PlaybackSpeedUtils.normalize(
+                    preferences[PreferencesKeys.PLAYBACK_SPEED] ?: PlaybackSpeedUtils.DEFAULT_SPEED
+                )
+            }.distinctUntilChanged()
 
     suspend fun setPlaybackSpeed(speed: Float) {
         dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PLAYBACK_SPEED] = speed.coerceIn(0.25f, 3.0f)
+            preferences[PreferencesKeys.PLAYBACK_SPEED] = PlaybackSpeedUtils.normalize(speed)
         }
     }
 
@@ -1786,6 +1794,21 @@ constructor(
     suspend fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] = enabled
+        }
+    }
+
+    /**
+     * Whether skipping to another song from the app's own controls while paused starts
+     * playback. On by default.
+     */
+    val autoplayOnSkipFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.AUTOPLAY_ON_SKIP] ?: true
+        }.distinctUntilChanged()
+
+    suspend fun setAutoplayOnSkip(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTOPLAY_ON_SKIP] = enabled
         }
     }
 

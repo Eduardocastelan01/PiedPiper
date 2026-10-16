@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">Regeneradas %1$d de %2$d paletas de carátula</string>
     <string name="toast_stats_regeneration_started">Regeneración de estadísticas iniciada</string>
     <string name="working_ellipsis">Trabajando…</string>
+    <string name="setcat_playback_behavior">Reproducción</string>
+    <string name="setcat_autoplay_on_skip_title">Auto-reproducir al saltar</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Reproduce automáticamente si el reproductor está pausado al cambiar de canción.</string>
+    <string name="playback_speed_description">El tono no cambia. Se aplica a todo lo que reproduces.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s veces</string>
+    <string name="playback_speed_decrease">Reducir la velocidad de reproducción</string>
+    <string name="playback_speed_increase">Aumentar la velocidad de reproducción</string>
+    <string name="playback_speed_presets">Preajustes</string>
+    <string name="playback_speed_custom_action">Introducir velocidad exacta</string>
+    <string name="playback_speed_custom_title">Velocidad de reproducción exacta</string>
+    <string name="playback_speed_custom_field_label">Velocidad</string>
+    <string name="playback_speed_custom_supporting">De %1$s× a %2$s×, hasta dos decimales</string>
+    <string name="playback_speed_custom_error">Introduce una velocidad de %1$s× a %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

@@ -3,7 +3,6 @@ package com.lostf1sh.pixelplayeross.presentation.screens
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.components.BackupModuleSelectionDialog
 import java.text.SimpleDateFormat
-import java.util.Locale
 import java.util.Date
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.rotate
@@ -181,6 +180,7 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveTopBarContent
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.components.PlaybackSpeedControls
 import com.lostf1sh.pixelplayeross.presentation.model.SettingsCategory
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.settings.search.settingHighlight
@@ -865,7 +865,8 @@ fun SettingsCategoryScreen(
                                         ),
                                         selectedKey = uiState.immersiveLyricsTimeout.toString(),
                                         onSelectionChanged = { settingsViewModel.setImmersiveLyricsTimeout(it.toLong()) },
-                                        leadingIcon = { Icon(Icons.Rounded.Timer, null, tint = MaterialTheme.colorScheme.secondary) }
+                                        leadingIcon = { Icon(Icons.Rounded.Timer, null, tint = MaterialTheme.colorScheme.secondary) },
+                                        modifier = Modifier.settingHighlight("item_appearance_lyrics_auto_hide_delay", highlightKey)
                                     )
                                 }
                             }
@@ -973,7 +974,8 @@ fun SettingsCategoryScreen(
                                         options = mapOf("track" to stringResource(R.string.setcat_gain_mode_track), "album" to stringResource(R.string.setcat_gain_mode_album)),
                                         selectedKey = if (uiState.replayGainUseAlbumGain) "album" else "track",
                                         onSelectionChanged = { settingsViewModel.setReplayGainUseAlbumGain(it == "album") },
-                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_volume_down_24), null, tint = MaterialTheme.colorScheme.secondary) }
+                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_volume_down_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                        modifier = Modifier.settingHighlight("item_playback_gain_mode", highlightKey)
                                     )
                                 }
                             }
@@ -1006,7 +1008,8 @@ fun SettingsCategoryScreen(
                                         valueRange = 1000f..12000f,
                                         steps= 10,
                                         onValueChange = { settingsViewModel.setCrossfadeDuration(it.toInt()) },
-                                        valueText = { value -> "${(value / 1000).toInt()}s" }
+                                        valueText = { value -> "${(value / 1000).toInt()}s" },
+                                        modifier = Modifier.settingHighlight("item_playback_crossfade_duration", highlightKey)
                                     )
                                     SwitchSettingItem(
                                         title = stringResource(R.string.setcat_smart_crossfade_title),
@@ -1017,15 +1020,19 @@ fun SettingsCategoryScreen(
                                         modifier = Modifier.settingHighlight("item_playback_smart_crossfade", highlightKey)
                                     )
                                 }
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_playback_speed),
-                                    value = playbackSpeed,
-                                    valueRange = 0.5f..2.0f,
-                                    steps = 5,
-                                    onValueChange = { settingsViewModel.setPlaybackSpeed(it) },
-                                    valueText = { value -> String.format(Locale.US, "%.2f×", value) },
-                                    modifier = Modifier.settingHighlight("item_playback_speed", highlightKey)
-                                )
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    modifier = Modifier
+                                        .settingHighlight("item_playback_speed", highlightKey)
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                ) {
+                                    PlaybackSpeedControls(
+                                        speed = playbackSpeed,
+                                        onSpeedChange = settingsViewModel::setPlaybackSpeed,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
                                 ThemeSelectorItem(
                                     label = stringResource(R.string.setcat_audio_output_mode_title),
                                     description = stringResource(R.string.setcat_audio_output_mode_description),
@@ -1118,6 +1125,18 @@ fun SettingsCategoryScreen(
                                     onCheckedChange = { settingsViewModel.setMiniPlayerSwipeToSkip(it) },
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_skip_next_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_behavior_mini_swipe_skip", highlightKey)
+                                )
+                            }
+                            SettingsSubsection(
+                                title = stringResource(R.string.setcat_playback_behavior)
+                            ) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_autoplay_on_skip_title),
+                                    subtitle = stringResource(R.string.setcat_autoplay_on_skip_subtitle),
+                                    checked = uiState.autoplayOnSkip,
+                                    onCheckedChange = { settingsViewModel.setAutoplayOnSkip(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_play_arrow_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_behavior_autoplay_skip", highlightKey)
                                 )
                             }
                             SettingsSubsection(

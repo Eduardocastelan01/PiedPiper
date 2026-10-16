@@ -54,6 +54,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -145,6 +146,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.AutoScrollingText
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayingEqIcon
 import com.lostf1sh.pixelplayeross.presentation.components.player.AnimatedPlaybackControls
+import com.lostf1sh.pixelplayeross.presentation.components.player.PlaybackSpeedBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerUiState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
@@ -153,6 +155,7 @@ import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
 import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
+import com.lostf1sh.pixelplayeross.utils.PlaybackSpeedUtils
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -255,12 +258,14 @@ fun QueueBottomSheet(
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     var showTimerOptions by rememberSaveable { mutableStateOf(false) }
+    var showSpeedSheet by rememberSaveable { mutableStateOf(false) }
     var showClearQueueDialog by remember { mutableStateOf(false) }
     var isFabExpanded by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(isVisible) {
         if (!isVisible) {
             showTimerOptions = false
+            showSpeedSheet = false
             showClearQueueDialog = false
             isFabExpanded = false
         }
@@ -280,6 +285,9 @@ fun QueueBottomSheet(
 
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val showQueueHistory = settingsState.showQueueHistory
+    // Kept as State and read only where it is shown, so a speed change does not recompose
+    // the whole sheet.
+    val playbackSpeed = settingsViewModel.playbackSpeed.collectAsStateWithLifecycle()
 
     val queueIndexOffset = if (showQueueHistory || currentSongIndex < 0) 0 else currentSongIndex
 
@@ -899,13 +907,21 @@ fun QueueBottomSheet(
                     val isTimerActiveDerived = remember {
                         derivedStateOf { activeTimerValueDisplay.value != null }
                     }
+                    val isSpeedModifiedDerived = remember {
+                        derivedStateOf { !PlaybackSpeedUtils.isNormal(playbackSpeed.value) }
+                    }
                     QueueControlsToolbar(
                         isShuffleOn = isShuffleOn,
                         repeatMode = repeatMode,
                         isTimerActive = isTimerActiveDerived,
+                        isSpeedModified = isSpeedModifiedDerived,
                         onToggleShuffle = onToggleShuffle,
                         onToggleRepeat = onToggleRepeat,
-                        onTimerClick = { showTimerOptions = true }
+                        onTimerClick = { showTimerOptions = true },
+                        onSpeedClick = { showSpeedSheet = true },
+                        // Measured after the FAB, so on narrow windows the toolbar gets the
+                        // width that is left and the FAB keeps its square shape.
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
                     Spacer(modifier = Modifier.width(4.dp))
@@ -1118,6 +1134,16 @@ fun QueueBottomSheet(
                 onOpenCustomTimePicker = onOpenCustomTimePicker,
                 onCancelCountedPlay = onCancelCountedPlay,
                 onCancelTimer = onCancelTimer
+            )
+        }
+
+        if (showSpeedSheet) {
+            // Through the persisted preference, not the controller: MusicService re-applies it
+            // on every player swap and crossfade.
+            PlaybackSpeedBottomSheet(
+                speed = playbackSpeed.value,
+                onSpeedChange = settingsViewModel::setPlaybackSpeed,
+                onDismiss = { showSpeedSheet = false }
             )
         }
 
@@ -1336,14 +1362,19 @@ private fun QueueSourceBadge(
     }
 }
 
+private val QueueToolbarButtonSize = 48.dp
+private val QueueToolbarMinEdgeMargin = 8.dp
+
 @Composable
 private fun QueueControlsToolbar(
     isShuffleOn: Boolean,
     repeatMode: Int,
     isTimerActive: androidx.compose.runtime.State<Boolean>,
+    isSpeedModified: androidx.compose.runtime.State<Boolean>,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
     onTimerClick: () -> Unit,
+    onSpeedClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeColors = IconButtonDefaults.filledIconButtonColors(
@@ -1370,46 +1401,64 @@ private fun QueueControlsToolbar(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         shadowElevation = 0.dp
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            FilledTonalIconButton(
-                onClick = onToggleShuffle,
-                colors = if (isShuffleOn) activeColors else inactiveColors,
-                modifier = Modifier.size(48.dp)
+        BoxWithConstraints(propagateMinConstraints = true) {
+            // The full spacing needs 252 dp. On 320 dp phones, large display sizes and split
+            // screen the gaps and the side padding shrink evenly, so the buttons keep their size
+            // and the row stays clear of the screen edges.
+            val gap = ((maxWidth - QueueToolbarMinEdgeMargin * 2 - QueueToolbarButtonSize * 4) / 5)
+                .coerceIn(0.dp, 12.dp)
+            Row(
+                modifier = Modifier.padding(horizontal = gap, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Shuffle,
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_shuffle),
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            FilledTonalIconButton(
-                onClick = onToggleRepeat,
-                colors = if (repeatMode != Player.REPEAT_MODE_OFF) activeColors else inactiveColors,
-                modifier = Modifier.size(48.dp)
-            ) {
-                val repeatIcon = when (repeatMode) {
-                    Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne
-                    else -> Icons.Rounded.Repeat
+                FilledTonalIconButton(
+                    onClick = onToggleShuffle,
+                    colors = if (isShuffleOn) activeColors else inactiveColors,
+                    modifier = Modifier.size(QueueToolbarButtonSize)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shuffle,
+                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_shuffle),
+                    )
                 }
-                Icon(
-                    imageVector = repeatIcon,
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat),
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            FilledTonalIconButton(
-                onClick = onTimerClick,
-                colors = if (isTimerActive.value) activeColors else inactiveColors,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Timer,
-                    contentDescription = stringResource(R.string.presentation_batch_e_cd_sleep_timer),
-                )
+                Spacer(modifier = Modifier.width(gap))
+                FilledTonalIconButton(
+                    onClick = onToggleRepeat,
+                    colors = if (repeatMode != Player.REPEAT_MODE_OFF) activeColors else inactiveColors,
+                    modifier = Modifier.size(QueueToolbarButtonSize)
+                ) {
+                    val repeatIcon = when (repeatMode) {
+                        Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne
+                        else -> Icons.Rounded.Repeat
+                    }
+                    Icon(
+                        imageVector = repeatIcon,
+                        contentDescription = stringResource(R.string.presentation_batch_e_cd_toggle_repeat),
+                    )
+                }
+                Spacer(modifier = Modifier.width(gap))
+                FilledTonalIconButton(
+                    onClick = onTimerClick,
+                    colors = if (isTimerActive.value) activeColors else inactiveColors,
+                    modifier = Modifier.size(QueueToolbarButtonSize)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Timer,
+                        contentDescription = stringResource(R.string.presentation_batch_e_cd_sleep_timer),
+                    )
+                }
+                Spacer(modifier = Modifier.width(gap))
+                FilledTonalIconButton(
+                    onClick = onSpeedClick,
+                    colors = if (isSpeedModified.value) activeColors else inactiveColors,
+                    modifier = Modifier.size(QueueToolbarButtonSize)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Speed,
+                        contentDescription = stringResource(R.string.setcat_playback_speed),
+                    )
+                }
             }
         }
     }

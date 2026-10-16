@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">Rigenerate %1$d di %2$d palette copertine album</string>
     <string name="toast_stats_regeneration_started">Rigenerazione statistiche avviata</string>
     <string name="working_ellipsis">Elaborazione…</string>
+    <string name="setcat_playback_behavior">Riproduzione</string>
+    <string name="setcat_autoplay_on_skip_title">Riproduzione automatica al salto</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Avvia automaticamente la riproduzione quando passi a un altro brano mentre è in pausa.</string>
+    <string name="playback_speed_description">L\'intonazione resta invariata. Si applica a tutto ciò che ascolti.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s volte</string>
+    <string name="playback_speed_decrease">Riduci velocità di riproduzione</string>
+    <string name="playback_speed_increase">Aumenta velocità di riproduzione</string>
+    <string name="playback_speed_presets">Preset</string>
+    <string name="playback_speed_custom_action">Inserisci velocità esatta</string>
+    <string name="playback_speed_custom_title">Velocità di riproduzione esatta</string>
+    <string name="playback_speed_custom_field_label">Velocità</string>
+    <string name="playback_speed_custom_supporting">Da %1$s× a %2$s×, fino a due decimali</string>
+    <string name="playback_speed_custom_error">Inserisci una velocità da %1$s× a %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>

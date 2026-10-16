@@ -280,4 +280,19 @@
     <string name="toast_regenerated_palettes_partial">Regenererte %1$d av %2$d paletter</string>
     <string name="toast_stats_regeneration_started">Regenerering av statistikk startet</string>
     <string name="working_ellipsis">Arbeider…</string>
+    <string name="setcat_playback_behavior">Avspilling</string>
+    <string name="setcat_autoplay_on_skip_title">Spill av automatisk ved hopp</string>
+    <string name="setcat_autoplay_on_skip_subtitle">Start avspillingen automatisk når du hopper til en annen sang mens avspillingen er satt på pause.</string>
+    <string name="playback_speed_description">Tonehøyden forblir den samme. Gjelder alt du spiller av.</string>
+    <string name="playback_speed_value">%1$s×</string>
+    <string name="playback_speed_state_description">%1$s ganger</string>
+    <string name="playback_speed_decrease">Senk avspillingshastigheten</string>
+    <string name="playback_speed_increase">Øk avspillingshastigheten</string>
+    <string name="playback_speed_presets">Forhåndsinnstillinger</string>
+    <string name="playback_speed_custom_action">Angi nøyaktig hastighet</string>
+    <string name="playback_speed_custom_title">Nøyaktig avspillingshastighet</string>
+    <string name="playback_speed_custom_field_label">Hastighet</string>
+    <string name="playback_speed_custom_supporting">Fra %1$s× til %2$s×, opptil to desimaler</string>
+    <string name="playback_speed_custom_error">Angi en hastighet fra %1$s× til %2$s×</string>
+    <string name="playback_speed_multiplier_suffix">×</string>
 </resources>
