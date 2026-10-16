@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import app.cash.turbine.test
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -254,4 +256,122 @@ class UserPreferencesRepositoryTest {
             tempDir.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun `migrateTabOrder backfills Folders right after Liked for a legacy order`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["SONGS","LIKED","ALBUMS","ARTIST","PLAYLISTS"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(
+                listOf("SONGS", "LIKED", "FOLDERS", "ALBUMS", "ARTIST", "PLAYLISTS"),
+                repository.storedLibraryTabsOrder()
+            )
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder appends Folders when a legacy order has no Liked tab`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["ALBUMS","SONGS"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("ALBUMS", "SONGS", "FOLDERS"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder does not bring back a Folders tab the user hid`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS","FOLDERS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            // The stored order is the visible-tab list, so dropping FOLDERS hides it.
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("SONGS", "ALBUMS", "LIKED"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder leaves a malformed order untouched`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.saveLibraryTabsOrder("not a tab list")
+            repository.migrateTabOrder()
+
+            assertEquals("not a tab list", repository.libraryTabsOrderFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateTabOrder with no saved order only marks the migration done`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.migrateTabOrder()
+            assertNull(repository.libraryTabsOrderFlow.first())
+
+            repository.saveLibraryTabsOrder("""["SONGS","LIKED"]""")
+            repository.migrateTabOrder()
+
+            assertEquals(listOf("SONGS", "LIKED"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    private suspend fun UserPreferencesRepository.storedLibraryTabsOrder(): List<String>? =
+        libraryTabsOrderFlow.first()?.let { Json.decodeFromString<List<String>>(it) }
 }

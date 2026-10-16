@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">Сбросить порядок вкладок к значениям по умолчанию?</string>
     <string name="reorder_tabs_reset_dialog_title">Сбросить порядок</string>
     <string name="reorder_tabs_sheet_title">Изменить порядок вкладок библиотеки</string>
+    <string name="reorder_tabs_visible_title">Видимые вкладки</string>
+    <string name="reorder_tabs_hidden_title">Скрытые вкладки</string>
+    <string name="reorder_tabs_hide_action">Скрыть вкладку</string>
+    <string name="reorder_tabs_show_action">Показать вкладку</string>
     <string name="search_playlists_hint">Поиск плейлистов…</string>
     <string name="song_field_album">Альбом</string>
     <string name="song_field_album_artist">Исполнитель альбома</string>

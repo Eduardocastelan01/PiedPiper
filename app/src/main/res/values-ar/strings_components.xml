@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">هل تريد إعادة تعيين ترتيب علامات التبويب إلى الوضع الافتراضي؟</string>
     <string name="reorder_tabs_reset_dialog_title">إعادة تعيين الترتيب</string>
     <string name="reorder_tabs_sheet_title">إعادة ترتيب علامات تبويب المكتبة</string>
+    <string name="reorder_tabs_visible_title">علامات التبويب المرئية</string>
+    <string name="reorder_tabs_hidden_title">علامات التبويب المخفية</string>
+    <string name="reorder_tabs_hide_action">إخفاء علامة التبويب</string>
+    <string name="reorder_tabs_show_action">إظهار علامة التبويب</string>
     <string name="search_playlists_hint">البحث عن قوائم التشغيل…</string>
     <string name="song_field_album">الألبوم</string>
     <string name="song_field_album_artist">فنان الألبوم</string>

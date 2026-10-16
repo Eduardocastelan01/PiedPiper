@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">Reset urutan tab ke default?</string>
     <string name="reorder_tabs_reset_dialog_title">Reset urutan</string>
     <string name="reorder_tabs_sheet_title">Urutkan ulang tab pustaka</string>
+    <string name="reorder_tabs_visible_title">Tab yang terlihat</string>
+    <string name="reorder_tabs_hidden_title">Tab tersembunyi</string>
+    <string name="reorder_tabs_hide_action">Sembunyikan tab</string>
+    <string name="reorder_tabs_show_action">Tampilkan tab</string>
     <string name="search_playlists_hint">Cari playlist…</string>
     <string name="song_field_album">Album</string>
     <string name="song_field_album_artist">Artis album</string>

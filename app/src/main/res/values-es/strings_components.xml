@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">¿Restablecer el orden de las pestañas al predeterminado?</string>
     <string name="reorder_tabs_reset_dialog_title">Restablecer orden</string>
     <string name="reorder_tabs_sheet_title">Reordenar pestañas de la biblioteca</string>
+    <string name="reorder_tabs_visible_title">Pestañas visibles</string>
+    <string name="reorder_tabs_hidden_title">Pestañas ocultas</string>
+    <string name="reorder_tabs_hide_action">Ocultar pestaña</string>
+    <string name="reorder_tabs_show_action">Mostrar pestaña</string>
     <string name="search_playlists_hint">Buscar listas de reproducción…</string>
     <string name="song_field_album">Álbum</string>
     <string name="song_field_album_artist">Artista del álbum</string>

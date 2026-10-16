@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">탭 순서를 기본값으로 재설정하시겠습니까?</string>
     <string name="reorder_tabs_reset_dialog_title">순서 초기화</string>
     <string name="reorder_tabs_sheet_title">라이브러리 탭 순서 변경</string>
+    <string name="reorder_tabs_visible_title">표시되는 탭</string>
+    <string name="reorder_tabs_hidden_title">숨겨진 탭</string>
+    <string name="reorder_tabs_hide_action">탭 숨기기</string>
+    <string name="reorder_tabs_show_action">탭 표시</string>
     <string name="search_playlists_hint">플레이리스트 검색…</string>
     <string name="song_field_album">앨범</string>
     <string name="song_field_album_artist">앨범 아티스트</string>

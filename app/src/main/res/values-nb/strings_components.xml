@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">Tilbakestill fanerekkefølgen til standard?</string>
     <string name="reorder_tabs_reset_dialog_title">Tilbakestill rekkefølge</string>
     <string name="reorder_tabs_sheet_title">Endre rekkefølge på bibliotekfaner</string>
+    <string name="reorder_tabs_visible_title">Synlige faner</string>
+    <string name="reorder_tabs_hidden_title">Skjulte faner</string>
+    <string name="reorder_tabs_hide_action">Skjul fane</string>
+    <string name="reorder_tabs_show_action">Vis fane</string>
     <string name="search_playlists_hint">Søk etter spillelister…</string>
     <string name="song_field_album">Album</string>
     <string name="song_field_album_artist">Albumartist</string>

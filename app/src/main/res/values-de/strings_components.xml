@@ -119,6 +119,10 @@
     <string name="reorder_tabs_reset_dialog_body">Tab-Reihenfolge auf Standard zurücksetzen?</string>
     <string name="reorder_tabs_reset_dialog_title">Reihenfolge zurücksetzen</string>
     <string name="reorder_tabs_sheet_title">Bibliotheks-Tabs neu sortieren</string>
+    <string name="reorder_tabs_visible_title">Sichtbare Tabs</string>
+    <string name="reorder_tabs_hidden_title">Ausgeblendete Tabs</string>
+    <string name="reorder_tabs_hide_action">Tab ausblenden</string>
+    <string name="reorder_tabs_show_action">Tab einblenden</string>
     <string name="search_playlists_hint">Playlists suchen…</string>
     <string name="song_field_album">Album</string>
     <string name="song_field_album_artist">Album-Künstler</string>

@@ -143,6 +143,7 @@ constructor(
 
         val GLOBAL_TRANSITION_SETTINGS = stringPreferencesKey("global_transition_settings_json")
         val LIBRARY_TABS_ORDER = stringPreferencesKey("library_tabs_order")
+        val LIBRARY_TABS_FOLDERS_MIGRATED = booleanPreferencesKey("library_tabs_folders_migrated")
         val IS_FOLDER_FILTER_ACTIVE = booleanPreferencesKey("is_folder_filter_active")
         val IS_FOLDERS_PLAYLIST_VIEW = booleanPreferencesKey("is_folders_playlist_view")
         val HIDE_LOCAL_MEDIA = booleanPreferencesKey("hide_local_media")
@@ -1567,23 +1568,27 @@ constructor(
         dataStore.edit { preferences -> preferences.remove(PreferencesKeys.LIBRARY_TABS_ORDER) }
     }
 
+    /**
+     * One-shot backfill of the Folders tab for orders saved before it existed.
+     *
+     * The stored order doubles as the list of *visible* tabs, so this must never run more
+     * than once: re-adding FOLDERS on every launch would undo a user who deliberately hid
+     * that tab.
+     */
     suspend fun migrateTabOrder() {
         dataStore.edit { preferences ->
-            val orderJson = preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
-            if (orderJson != null) {
-                try {
-                    val order = json.decodeFromString<MutableList<String>>(orderJson)
-                    if (!order.contains("FOLDERS")) {
-                        val likedIndex = order.indexOf("LIKED")
-                        if (likedIndex != -1) {
-                            order.add(likedIndex + 1, "FOLDERS")
-                        } else {
-                            order.add("FOLDERS")
-                        }
-                        preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
-                    }
-                } catch (e: Exception) {
-                }
+            if (preferences[PreferencesKeys.LIBRARY_TABS_FOLDERS_MIGRATED] == true) return@edit
+            preferences[PreferencesKeys.LIBRARY_TABS_FOLDERS_MIGRATED] = true
+
+            val orderJson = preferences[PreferencesKeys.LIBRARY_TABS_ORDER] ?: return@edit
+            val order = runCatching {
+                json.decodeFromString<MutableList<String>>(orderJson)
+            }.getOrNull() ?: return@edit // Abort on malformed data; don't overwrite user data.
+
+            if ("FOLDERS" !in order) {
+                val insertAfter = order.indexOf("LIKED").takeIf { it != -1 } ?: order.lastIndex
+                order.add(insertAfter + 1, "FOLDERS")
+                preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
             }
         }
     }
