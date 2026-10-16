@@ -190,9 +190,13 @@ class SleepTimerStateHolder @Inject constructor(
     }
 
     /**
-     * Cleanup when ViewModel is cleared.
+     * Cleanup when ViewModel is cleared. Only the scope that currently owns the binding
+     * may sever it: a stale PlayerViewModel clearing after a newer instance already
+     * re-initialized this singleton must not null the live callbacks (the timer toasts
+     * and end-of-track toggle would silently no-op until process restart).
      */
-    fun onCleared() {
+    fun onCleared(owner: CoroutineScope) {
+        if (scope !== owner) return
         sessionMirrorJob?.cancel()
         sessionMirrorJob = null
         scope = null

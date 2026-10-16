@@ -209,7 +209,12 @@ class LibraryStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
+    fun onCleared(owner: CoroutineScope) {
+        // Only the scope that currently owns the binding may sever it. A stale
+        // PlayerViewModel clearing after a newer instance already re-initialized this
+        // singleton must not leave it scope-less (sorting and library loading would
+        // silently no-op until process restart).
+        if (scope !== owner) return
         scope = null
     }
 

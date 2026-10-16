@@ -4045,6 +4045,9 @@ class PlayerViewModel @Inject constructor(
 
 
     override fun onCleared() {
+        // Captured before super.onCleared() so the owner checks below compare against the
+        // exact scope this instance bound the singleton holders to.
+        val ownerScope = viewModelScope
         val controllerToRelease = mediaController
         mediaControllerPlaybackListener?.let { listener ->
             controllerToRelease?.removeListener(listener)
@@ -4057,13 +4060,15 @@ class PlayerViewModel @Inject constructor(
         super.onCleared()
         stopProgressUpdates()
         playbackStateHolder.onCleared()
-        listeningStatsTracker.onCleared()
+        // The listening session belongs to MusicService, which finalizes it on track end,
+        // stop/unload and onDestroy. Finalizing here would split a session that keeps
+        // playing in the background after the activity finishes.
         dailyMixStateHolder.onCleared()
         lyricsStateHolder.onCleared()
-        themeStateHolder.onCleared()
+        themeStateHolder.onCleared(ownerScope)
         searchStateHolder.onCleared()
-        libraryStateHolder.onCleared()
-        sleepTimerStateHolder.onCleared()
+        libraryStateHolder.onCleared(ownerScope)
+        sleepTimerStateHolder.onCleared(ownerScope)
         connectivityStateHolder.onCleared()
         queueUndoStateHolder.onCleared()
         playlistDismissUndoStateHolder.onCleared()

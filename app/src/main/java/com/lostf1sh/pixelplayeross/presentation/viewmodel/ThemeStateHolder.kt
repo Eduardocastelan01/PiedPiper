@@ -387,7 +387,12 @@ class ThemeStateHolder @Inject constructor(
         }
     }
 
-    fun onCleared() {
+    fun onCleared(owner: CoroutineScope) {
+        // Only the scope that currently owns the binding may sever it. A stale
+        // PlayerViewModel clearing after a newer instance already re-initialized this
+        // singleton must not leave it scope-less (breaks album color extraction until
+        // process restart).
+        if (scope !== owner) return
         scope = null
     }
 

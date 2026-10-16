@@ -17,11 +17,15 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -111,6 +115,34 @@ class ThemeStateHolderArtworkTest {
 
         assertTrue(failure is CancellationException)
     }
+
+    @Test
+    fun `stale owner clearing keeps album palettes generating until the current owner clears`() = runTest {
+        val holder = holder()
+        val staleOwner = childScope()
+        val currentOwner = childScope()
+        holder.initialize(staleOwner)
+        holder.initialize(currentOwner)
+        runCurrent()
+        val boundUri = LocalArtworkUri.buildSongUri(1L)
+        val unboundUri = LocalArtworkUri.buildSongUri(2L)
+
+        holder.onCleared(staleOwner)
+        holder.ensureAlbumColorScheme(boundUri)
+        holder.getAlbumColorSchemeFlow(boundUri, eager = false).first { it == oldScheme }
+
+        holder.onCleared(currentOwner)
+        holder.ensureAlbumColorScheme(unboundUri)
+
+        assertNull(holder.getAlbumColorSchemeFlow(unboundUri, eager = false).value)
+        coVerify(exactly = 1) { processor.getOrGenerateColorScheme(boundUri, any(), any(), any()) }
+        coVerify(exactly = 0) { processor.getOrGenerateColorScheme(unboundUri, any(), any(), any()) }
+        staleOwner.cancel()
+        currentOwner.cancel()
+    }
+
+    private fun TestScope.childScope(): CoroutineScope =
+        CoroutineScope(backgroundScope.coroutineContext + Job(backgroundScope.coroutineContext[Job]))
 
     private fun holder(): ThemeStateHolder {
         val preferences = mockk<ThemePreferencesRepository> {

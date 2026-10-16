@@ -76,7 +76,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.paging.LoadState
@@ -89,6 +88,7 @@ import com.lostf1sh.pixelplayeross.data.model.LibraryTabId
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.presentation.screens.TabAnimation
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
@@ -104,7 +104,7 @@ fun SongPickerBottomSheet(
     initiallySelectedSongIds: Set<String>,
     onDismiss: () -> Unit,
     onConfirm: (Set<String>) -> Unit,
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val selectedSongIds = remember {
@@ -132,7 +132,7 @@ fun SongPickerBottomSheet(
 fun SongPickerContent(
     selectedSongIds: MutableMap<String, Boolean>,
     onConfirm: (Set<String>) -> Unit,
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
     val storageFilter by playerViewModel.playlistPickerStorageFilter.collectAsStateWithLifecycle()
     val hasCloudSongs by playerViewModel.hasCloudSongsFlow.collectAsStateWithLifecycle()
@@ -289,7 +289,7 @@ fun SongPickerSelectionPane(
     selectedSongIds: MutableMap<String, Boolean>,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp, top = 20.dp),
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var favoritesOnly by remember { mutableStateOf(false) }
