@@ -60,6 +60,7 @@
     <string name="audio_bookmarks_back_to_top">맨 위로</string>
     <string name="audio_bookmarks_clear_filter">필터 지우기</string>
     <string name="audio_bookmarks_name_label">북마크 이름</string>
+    <string name="audio_bookmarks_actions">북마크 작업</string>
     <string name="audio_bookmarks_title">북마크</string>
     <string name="browse_by_genre">장르별 찾아보기</string>
     <string name="cd_about_open_link">%1$s 열기</string>

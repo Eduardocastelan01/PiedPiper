@@ -1972,7 +1972,7 @@ private fun BookmarkMomentCard(
                     IconButton(onClick = onMoreClick) {
                         Icon(
                             imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = "Bookmark actions"
+                            contentDescription = stringResource(R.string.audio_bookmarks_actions)
                         )
                     }
                 }

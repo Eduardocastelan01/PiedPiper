@@ -63,6 +63,7 @@
     <string name="audio_bookmarks_back_to_top">Nach oben</string>
     <string name="audio_bookmarks_clear_filter">Filter löschen</string>
     <string name="audio_bookmarks_name_label">Name des Lesezeichens</string>
+    <string name="audio_bookmarks_actions">Lesezeichen-Aktionen</string>
     <string name="audio_bookmarks_title">Lesezeichen</string>
     <string name="browse_by_genre">Nach Genre stöbern</string>
     <string name="cd_about_open_link">%1$s öffnen</string>
