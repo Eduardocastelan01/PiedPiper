@@ -363,4 +363,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Estable</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Registro de cambios</string>
     <string name="presentation_batch_g_yes">Sí</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS divide las etiquetas de artista usando delimitadores de caracteres (/, ;, &amp;) y delimitadores de palabras (feat., ft., vs., x). Los delimitadores de palabras no distinguen entre mayúsculas y minúsculas.
+
+"Extraer artistas del título" detecta patrones como (feat. Artista) en los títulos de las canciones.
+
+La barra invertida (\) se puede usar para escapar los delimitadores de caracteres.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Bienvenido a PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Actualiza a la última versión de PixelPlayerOSS y confirma que el problema sigue ocurriendo.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Versión de PixelPlayerOSS:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>Reproducidas recientemente y la restauración de la cola persistente mantienen lista tu sesión de escucha.</item>
+        <item>Ahora se incluyen Copia de seguridad y restauración v3 y herramientas de gestión de cuentas.</item>
+        <item>Las letras son más inteligentes, con búsqueda manual como alternativa y mejoras de almacenamiento.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Gran mejora de rendimiento en el inicio, la biblioteca, la cola y las interacciones del reproductor.</item>
+        <item>Los flujos de navegación y búsqueda son más fiables, con un manejo de rutas más seguro.</item>
+        <item>Mejor compatibilidad de reproducción de audio con más dispositivos y formatos.</item>
+        <item>Se ampliaron los flujos de selección múltiple en canciones, álbumes y listas de reproducción.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>El comportamiento de la cola y del modo aleatorio ahora es más estable y predecible.</item>
+        <item>Se corrigieron el temporizador de apagado, la navegación de la pestaña Archivos y los cierres inesperados por el artista del álbum.</item>
+        <item>Se mejoró la carga de widgets y la estabilidad del servicio para reducir problemas de sobrecalentamiento y memoria.</item>
+        <item>Correcciones generales de errores y mejoras de la interfaz en toda la app.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Actualización de la interfaz Material 3 Expressive</item>
+        <item>Ecualizador de 10 bandas y efectos</item>
+        <item>Nuevo flujo de sincronización de la biblioteca</item>
+        <item>Importación y exportación de listas M3U</item>
+        <item>Integración de imágenes de artista de Deezer</item>
+        <item>Portadas personalizadas para listas de reproducción</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Refactorización de la arquitectura de los ajustes</item>
+        <item>Animaciones de la cola y del reproductor</item>
+        <item>Baseline Profiles y rendimiento</item>
+        <item>Mejor sistema de letras con desfase de sincronización</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Estabilidad de la hoja del reproductor</item>
+        <item>Correcciones generales de errores y limpieza</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Gran rediseño de la navegación</item>
+        <item>Nuevo explorador de archivos para elegir los directorios de origen</item>
+        <item>Continuidad fluida entre dispositivos remotos</item>
+        <item>Transición sin pausas entre canciones</item>
+        <item>Control de fundido cruzado</item>
+        <item>Nueva función de transiciones personalizadas (solo para listas de reproducción)</item>
+        <item>Sigue reproduciendo música después de cerrar la app</item>
+        <item>Optimizaciones de la interfaz</item>
+        <item>Función de estadísticas mejorada</item>
+        <item>Control de la cola rediseñado con más funciones</item>
+        <item>Mejor compatibilidad con distintos tipos de archivo para la reproducción y la edición de metadatos</item>
+        <item>Controlador de permisos mejorado</item>
+        <item>Correcciones de errores menores</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Se presentó un centro de estadísticas de escucha más completo, con información más detallada de tus sesiones.</item>
+        <item>Se lanzó un reproductor rápido flotante para abrir y previsualizar archivos locales al instante.</item>
+        <item>Se añadió una pestaña de carpetas con navegador en forma de árbol y vista lista para listas de reproducción.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Se refinó toda la interfaz Material 3 para una experiencia más limpia y cohesiva.</item>
+        <item>La edición de metadatos ahora permite cambiar la carátula.</item>
+        <item>Se suavizaron las animaciones y transiciones de toda la app para una navegación más fluida.</item>
+        <item>Se mejoró el diseño de la pantalla de artista con más detalles y mejor acabado.</item>
+        <item>Se mejoró la generación de DailyMix y YourMix con selecciones más inteligentes y variadas.</item>
+        <item>Se mejoraron la relevancia y la presentación de la búsqueda para descubrir música más rápido.</item>
+        <item>Se amplió la compatibilidad con una gama más amplia de formatos de archivo de audio.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Se resolvieron rarezas de los metadatos para que los datos de las canciones sean precisos en todas partes.</item>
+        <item>Se restauraron los accesos directos de las notificaciones para que vuelvan a la reproducción de forma fiable.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Registro de cambios en la app para mantenerte al día de las últimas novedades.</item>
+        <item>Compatibilidad con archivos .LRC, tanto incrustados como externos.</item>
+        <item>Compatibilidad con letras sin conexión.</item>
+        <item>Letras sincronizadas (en sintonía con la canción).</item>
+        <item>Nueva pantalla para ver la cola completa.</item>
+        <item>Reordena y quita canciones de la cola.</item>
+        <item>Gestos en el minirreproductor (desliza hacia abajo para cerrar).</item>
+        <item>Se añadieron más animaciones de Material.</item>
+        <item>Nuevos ajustes para personalizar el aspecto y el comportamiento.</item>
+        <item>Nuevos ajustes para borrar la caché.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Rediseño completo de la interfaz de usuario.</item>
+        <item>Rediseño completo del reproductor.</item>
+        <item>Mejoras de rendimiento en la biblioteca.</item>
+        <item>Mayor velocidad de inicio de la aplicación.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Se corrigieron varios errores del editor de etiquetas.</item>
+        <item>Se corrigió un error por el que la notificación de reproducción no se borraba.</item>
+        <item>Se corrigieron varios errores que provocaban cierres inesperados de la app.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Primera versión FOSS pública de PixelPlayerOSS.</item>
+        <item>Incluye reproducción local, listas de reproducción, favoritos, letras, estadísticas de escucha, temas dinámicos Material 3, widgets y copia de seguridad/restauración.</item>
+        <item>Mantiene la compatibilidad con Navidrome/Subsonic y Jellyfin autoalojados, además de la búsqueda opcional de letras en LRCLIB y de imágenes de artista en Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Se eliminaron las dependencias de ejecución de Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, la facturación de Play Store, Firebase, Crashlytics y Google Play Services.</item>
+        <item>Se eliminó el scrobbling público de Last.fm y ListenBrainz; el envío de datos a Navidrome/Subsonic autoalojado sigue limitado al servidor propio del usuario.</item>
+        <item>Se eliminaron las traducciones incluidas y el selector de idioma de la app en esta primera versión FOSS; primero se publican los recursos en inglés.</item>
+        <item>Se eliminaron las rutas de publicación que dependían de artefactos de firma locales o privados, valores de firma ficticios o supuestos exclusivos de tiendas de aplicaciones.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>Se añadieron metadatos de F-Droid, metadatos de tienda de Fastlane, notas de privacidad, notas de seguridad, documentación de dependencias y licencias, y guías para colaboradores.</item>
+        <item>Las compilaciones de lanzamiento permanecen sin firmar cuando faltan las claves de firma locales.</item>
+        <item>Se añadió pixelplayer.disableReleaseSigning=true para compilaciones de verificación sin firmar y deterministas.</item>
+        <item>Se documentó el rastro de licencias de recursos y dependencias, incluidos los artefactos Maven nativos o binarios y las dependencias de JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>El streaming en la nube por loopback ahora requiere un token por sesión.</item>
+        <item>La restauración de copias de seguridad ignora las claves de preferencias que pertenecen a gestores de módulo dedicados.</item>
+        <item>Se reforzó el registro en las versiones de lanzamiento para que las cabeceras de las solicitudes HTTP y los registros sin procesar de Android no eludan el filtro de lanzamiento de Timber.</item>
+        <item>También incluye persistencia de listas inteligentes, detección de pistas duplicadas, control de la velocidad de reproducción, mensajes de error de reproducción y sincronización más claros, y mejor accesibilidad.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Mejora del diseño Material 3 Expressive: un nuevo esquema de movimiento, indicadores de progreso ondulados y animaciones de transformación de formas en toda la app.</item>
+        <item>Ahora se permiten servidores Jellyfin sobre HTTP sin cifrar para hosts de VPN y de red local.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>App más ligera: unas reglas de reducción de código más ajustadas recortan unos 1,5 MB del tamaño de instalación.</item>
+        <item>Inicio más rápido y fluido: los Baseline Profiles se regeneraron desde cero para ajustarse a la nueva interfaz y a las nuevas rutas de código.</item>
+        <item>Listas, hojas y ecualizador más ágiles gracias a una amplia mejora de rendimiento de Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Reproducción en la nube más fiable: las solicitudes canceladas de Navidrome/Jellyfin ya no se notifican por error como errores de red al saltar pistas rápidamente.</item>
+        <item>Los eventos de copia de seguridad, restauración y configuración ya no se pueden perder al girar la pantalla.</item>
+        <item>Limpieza general: se eliminó el código muerto, se migraron las API obsoletas y se actualizaron las dependencias.</item>
+    </string-array>
 </resources>

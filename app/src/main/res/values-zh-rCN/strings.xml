@@ -1,5 +1,4 @@
 <resources>
-<string name="app_name">PixelPlayerOSS</string>
 <string name="app_name_change_title">应用名称已变更</string>
 <string name="app_name_change_message">本应用现已更名为 PixelPlayerOSS！开启你的音乐之旅吧！</string>
 <string name="do_not_show_again">不再提示</string>
@@ -39,7 +38,6 @@
 <string name="lyrics">歌词</string>
 <string name="loading_lyrics">正在加载歌词…</string>
 <string name="lyrics_provided_by">歌词来源</string>
-<string name="lrclib_uri">https://lrclib.net/</string>
 <string name="lyrics_not_found">未找到歌词</string>
 <string name="search_lyrics_online_prompt">是否在线搜索歌词？</string>
 <string name="lyrics_custom_search_hint">未能自动匹配歌词，你可以修改歌曲标题或歌手，手动搜索。</string>
@@ -126,7 +124,6 @@
 <string name="playlist_share_failed">分享失败：%1$s</string>
 <string name="playlist_none_to_export">没有可导出的播放列表</string>
 <string name="playlist_export_failed">导出失败：%1$s</string>
-<string name="playlist_export_folder_display">Music/PixelPlayerOSS Exports</string>
 <string name="error_unknown">未知错误</string>
 
 
@@ -254,4 +251,36 @@
 <string name="setcat_find_duplicates_title">查找重复曲目</string>
 <string name="setcat_find_duplicates_subtitle">扫描曲库中多次出现的歌曲</string>
 
+    <string name="cloud_download_action">下载</string>
+    <string name="cloud_download_queued">排队中</string>
+    <string name="cloud_downloading">正在下载…</string>
+    <string name="cloud_download_progress">%1$d%%</string>
+    <string name="cloud_remove_download">移除下载</string>
+    <string name="cloud_download_retry">重试</string>
+    <string name="cloud_album_download">下载专辑</string>
+    <string name="cloud_album_remove_downloads">移除下载</string>
+    <string name="cloud_downloads_title">下载</string>
+    <string name="cloud_downloads_settings_subtitle">管理离线云端曲目和存储空间</string>
+    <string name="cloud_downloads_storage_used">离线存储已用空间</string>
+    <string name="cloud_downloads_storage_summary">已完成 %1$d 首 · 共 %2$d 首</string>
+    <string name="cloud_downloads_active_section">排队与下载中</string>
+    <string name="cloud_downloads_failed_section">失败</string>
+    <string name="cloud_downloads_completed_section">已完成</string>
+    <string name="cloud_downloads_section_count">%1$s · %2$d</string>
+    <string name="cloud_downloads_unknown_track">未知曲目</string>
+    <string name="cloud_downloads_downloaded_size">已下载 · %1$s</string>
+    <string name="cloud_downloads_failed_fallback">下载失败</string>
+    <string name="cloud_downloads_empty_title">暂无离线下载</string>
+    <string name="cloud_downloads_empty_subtitle">你下载的云端曲目会显示在这里。</string>
+    <string name="cloud_download_selected">下载所选云端曲目</string>
+    <string name="cloud_download_selected_count">下载 %1$d 首云端曲目</string>
+    <string name="musicbrainz_lookup">在 MusicBrainz 上查找</string>
+    <string name="musicbrainz_searching">正在搜索匹配的录音…</string>
+    <string name="musicbrainz_lookup_failed">MusicBrainz 查询失败</string>
+    <string name="musicbrainz_search_failed_fallback">MusicBrainz 搜索失败</string>
+    <string name="musicbrainz_save_failed_fallback">无法保存 MusicBrainz 元数据</string>
+    <string name="musicbrainz_choose_match">选择 MusicBrainz 匹配项</string>
+    <string name="musicbrainz_no_results">未找到合适的录音。</string>
+    <string name="musicbrainz_match_score">匹配度：%1$d%%</string>
+    <string name="musicbrainz_applied">已保存 MusicBrainz 标识符，并补全了缺失的年份和占位名称。</string>
 </resources>

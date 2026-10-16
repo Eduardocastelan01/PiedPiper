@@ -288,4 +288,13 @@
     <string name="word_delimiter_toast_invalid">موجود بالفعل أو غير صالح</string>
     <string name="word_delimiter_toast_reset">تمت إعادة تعيين محددات الكلمات إلى الافتراضية</string>
     <string name="word_delimiters_screen_title">محددات الكلمات</string>
+    <string name="easter_egg_thank_you">شكراً لاستخدامك PixelPlayerOSS!</string>
+    <string name="setup_external_services_subtitle">يعمل PixelPlayerOSS دون اتصال بشكل افتراضي. فعّل عمليات البحث التي تريدها فقط.</string>
+    <string name="setup_permission_media_description">يحتاج PixelPlayerOSS إلى الوصول إلى ملفاتك الصوتية لبناء مكتبتك الموسيقية.</string>
+    <string name="setup_permission_alarms_description">اختياري، لكنه موصى به إذا كنت تستخدم مؤقت النوم وتريد أن يوقف PixelPlayerOSS التشغيل في الوقت المحدد تماماً.</string>
+    <string name="setup_backup_have_description">إذا كانت لديك نسخة احتياطية من PixelPlayerOSS، فاستعدها الآن لتتخطى معظم خطوات الإعداد المتبقية على هذا الجهاز.</string>
+    <string name="setup_theme_dark_description">مظهر Material 3 الداكن الافتراضي لتطبيق PixelPlayerOSS.</string>
+    <string name="home_empty_placeholder_subtitle">سيظهر مزيجك الموسيقي هنا عندما يعثر PixelPlayerOSS على أغانٍ أو يزامن مصدراً.</string>
+    <string name="crash_report_share_subject">تقرير تعطل PixelPlayerOSS</string>
+    <string name="about_support_title">ادعم PixelPlayerOSS</string>
 </resources>

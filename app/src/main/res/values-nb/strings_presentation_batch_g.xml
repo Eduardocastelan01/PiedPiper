@@ -363,4 +363,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Endringslogg</string>
     <string name="presentation_batch_g_yes">Ja</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS deler artisttagger ved hjelp av tegndelimitere (/, ;, &amp;) og orddelimitere (feat., ft., vs., x). Orddelimitere samsvares uten hensyn til store og små bokstaver.
+
+«Hent artister fra tittel» gjenkjenner mønstre som (feat. Artist) i sangtitler.
+
+Skråstrek bakover (\) kan brukes til å escape tegndelimitere.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Velkommen til PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Oppdater til den nyeste PixelPlayerOSS-versjonen og bekreft at problemet fortsatt oppstår.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">PixelPlayerOSS-versjon:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>Nylig spilt og gjenoppretting av vedvarende kø holder lyttingen din klar.</item>
+        <item>Sikkerhetskopiering og gjenoppretting v3 og verktøy for kontoadministrasjon er nå inkludert.</item>
+        <item>Sangtekster ble smartere, med manuelt søk som reserve og forbedret lagring.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Stor ytelsesgjennomgang av oppstart, bibliotek, kø og avspillerinteraksjoner.</item>
+        <item>Navigasjon og søk er mer pålitelige, med tryggere rutehåndtering.</item>
+        <item>Bedre kompatibilitet for lydavspilling på flere enheter og formater.</item>
+        <item>Flervalg er utvidet på tvers av sanger, album og spillelister.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>Oppførselen til kø og blanding er nå mer stabil og forutsigbar.</item>
+        <item>Problemer med Sleep timer, navigasjon i Filer-fanen og krasj med albumartister er rettet.</item>
+        <item>Lasting av widgeter og tjenestestabilitet er forbedret for å redusere overoppheting og minneproblemer.</item>
+        <item>Generelle feilrettinger og UI-polering i hele appen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Oppdatert brukergrensesnitt med Material 3 Expressive</item>
+        <item>10-bånds equalizer og effekter</item>
+        <item>Ny flyt for bibliotekssynkronisering</item>
+        <item>Import og eksport av M3U-spillelister</item>
+        <item>Integrasjon av Deezer-artistbilder</item>
+        <item>Egendefinerte spillelisteomslag</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Omstrukturering av innstillingsarkitekturen</item>
+        <item>Animasjoner for kø og avspiller</item>
+        <item>Baseline Profiles og ytelse</item>
+        <item>Bedre sangtekstsystem med synkroniseringsforskyvning</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Stabilitet i avspillerpanelet</item>
+        <item>Generelle feilrettinger og opprydding</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Stor redesign av navigasjonen</item>
+        <item>Ny filutforsker for valg av kildemapper</item>
+        <item>Sømløs overgang mellom eksterne enheter</item>
+        <item>Gapless-overgang mellom sanger</item>
+        <item>Crossfade-kontroll</item>
+        <item>Ny funksjon for egendefinerte overganger (kun for spillelister)</item>
+        <item>Fortsett å spille etter at appen er lukket</item>
+        <item>UI-optimaliseringer</item>
+        <item>Forbedret statistikkfunksjon</item>
+        <item>Redesignet kø-kontroll med flere funksjoner</item>
+        <item>Bedre støtte for ulike filtyper ved avspilling og redigering av metadata</item>
+        <item>Forbedret tillatelseshåndtering</item>
+        <item>Mindre feilrettinger</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Innførte et rikere statistikksenter for lytting med dypere innsikt i øktene dine.</item>
+        <item>Lanserte en flytende hurtigspiller for å åpne og forhåndslytte til lokale filer umiddelbart.</item>
+        <item>La til en mappefane med trestrukturert navigasjon og en visning som er klar for spillelister.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Finpusset det overordnede Material 3-grensesnittet for en renere og mer helhetlig opplevelse.</item>
+        <item>Redigering av metadata støtter nå bytte av albumkunst.</item>
+        <item>Jevnet ut animasjoner og overganger i hele appen for mer flytende navigasjon.</item>
+        <item>Forbedret oppsettet på artistskjermen med rikere detaljer og finpuss.</item>
+        <item>Oppgraderte DailyMix- og YourMix-generering med smartere og mer varierte utvalg.</item>
+        <item>Bedre søkerelevans og presentasjon for raskere oppdagelse.</item>
+        <item>Utvidet støtte for et bredere utvalg lydfilformater.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Rettet metadatafeil slik at sangdetaljer forblir riktige overalt.</item>
+        <item>Gjenopprettet varselsnarveier slik at de pålitelig hopper tilbake til avspillingen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Endringslogg i appen som holder deg oppdatert på de nyeste funksjonene.</item>
+        <item>Støtte for .LRC-filer, både innebygde og eksterne.</item>
+        <item>Støtte for sangtekster offline.</item>
+        <item>Synkroniserte sangtekster (synkronisert med sangen).</item>
+        <item>Ny skjerm for å se hele køen.</item>
+        <item>Endre rekkefølge på og fjern sanger fra køen.</item>
+        <item>Gester for minispilleren (sveip ned for å lukke).</item>
+        <item>La til flere Material-animasjoner.</item>
+        <item>Nye innstillinger for å tilpasse utseende og følelse.</item>
+        <item>Nye innstillinger for å tømme cachen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Fullstendig redesign av brukergrensesnittet.</item>
+        <item>Fullstendig redesign av avspilleren.</item>
+        <item>Ytelsesforbedringer i biblioteket.</item>
+        <item>Raskere oppstart av appen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Rettet flere feil i tagg-editoren.</item>
+        <item>Rettet en feil der avspillingsvarselet ikke ble fjernet.</item>
+        <item>Rettet flere feil som fikk appen til å krasje.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Første offentlige FOSS-utgivelse av PixelPlayerOSS.</item>
+        <item>Inkluderer lokal avspilling, spillelister, favoritter, sangtekster, lyttestatistikk, dynamisk Material 3-tema, widgeter og sikkerhetskopiering/gjenoppretting.</item>
+        <item>Beholder støtte for selvhostet Navidrome/Subsonic og Jellyfin, pluss valgfritt oppslag av sangtekster via LRCLIB og av artistbilder fra Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Fjernet kjøretidsavhengighetene til Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play Store-fakturering, Firebase, Crashlytics og Google Play Services.</item>
+        <item>Fjernet offentlig scrobbling til Last.fm og ListenBrainz; rapportering til selvhostet Navidrome/Subsonic er fortsatt begrenset til brukerens egen server.</item>
+        <item>Fjernet medfølgende oversettelser og språkvelgeren i appen for denne første FOSS-utgivelsen; engelske ressurser leveres først.</item>
+        <item>Fjernet utgivelsesløp som var avhengige av lokale/private signeringsartefakter, dummy-signeringsverdier eller antakelser som bare gjaldt app-butikker.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>La til F-Droid-metadata, Fastlane-butikkmetadata, personvernnotater, sikkerhetsnotater, dokumentasjon av avhengigheter/lisenser og veiledning for bidragsytere.</item>
+        <item>Utgivelsesbygg forblir usignerte når lokale signeringsnøkler mangler.</item>
+        <item>La til pixelplayer.disableReleaseSigning=true for deterministiske, usignerte verifiseringsbygg.</item>
+        <item>Dokumenterte lisensspor for ressurser og avhengigheter, inkludert native/binære Maven-artefakter og JitPack-avhengigheter.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>Loopback-skystrømming krever nå et token per økt.</item>
+        <item>Gjenoppretting av sikkerhetskopi ignorerer innstillingsnøkler som eies av dedikerte modulbehandlere.</item>
+        <item>Logging i utgivelsesbygg er strammet inn, slik at HTTP-forespørselshoder og rå Android-logger ikke omgår Timber-utgivelsesfilteret.</item>
+        <item>Inkluderer også vedvarende smarte spillelister, skanning etter duplikate spor, kontroll av avspillingshastighet, tydeligere feilmeldinger ved avspilling og synkronisering, og bedre tilgjengelighet.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Designoppgradering med Material 3 Expressive: et nytt bevegelsesskjema, bølgete fremdriftsindikatorer og formtransformerende animasjoner i hele appen.</item>
+        <item>Jellyfin-servere over vanlig HTTP er nå tillatt for VPN- og lokalnettverksverter.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>Mindre app: slankere regler for kodekomprimering sparer rundt 1,5 MB installasjonsstørrelse.</item>
+        <item>Raskere og jevnere oppstart: Baseline Profiles ble generert på nytt fra bunnen av for å passe til det nye brukergrensesnittet og de nye kodeveiene.</item>
+        <item>Kjappere lister, paneler og equalizer takket være en omfattende ytelsesgjennomgang av Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Mer pålitelig skyavspilling: avbrutte Navidrome/Jellyfin-forespørsler rapporteres ikke lenger feilaktig som nettverksfeil når du hopper raskt mellom spor.</item>
+        <item>Hendelser for sikkerhetskopiering, gjenoppretting og oppsett kan ikke lenger gå tapt ved skjermrotasjon.</item>
+        <item>Vårrengjøring: ubrukt kode fjernet, utdaterte API-er migrert og avhengigheter oppdatert.</item>
+    </string-array>
 </resources>

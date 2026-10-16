@@ -363,4 +363,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Log Perubahan</string>
     <string name="presentation_batch_g_yes">Ya</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS memisahkan tag artis menggunakan pemisah karakter (/, ;, &amp;) dan pemisah kata (feat., ft., vs., x). Pemisah kata dicocokkan tanpa peka huruf besar-kecil.
+
+\"Ekstrak Artis dari Judul\" mendeteksi pola seperti (feat. Artis) pada judul lagu.
+
+Garis miring terbalik (\) dapat digunakan untuk meloloskan pemisah karakter.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Selamat datang di PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Perbarui ke versi PixelPlayerOSS terbaru dan pastikan masalah tetap terjadi.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Versi PixelPlayerOSS:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>Fitur Baru-baru Ini Diputar dan pemulihan antrean persisten menjaga sesi mendengarkan Anda tetap siap.</item>
+        <item>Alat Cadangan &amp; Pemulihan v3 dan pengelolaan akun kini disertakan.</item>
+        <item>Lirik jadi lebih pintar dengan pencarian manual sebagai cadangan dan peningkatan penyimpanan.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Peningkatan kinerja besar-besaran pada startup, pustaka, antrean, dan interaksi pemutar.</item>
+        <item>Alur navigasi dan pencarian lebih andal, dengan penanganan rute yang lebih aman.</item>
+        <item>Kompatibilitas pemutaran audio ditingkatkan untuk lebih banyak perangkat dan format.</item>
+        <item>Alur kerja multi-pilih diperluas ke lagu, album, dan playlist.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>Perilaku antrean dan acak kini lebih stabil dan mudah diprediksi.</item>
+        <item>Masalah Timer Tidur, navigasi tab File, dan crash pada artis album telah diperbaiki.</item>
+        <item>Pemuatan widget dan stabilitas layanan ditingkatkan untuk mengurangi masalah panas berlebih/memori.</item>
+        <item>Perbaikan bug umum dan penyempurnaan UI di seluruh aplikasi.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Pembaruan UI Material 3 Expressive</item>
+        <item>Equalizer 10 pita &amp; Efek</item>
+        <item>Alur Sinkronisasi Pustaka Baru</item>
+        <item>Impor/Ekspor Playlist M3U</item>
+        <item>Integrasi Gambar Artis Deezer</item>
+        <item>Sampul Playlist Kustom</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Refaktor Arsitektur Pengaturan</item>
+        <item>Animasi Antrean &amp; Pemutar</item>
+        <item>Baseline Profiles &amp; Kinerja</item>
+        <item>Sistem Lirik yang Lebih Baik dengan Offset Sinkronisasi</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Stabilitas Lembar Pemutar</item>
+        <item>Perbaikan Bug Umum &amp; Pembersihan</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Desain ulang navigasi besar-besaran</item>
+        <item>Penjelajah file baru untuk memilih direktori sumber</item>
+        <item>Kesinambungan mulus antar perangkat jarak jauh</item>
+        <item>Transisi tanpa jeda antar lagu</item>
+        <item>Kontrol crossfade</item>
+        <item>Fitur Transisi Kustom baru (hanya untuk playlist)</item>
+        <item>Tetap memutar setelah aplikasi ditutup</item>
+        <item>Optimasi UI</item>
+        <item>Fitur statistik yang ditingkatkan</item>
+        <item>Kontrol Antrean yang didesain ulang dengan lebih banyak fitur</item>
+        <item>Dukungan berbagai jenis file yang ditingkatkan untuk pemutaran dan pengeditan metadata</item>
+        <item>Pengontrol izin yang ditingkatkan</item>
+        <item>Perbaikan bug kecil</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Memperkenalkan pusat statistik mendengarkan yang lebih kaya dengan wawasan lebih mendalam tentang sesi Anda.</item>
+        <item>Meluncurkan pemutar cepat mengambang untuk langsung membuka dan memutar pratinjau file lokal.</item>
+        <item>Menambahkan tab folder dengan navigator bergaya pohon dan tampilan yang siap untuk playlist.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Menyempurnakan UI Material 3 secara keseluruhan untuk pengalaman yang lebih bersih dan kohesif.</item>
+        <item>Pengeditan metadata kini mendukung penggantian sampul.</item>
+        <item>Animasi dan transisi di seluruh aplikasi dihaluskan agar navigasi lebih mulus.</item>
+        <item>Tata letak layar artis ditingkatkan dengan detail yang lebih kaya dan lebih rapi.</item>
+        <item>Pembuatan DailyMix dan YourMix ditingkatkan dengan pilihan yang lebih cerdas dan beragam.</item>
+        <item>Relevansi dan tampilan pencarian ditingkatkan agar penemuan lebih cepat.</item>
+        <item>Dukungan diperluas untuk lebih banyak format file audio.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Memperbaiki keanehan metadata sehingga detail lagu tetap akurat di mana pun.</item>
+        <item>Memulihkan pintasan notifikasi sehingga andal kembali ke pemutaran.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Log perubahan di dalam aplikasi agar Anda selalu mendapat kabar fitur terbaru.</item>
+        <item>Dukungan untuk file .LRC, baik yang tertanam maupun eksternal.</item>
+        <item>Dukungan lirik offline.</item>
+        <item>Lirik tersinkronisasi (selaras dengan lagu).</item>
+        <item>Layar baru untuk melihat seluruh antrean.</item>
+        <item>Urutkan ulang dan hapus lagu dari antrean.</item>
+        <item>Gestur mini-player (geser ke bawah untuk menutup).</item>
+        <item>Menambahkan lebih banyak animasi material.</item>
+        <item>Pengaturan baru untuk menyesuaikan tampilan dan nuansa.</item>
+        <item>Pengaturan baru untuk menghapus cache.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Desain ulang total antarmuka pengguna.</item>
+        <item>Desain ulang total pemutar.</item>
+        <item>Peningkatan kinerja di pustaka.</item>
+        <item>Kecepatan startup aplikasi ditingkatkan.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Memperbaiki berbagai bug di editor tag.</item>
+        <item>Memperbaiki bug notifikasi pemutaran yang tidak hilang.</item>
+        <item>Memperbaiki beberapa bug yang menyebabkan aplikasi crash.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Rilis FOSS publik pertama dari PixelPlayerOSS.</item>
+        <item>Mencakup pemutaran lokal, playlist, favorit, lirik, statistik mendengarkan, tema dinamis Material 3, widget, dan cadangan/pemulihan.</item>
+        <item>Tetap mendukung Navidrome/Subsonic dan Jellyfin yang dihosting sendiri, ditambah lirik LRCLIB opsional dan pencarian gambar artis Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Menghapus dependensi runtime Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, penagihan Play Store, Firebase, Crashlytics, dan Google Play Services.</item>
+        <item>Menghapus scrobbling publik Last.fm dan ListenBrainz; pelaporan Navidrome/Subsonic yang dihosting sendiri tetap terbatas pada server milik pengguna.</item>
+        <item>Menghapus terjemahan bawaan dan pemilih bahasa di dalam aplikasi untuk rilis FOSS pertama ini; sumber daya bahasa Inggris dirilis lebih dulu.</item>
+        <item>Menghapus jalur rilis yang bergantung pada artefak penandatanganan lokal/privat, nilai penandatanganan palsu, atau asumsi khusus toko aplikasi.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>Menambahkan metadata F-Droid, metadata toko Fastlane, catatan privasi, catatan keamanan, dokumentasi dependensi/lisensi, dan panduan kontributor.</item>
+        <item>Build rilis tetap tidak ditandatangani saat kunci penandatanganan lokal tidak ada.</item>
+        <item>Menambahkan pixelplayer.disableReleaseSigning=true untuk build verifikasi tanpa tanda tangan yang deterministik.</item>
+        <item>Mendokumentasikan jejak lisensi aset dan dependensi, termasuk artefak Maven native/biner dan dependensi JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>Streaming cloud loopback kini memerlukan token per sesi.</item>
+        <item>Pemulihan cadangan mengabaikan kunci preferensi yang dimiliki oleh penangan modul khusus.</item>
+        <item>Pencatatan log rilis diperketat agar header permintaan HTTP dan log Android mentah tidak melewati filter rilis Timber.</item>
+        <item>Juga mencakup persistensi playlist pintar, pemindaian trek duplikat, kontrol kecepatan pemutaran, pesan kegagalan pemutaran/sinkronisasi yang lebih jelas, dan aksesibilitas yang lebih baik.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Penyempurnaan desain Material 3 Expressive: skema gerak baru, indikator progres bergelombang, dan animasi perubahan bentuk di seluruh aplikasi.</item>
+        <item>Server Jellyfin lewat HTTP biasa kini diizinkan untuk host VPN dan jaringan lokal.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>Aplikasi lebih kecil: aturan penyusutan kode yang lebih ramping memangkas sekitar 1,5 MB dari ukuran instalasi.</item>
+        <item>Startup lebih cepat dan mulus: Baseline Profiles dibuat ulang dari awal agar sesuai dengan UI dan jalur kode yang baru.</item>
+        <item>Daftar, sheet, dan equalizer lebih gesit berkat penyempurnaan kinerja Compose secara menyeluruh.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Pemutaran cloud lebih andal: permintaan Navidrome/Jellyfin yang dibatalkan tidak lagi salah dilaporkan sebagai kesalahan jaringan saat melewati trek dengan cepat.</item>
+        <item>Peristiwa cadangan, pemulihan, dan penyiapan tidak lagi bisa hilang saat layar diputar.</item>
+        <item>Bersih-bersih besar: kode mati dihapus, API yang usang dimigrasikan, dan dependensi diperbarui.</item>
+    </string-array>
 </resources>

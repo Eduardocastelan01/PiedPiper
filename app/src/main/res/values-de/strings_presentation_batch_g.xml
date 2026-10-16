@@ -363,4 +363,140 @@
     <string name="presentation_batch_g_topbar_build_stable">Stabil</string>
     <string name="presentation_batch_g_topbar_cd_changelog">Changelog</string>
     <string name="presentation_batch_g_yes">Ja</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS teilt Künstler-Tags anhand von Zeichen-Trennzeichen (/, ;, &amp;) und Wort-Trennzeichen (feat., ft., vs., x). Bei Wort-Trennzeichen wird die Groß-/Kleinschreibung nicht beachtet.
+
+„Künstler aus Titel extrahieren“ erkennt Muster wie (feat. Künstler) in Songtiteln.
+
+Mit einem Backslash (\) lassen sich Zeichen-Trennzeichen maskieren.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Willkommen bei PixelPlayerOSS %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Aktualisiere auf die neueste PixelPlayerOSS-Version und prüfe, ob das Problem weiterhin auftritt.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">PixelPlayerOSS-Version:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>Zuletzt gespielt und die Wiederherstellung der dauerhaften Queue halten deine Hörsitzung bereit.</item>
+        <item>Backup &amp; Wiederherstellung v3 und Tools zur Kontoverwaltung sind jetzt enthalten.</item>
+        <item>Lyrics sind klüger geworden: mit manuellem Such-Fallback und Verbesserungen bei der Speicherung.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>Umfassende Performance-Überarbeitung bei Start, Bibliothek, Queue und Player-Interaktionen.</item>
+        <item>Navigation und Suche sind zuverlässiger, mit sichererer Routenverarbeitung.</item>
+        <item>Verbesserte Kompatibilität der Audiowiedergabe mit mehr Geräten und Formaten.</item>
+        <item>Mehrfachauswahl wurde auf Songs, Alben und Playlists ausgeweitet.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>Queue- und Shuffle-Verhalten sind jetzt stabiler und vorhersehbarer.</item>
+        <item>Probleme mit dem Sleep Timer, der Navigation im Dateien-Tab und Abstürze bei Album-Künstlern wurden behoben.</item>
+        <item>Das Laden von Widgets und die Stabilität des Dienstes wurden verbessert, um Überhitzung und Speicherprobleme zu verringern.</item>
+        <item>Allgemeine Fehlerbehebungen und UI-Feinschliff in der gesamten App.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Material 3 Expressive UI-Update</item>
+        <item>10-Band-Equalizer &amp; Effekte</item>
+        <item>Neuer Ablauf für die Bibliotheks-Synchronisierung</item>
+        <item>M3U-Playlist-Import/-Export</item>
+        <item>Deezer-Integration für Künstlerbilder</item>
+        <item>Eigene Playlist-Cover</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>Überarbeitung der Einstellungsarchitektur</item>
+        <item>Queue- &amp; Player-Animationen</item>
+        <item>Baseline Profiles &amp; Performance</item>
+        <item>Besseres Lyrics-System mit Sync-Offset</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>Stabilität des Player-Sheets</item>
+        <item>Allgemeine Fehlerbehebungen &amp; Aufräumarbeiten</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>Große Neugestaltung der Navigation</item>
+        <item>Neuer Datei-Explorer zur Auswahl von Quellverzeichnissen</item>
+        <item>Nahtloser Wechsel zwischen Remote-Geräten</item>
+        <item>Lückenloser Übergang zwischen Songs</item>
+        <item>Crossfade-Steuerung</item>
+        <item>Neue Funktion für benutzerdefinierte Übergänge (nur für Playlists)</item>
+        <item>Die Wiedergabe läuft nach dem Schließen der App weiter</item>
+        <item>UI-Optimierungen</item>
+        <item>Verbesserte Statistikfunktion</item>
+        <item>Neu gestaltete Queue-Steuerung mit mehr Funktionen</item>
+        <item>Bessere Unterstützung verschiedener Dateitypen für Wiedergabe und Metadatenbearbeitung</item>
+        <item>Verbesserte Berechtigungsverwaltung</item>
+        <item>Kleinere Fehlerbehebungen</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>Ein umfangreicheres Statistik-Hub mit tieferen Einblicken in deine Hörsitzungen.</item>
+        <item>Ein schwebender Quick-Player zum sofortigen Öffnen und Vorhören lokaler Dateien.</item>
+        <item>Ein Ordner-Tab mit baumartiger Navigation und Playlist-tauglicher Ansicht.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>Die gesamte Material-3-Oberfläche wurde für ein saubereres, stimmigeres Erlebnis verfeinert.</item>
+        <item>Die Metadatenbearbeitung unterstützt jetzt das Ändern des Covers.</item>
+        <item>Animationen und Übergänge in der ganzen App wurden geglättet – für eine flüssigere Navigation.</item>
+        <item>Das Layout des Künstlerbildschirms wurde mit mehr Details und Feinschliff verbessert.</item>
+        <item>Die Erstellung von DailyMix und YourMix wurde mit klügeren, abwechslungsreicheren Auswahlen aufgewertet.</item>
+        <item>Suchrelevanz und -darstellung wurden für schnelleres Entdecken verbessert.</item>
+        <item>Unterstützung für ein breiteres Spektrum an Audiodateiformaten.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>Metadaten-Eigenheiten behoben, damit Song-Details überall korrekt bleiben.</item>
+        <item>Benachrichtigungs-Shortcuts wiederhergestellt, damit sie zuverlässig zurück zur Wiedergabe führen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>Changelog in der App, damit du über die neuesten Funktionen auf dem Laufenden bleibst.</item>
+        <item>Unterstützung für .LRC-Dateien, sowohl eingebettet als auch extern.</item>
+        <item>Unterstützung für Offline-Lyrics.</item>
+        <item>Synchronisierte Lyrics (passend zum Song).</item>
+        <item>Neuer Bildschirm zur Anzeige der gesamten Queue.</item>
+        <item>Songs in der Queue umsortieren und entfernen.</item>
+        <item>Mini-Player-Gesten (nach unten wischen zum Schließen).</item>
+        <item>Weitere Material-Animationen hinzugefügt.</item>
+        <item>Neue Einstellungen, um Aussehen und Bedienung anzupassen.</item>
+        <item>Neue Einstellungen zum Leeren des Caches.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>Komplett neu gestaltete Benutzeroberfläche.</item>
+        <item>Komplett neu gestalteter Player.</item>
+        <item>Performance-Verbesserungen in der Bibliothek.</item>
+        <item>Schnellerer App-Start.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>Verschiedene Fehler im Tag-Editor behoben.</item>
+        <item>Fehler behoben, bei dem die Wiedergabe-Benachrichtigung nicht verschwand.</item>
+        <item>Mehrere Fehler behoben, die zu App-Abstürzen führten.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>Erste öffentliche FOSS-Version von PixelPlayerOSS.</item>
+        <item>Enthält lokale Wiedergabe, Playlists, Favoriten, Lyrics, Hörstatistiken, dynamisches Material-3-Theming, Widgets sowie Backup/Wiederherstellung.</item>
+        <item>Behält die Unterstützung für selbst gehostetes Navidrome/Subsonic und Jellyfin bei, dazu optionale LRCLIB-Lyrics und die Deezer-Suche nach Künstlerbildern.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Laufzeitabhängigkeiten zu Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play-Store-Abrechnung, Firebase, Crashlytics und Google Play Services entfernt.</item>
+        <item>Öffentliches Scrobbling zu Last.fm und ListenBrainz entfernt; die Meldungen an selbst gehostete Navidrome/Subsonic-Server bleiben auf deinen eigenen Server beschränkt.</item>
+        <item>Mitgelieferte Übersetzungen und die Sprachauswahl in der App wurden für diese erste FOSS-Version entfernt; zunächst werden englische Ressourcen ausgeliefert.</item>
+        <item>Release-Pfade entfernt, die von lokalen/privaten Signierartefakten, Dummy-Signierwerten oder reinen App-Store-Annahmen abhingen.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>F-Droid-Metadaten, Fastlane-Store-Metadaten, Datenschutzhinweise, Sicherheitshinweise, Dokumentation zu Abhängigkeiten/Lizenzen und Leitfäden für Mitwirkende hinzugefügt.</item>
+        <item>Release-Builds bleiben unsigniert, wenn keine lokalen Signaturschlüssel vorhanden sind.</item>
+        <item>pixelplayer.disableReleaseSigning=true für deterministische, unsignierte Verifizierungs-Builds hinzugefügt.</item>
+        <item>Lizenznachweise für Assets und Abhängigkeiten dokumentiert, einschließlich nativer/binärer Maven-Artefakte und JitPack-Abhängigkeiten.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>Loopback-Cloud-Streaming erfordert jetzt ein Token pro Sitzung.</item>
+        <item>Die Backup-Wiederherstellung ignoriert Einstellungsschlüssel, die dedizierten Modul-Handlern gehören.</item>
+        <item>Das Release-Logging wurde verschärft, sodass HTTP-Request-Header und rohe Android-Logs den Timber-Release-Filter nicht umgehen.</item>
+        <item>Außerdem enthalten: Persistenz für Smart Playlists, Suche nach doppelten Titeln, Steuerung der Wiedergabegeschwindigkeit, klarere Fehlermeldungen bei Wiedergabe und Synchronisierung sowie verbesserte Barrierefreiheit.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Überarbeitung im Material-3-Expressive-Design: ein neues Bewegungsschema, wellenförmige Fortschrittsanzeigen und formverändernde Animationen in der gesamten App.</item>
+        <item>Jellyfin-Server über reines HTTP sind jetzt für VPN- und Hosts im lokalen Netzwerk erlaubt.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>Kleinere App: Schlankere Code-Shrinking-Regeln sparen etwa 1,5 MB Installationsgröße.</item>
+        <item>Schnellerer, flüssigerer Start: Die Baseline Profiles wurden von Grund auf neu erzeugt, passend zur neuen UI und den neuen Codepfaden.</item>
+        <item>Flottere Listen, Sheets und Equalizer dank einer umfassenden Compose-Performance-Überarbeitung.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>Zuverlässigere Cloud-Wiedergabe: Abgebrochene Navidrome/Jellyfin-Anfragen werden beim schnellen Überspringen von Titeln nicht mehr fälschlich als Netzwerkfehler gemeldet.</item>
+        <item>Backup-, Wiederherstellungs- und Einrichtungsereignisse können bei einer Bildschirmdrehung nicht mehr verloren gehen.</item>
+        <item>Frühjahrsputz: Toter Code entfernt, veraltete APIs migriert und Abhängigkeiten aktualisiert.</item>
+    </string-array>
 </resources>

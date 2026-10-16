@@ -325,7 +325,7 @@ Backslash (\) can be used to escape character delimiters.</string>
     <string name="presentation_batch_g_album_sel_selected">selected</string>
     <string name="presentation_batch_g_album_sel_queue_hint">Queue + play respects your selection order.</string>
     <string name="presentation_batch_g_album_sel_limit">Limit: %1$d albums per selection.</string>
-    <string name="presentation_batch_g_app_name">PixelPlayerOSS</string>
+    <string name="presentation_batch_g_app_name" translatable="false">PixelPlayerOSS</string>
     <string name="presentation_batch_g_app_tagline">Music Player</string>
     <string name="sidebar_edit_shortcuts">Edit shortcuts</string>
     <string name="sidebar_shortcuts_dialog_title">Sidebar shortcuts</string>

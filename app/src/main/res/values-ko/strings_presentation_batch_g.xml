@@ -362,4 +362,141 @@
     <string name="presentation_batch_g_topbar_build_stable">정식</string>
     <string name="presentation_batch_g_topbar_cd_changelog">변경 로그</string>
     <string name="presentation_batch_g_yes">예</string>
+    <string name="presentation_batch_g_artist_info_body">PixelPlayerOSS는 문자 구분 기호(/, ;, &amp;)와 단어 구분 기호(feat., ft., vs., x)를 사용하여 아티스트 태그를 분리합니다. 단어 구분 기호는 대소문자를 구분하지 않고 일치시킵니다.
+
+"제목에서 아티스트 추출"은 곡 제목에서 (feat. Artist)와 같은 패턴을 감지합니다.
+
+백슬래시(\)를 사용하면 문자 구분 기호를 이스케이프할 수 있습니다.</string>
+    <string name="presentation_batch_g_selection_n_songs">곡 선택됨</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">PixelPlayerOSS %1$s에 오신 것을 환영합니다</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">최신 PixelPlayerOSS 버전으로 업데이트한 후 문제가 계속 발생하는지 확인하세요.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">PixelPlayerOSS 버전:</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>최근 재생 목록과 대기열 복원 기능으로 감상 세션을 언제든 이어 갈 수 있습니다.</item>
+        <item>백업 및 복구 v3와 계정 관리 도구가 추가되었습니다.</item>
+        <item>수동 검색 대체 기능과 저장 방식 개선으로 가사 기능이 더 똑똑해졌습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>시작, 라이브러리, 대기열, 플레이어 조작 전반에 걸쳐 대대적인 성능 개선을 진행했습니다.</item>
+        <item>더 안전한 경로 처리로 탐색 및 검색 흐름이 더욱 안정적으로 동작합니다.</item>
+        <item>더 많은 기기와 포맷에서 오디오 재생 호환성이 향상되었습니다.</item>
+        <item>곡, 앨범, 플레이리스트 전반에서 다중 선택 작업이 확대되었습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>대기열과 셔플 동작이 더 안정적이고 예측 가능해졌습니다.</item>
+        <item>취침 타이머, 파일 탭 탐색, 앨범 아티스트 충돌 문제를 수정했습니다.</item>
+        <item>과열 및 메모리 문제를 줄이기 위해 위젯 로딩과 서비스 안정성을 개선했습니다.</item>
+        <item>앱 전반의 일반적인 버그 수정 및 UI 다듬기.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>Material 3 Expressive UI 업데이트</item>
+        <item>10밴드 이퀄라이저 및 이펙트</item>
+        <item>새로운 라이브러리 동기화 흐름</item>
+        <item>M3U 플레이리스트 가져오기/내보내기</item>
+        <item>Deezer 아티스트 아트워크 연동</item>
+        <item>사용자 지정 플레이리스트 커버</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>설정 구조 리팩터링</item>
+        <item>대기열 및 플레이어 애니메이션</item>
+        <item>Baseline Profiles 및 성능</item>
+        <item>동기화 오프셋을 지원하는 더 나은 가사 시스템</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>플레이어 시트 안정성</item>
+        <item>일반 버그 수정 및 정리</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>대대적인 탐색 구조 재설계</item>
+        <item>소스 디렉터리를 선택할 수 있는 새 파일 탐색기</item>
+        <item>원격 기기 간 끊김 없는 이어 재생</item>
+        <item>곡 사이 갭리스 전환</item>
+        <item>크로스페이드 제어</item>
+        <item>새로운 사용자 지정 전환 기능(플레이리스트 전용)</item>
+        <item>앱을 닫은 뒤에도 계속 재생</item>
+        <item>UI 최적화</item>
+        <item>개선된 통계 기능</item>
+        <item>더 많은 기능을 갖춘 새로운 대기열 제어</item>
+        <item>재생 및 메타데이터 편집에서 다양한 파일 형식 지원 개선</item>
+        <item>개선된 권한 컨트롤러</item>
+        <item>사소한 버그 수정</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>세션에 대한 더 깊은 인사이트를 제공하는 한층 풍부한 감상 통계 허브를 도입했습니다.</item>
+        <item>로컬 파일을 즉시 열어 미리 들을 수 있는 플로팅 퀵 플레이어를 추가했습니다.</item>
+        <item>트리 형태 탐색기와 플레이리스트 연동 보기를 갖춘 폴더 탭을 추가했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>더 깔끔하고 일관된 경험을 위해 전체 Material 3 UI를 다듬었습니다.</item>
+        <item>메타데이터 편집에서 커버 아트 변경을 지원합니다.</item>
+        <item>더 부드러운 탐색을 위해 앱 전반의 애니메이션과 전환 효과를 매끄럽게 개선했습니다.</item>
+        <item>더 풍부한 정보와 완성도로 아티스트 화면 레이아웃을 개선했습니다.</item>
+        <item>더 똑똑하고 다양한 선곡으로 DailyMix와 YourMix 생성을 업그레이드했습니다.</item>
+        <item>더 빠른 탐색을 위해 검색 관련도와 표시 방식을 개선했습니다.</item>
+        <item>더 다양한 오디오 파일 형식을 지원하도록 확대했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>곡 정보가 어디서나 정확하게 유지되도록 메타데이터 문제를 해결했습니다.</item>
+        <item>알림 바로가기가 항상 재생 화면으로 돌아가도록 복원했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>최신 기능을 알려 주는 앱 내 변경 로그.</item>
+        <item>.LRC 파일 지원(내장 및 외부 모두).</item>
+        <item>오프라인 가사 지원.</item>
+        <item>동기화 가사(곡과 함께 흐르는 가사).</item>
+        <item>전체 대기열을 보는 새 화면.</item>
+        <item>대기열에서 곡 순서 변경 및 삭제.</item>
+        <item>미니 플레이어 제스처(아래로 스와이프하여 닫기).</item>
+        <item>머티리얼 애니메이션 추가.</item>
+        <item>외관과 사용감을 사용자 지정하는 새 설정.</item>
+        <item>캐시를 지우는 새 설정.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>사용자 인터페이스 전면 재설계.</item>
+        <item>플레이어 전면 재설계.</item>
+        <item>라이브러리 성능 개선.</item>
+        <item>앱 시작 속도 개선.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>태그 편집기의 여러 버그를 수정했습니다.</item>
+        <item>재생 알림이 사라지지 않던 버그를 수정했습니다.</item>
+        <item>앱이 충돌하던 여러 버그를 수정했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>PixelPlayerOSS의 첫 공개 FOSS 릴리스입니다.</item>
+        <item>로컬 재생, 플레이리스트, 즐겨찾기, 가사, 감상 통계, 다이내믹 Material 3 테마, 위젯, 백업/복구를 포함합니다.</item>
+        <item>자체 호스팅 Navidrome/Subsonic 및 Jellyfin 지원은 그대로 유지하며, 선택 사항으로 LRCLIB 가사와 Deezer 아티스트 아트워크 조회도 사용할 수 있습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play Store 결제, Firebase, Crashlytics, Google Play Services 런타임 의존성을 제거했습니다.</item>
+        <item>공개 Last.fm 및 ListenBrainz 스크로블링을 제거했습니다. 자체 호스팅 Navidrome/Subsonic 보고는 사용자 본인의 서버로 한정됩니다.</item>
+        <item>이번 첫 FOSS 릴리스에서는 번들 번역과 앱 내 언어 선택기를 제거했으며, 영어 리소스가 먼저 제공됩니다.</item>
+        <item>로컬/비공개 서명 아티팩트, 더미 서명 값, 앱 스토어 전용 가정에 의존하던 릴리스 경로를 제거했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>F-Droid 메타데이터, Fastlane 스토어 메타데이터, 개인정보 보호 안내, 보안 안내, 의존성/라이선스 문서, 기여자 가이드를 추가했습니다.</item>
+        <item>로컬 서명 키가 없으면 릴리스 빌드는 서명되지 않은 상태로 유지됩니다.</item>
+        <item>결정적인 미서명 검증 빌드를 위해 pixelplayer.disableReleaseSigning=true를 추가했습니다.</item>
+        <item>네이티브/바이너리 Maven 아티팩트와 JitPack 의존성을 포함하여 에셋 및 의존성 라이선스 내역을 문서화했습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>루프백 클라우드 스트리밍에 이제 세션별 토큰이 필요합니다.</item>
+        <item>백업 복구 시 전용 모듈 핸들러가 소유한 환경설정 키는 무시합니다.</item>
+        <item>HTTP 요청 헤더와 원시 Android 로그가 Timber 릴리스 필터를 우회하지 않도록 릴리스 로깅을 강화했습니다.</item>
+        <item>스마트 플레이리스트 유지, 중복 트랙 검색, 재생 속도 제어, 더 명확한 재생/동기화 실패 메시지, 향상된 접근성도 포함됩니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>Material 3 Expressive 디자인 개편: 새로운 모션 체계, 물결 모양 진행 표시기, 앱 전반의 모양 변형 애니메이션.</item>
+        <item>VPN 및 로컬 네트워크 호스트에서는 일반 HTTP를 사용하는 Jellyfin 서버가 이제 허용됩니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>더 작아진 앱: 더 간결해진 코드 축소 규칙으로 설치 크기가 약 1.5 MB 줄었습니다.</item>
+        <item>더 빠르고 매끄러운 시작: 새로운 UI와 코드 경로에 맞춰 Baseline Profiles를 처음부터 다시 생성했습니다.</item>
+        <item>Compose 성능 전반 개선으로 목록, 시트, 이퀄라이저가 더 민첩해졌습니다.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>더 안정적인 클라우드 재생: 곡을 빠르게 넘길 때 취소된 Navidrome/Jellyfin 요청이 더 이상 네트워크 오류로 잘못 보고되지 않습니다.</item>
+        <item>화면을 회전해도 백업, 복구, 설정 이벤트가 유실되지 않습니다.</item>
+        <item>대청소: 사용하지 않는 코드를 제거하고, 지원 중단된 API를 마이그레이션하고, 의존성을 업데이트했습니다.</item>
+    </string-array>
 </resources>
