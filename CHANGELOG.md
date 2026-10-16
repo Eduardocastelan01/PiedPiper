@@ -13,7 +13,7 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - Multi-selection in Search for songs, albums, playlists, and genres.
 - Optional swipe-to-skip on the mini player.
 - Audio output picker in the player (phone speaker, wired, USB, or a Bluetooth device).
-- Audio bookmarks are now part of backups, can be selected and deleted in bulk, and reconnect to their songs after a rescan.
+- Audio bookmarks are now part of backups, can be selected and deleted in bulk, and reconnect to their songs after a rescan, even when the scan gives their old song id to a different song.
 - Excluded folders now open on their own screen, with a list of every audio folder.
 - In-app licenses screen under About.
 - Battery optimization exemption prompt in setup and Playback settings.
@@ -45,16 +45,16 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 - System media controls can load album artwork through the app's artwork URI again. System UI reads that URI without connecting as a media controller, so it never received the per-track read grant and was refused on every track; privileged media surfaces (holders of `MEDIA_CONTENT_CONTROL`) may now open the artwork the session currently shows, while every other cover, and every other app, still needs the explicit grant. Stock Android fell back to the session bitmap, but System UIs without that fallback could show no artwork.
 - Jellyfin playlists no longer go missing on Jellyfin 10.10 and newer, where playlists can hold mixed content and audio playlists are often reported without a media type.
 - With crossfade on, queues longer than 200 songs no longer shrink to a 200-song window after a transition, and the shortened queue is no longer restored after the app is killed.
-- Restoring a backup before the library scan finishes no longer drops songs from playlists. They are added back once the scan finds them. Transition rules restored on another device now point at the right songs.
+- Restoring a backup before the library scan finishes no longer drops songs from playlists. They are added back once the scan finds them, without undoing changes you made to those playlists in the meantime. Transition rules restored on another device now point at the right songs.
 - Correctly accented titles such as "Château" or "CORAÇÃO" are no longer turned into garbled text during library scans. Libraries scanned by an earlier version are checked once after updating, so titles that were already garbled are repaired.
 - Reordering the queue no longer flickers, and a swiped-away queue item no longer jumps back before it is removed.
-- Metadata edits work on files that can only be written through the system's media permission.
+- Metadata edits work on files that can only be written through the system's media permission. If saving the edited file is interrupted, the app keeps a full copy and restores the song instead of leaving it cut off.
 - Songs whose files were already deleted can now be removed from the library.
 - Empty library tabs no longer stay stuck on the loading placeholder.
 - File info (bitrate, sample rate) no longer disappears when you toggle shuffle or repeat.
 - Tracks no decoder can play now pause and show a message, instead of playing silence while the progress bar moves.
 - The widget's "next up" artwork follows shuffle and repeat order.
-- When a song from elsewhere is queued between playlist songs, it now gets the playlist's default transition. A song pair's custom transition only plays while the two songs are still next to each other.
+- When a song from elsewhere is queued between playlist songs, it now gets the playlist's default transition. A song pair's custom transition only plays while the two songs are still next to each other, and shuffling no longer gives playlist transitions to a song you queued again by hand.
 - The scrollbar no longer keeps outdated state or reserves space when the list can't scroll. The folder picker no longer lists folders that contain no audio.
 - The "locate current song" button no longer appears in Liked for songs that aren't liked, or in Folders for folders that don't contain the current song.
 - Back closes the settings search before leaving Settings.
