@@ -4,6 +4,8 @@ All notable changes to PixelPlayerOSS will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-17
+
 ### Added
 - An Updates screen (Settings → Updates, also linked from Settings → About) that checks for new versions on a chosen channel: Stable pulls from F-Droid, Alpha from the GitHub prereleases built for every merged change. Same-channel updates download and install in the app; switching channels walks through backing up, downloading the other build, and uninstalling, since F-Droid and GitHub builds are signed with different keys. An optional daily check notifies when an update is available (on by default for alpha builds, off for F-Droid builds).
 - Smart Mix composer that replaces the "Describe it" dialog. Describe a mix, adjust its energy and length, preview it, then play it, save it as a playlist, or use it as today's Daily Mix (with undo). It suggests mixes based on your library and listening habits and remembers recent requests. History can be cleared in Settings. Everything still runs offline.

@@ -1,0 +1,7 @@
+PixelPlayerOSS 0.4.0:
+
+* In-app updates: Stable from F-Droid, Alpha from GitHub, with an optional daily check.
+* Smart Mix composer: describe a mix, tune its energy and length, and preview it. Fully offline.
+* AMOLED theme, audio output picker, playback speed in 0.05× steps, adjustable lyrics size.
+* New Stats screen, redesigned album and artist headers, hideable library tabs.
+* Fixes: stuck cloud artwork, missing Jellyfin playlists, garbled accented titles, partial album scans.
