@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
 import android.animation.ValueAnimator
+import android.content.ClipData
 import android.os.Build
 import android.widget.Toast
 import com.lostf1sh.pixelplayeross.data.model.Song
@@ -41,6 +42,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -69,14 +71,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.animation.core.Animatable
@@ -149,6 +156,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.produceState
+import kotlin.coroutines.cancellation.CancellationException
+import timber.log.Timber
 
 internal data class LyricsSheetColors(
     val container: Color,
@@ -317,6 +326,8 @@ fun LyricsSheet(
         lyrics?.synced?.any { !it.translation.isNullOrBlank() } == true
     }
 
+    val canCopyLyrics = remember(lyrics) { LyricsClipboardText.hasCopyableText(lyrics) }
+
     val hasRomanizedLyrics = remember(lyrics) {
         val hasSynced = lyrics?.synced?.any { !it.romanization.isNullOrBlank() } == true
         val hasPlain = lyrics?.plain?.any { line ->
@@ -396,6 +407,30 @@ fun LyricsSheet(
         keepScreenOnFlow.collect { keepScreenOn = it }
     }
     val coroutineScope = rememberCoroutineScope()
+
+    val clipboard = LocalClipboard.current
+    val clipLabel = stringResource(R.string.lyrics)
+    val lyricsCopiedMessage = stringResource(R.string.lyrics_copied)
+    val lineCopiedMessage = stringResource(R.string.lyrics_line_copied)
+    val copyLineActionLabel = stringResource(R.string.lyrics_copy_line_action)
+
+    fun copyLyricsToClipboard(text: String, confirmation: String) {
+        if (text.isBlank()) return
+        coroutineScope.launch {
+            try {
+                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(clipLabel, text)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to copy lyrics to the clipboard")
+                return@launch
+            }
+            // Android 13+ confirms clipboard writes with its own overlay.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(context, confirmation, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val view = LocalView.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -787,6 +822,14 @@ fun LyricsSheet(
                                     )
                                     resetImmersiveTimer()
                                 },
+                                onLineLongClick = { syncedLine ->
+                                    resetImmersiveTimer()
+                                    copyLyricsToClipboard(
+                                        LyricsClipboardText.syncedLine(syncedLine),
+                                        lineCopiedMessage
+                                    )
+                                },
+                                lineLongClickLabel = copyLineActionLabel,
                                 highlightZoneFraction = highlightZoneFraction,
                                 highlightOffsetDp = highlightOffsetDp,
                                 autoscrollAnimationSpec = resolvedAutoscrollSpec,
@@ -839,7 +882,14 @@ fun LyricsSheet(
                                         lyricsAlignment = lyricsAlignment,
                                         showTranslation = if (hasTranslatedLyrics) showLyricsTranslation else true,
                                         showRomanization = if (hasRomanizedLyrics) showLyricsRomanization else true,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onLongClick = {
+                                            copyLyricsToClipboard(
+                                                LyricsClipboardText.plainLine(line),
+                                                lineCopiedMessage
+                                            )
+                                        },
+                                        onLongClickLabel = copyLineActionLabel
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                 }
@@ -1007,6 +1057,13 @@ fun LyricsSheet(
                     showSyncedLyrics = showSyncedLyrics == true,
                     isSyncControlsVisible = showSyncControls,
                     onSaveLyricsAsLrc = { showSaveLyricsDialog = true },
+                    canCopyLyrics = canCopyLyrics,
+                    onCopyLyrics = {
+                        copyLyricsToClipboard(
+                            LyricsClipboardText.fullLyrics(lyrics),
+                            lyricsCopiedMessage
+                        )
+                    },
                     onResetImportedLyrics = {
                         wasResetTriggered = true
                         resetLyricsForCurrentSong()
@@ -1185,6 +1242,8 @@ fun SyncedLyricsList(
     accentColor: Color,
     textStyle: TextStyle,
     onLineClick: (SyncedLine) -> Unit,
+    onLineLongClick: ((SyncedLine) -> Unit)? = null,
+    lineLongClickLabel: String? = null,
     highlightZoneFraction: Float,
     highlightOffsetDp: Dp,
     autoscrollAnimationSpec: AnimationSpec<Float>,
@@ -1349,6 +1408,12 @@ fun SyncedLyricsList(
                             modifier = parallaxModifier
                                 .fillMaxWidth()
                                 .testTag("synced_line_${line.time}"),
+                            onLongClick = if (onLineLongClick != null) {
+                                { onLineLongClick(line) }
+                            } else {
+                                null
+                            },
+                            onLongClickLabel = lineLongClickLabel,
                             onClick = { onLineClick(line) }
                         )
                     } else {
@@ -1387,6 +1452,8 @@ fun LyricLineRow(
     accentColor: Color,
     style: TextStyle,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
     onClick: () -> Unit
 ) {
     val sanitizedLine = remember(line.line) { sanitizeLyricLineText(line.line) }
@@ -1514,7 +1581,11 @@ fun LyricLineRow(
             modifier = animatedModifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { onClick() }
+                .combinedClickable(
+                    onLongClickLabel = onLongClickLabel,
+                    onLongClick = onLongClick,
+                    onClick = onClick
+                )
                 .padding(vertical = verticalPadding, horizontal = 2.dp),
             horizontalAlignment = horizontalAlignment
         ) {
@@ -1571,7 +1642,11 @@ fun LyricLineRow(
             modifier = animatedModifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { onClick() }
+                .combinedClickable(
+                    onLongClickLabel = onLongClickLabel,
+                    onLongClick = onLongClick,
+                    onClick = onClick
+                )
                 .padding(vertical = verticalPadding, horizontal = 2.dp),
             horizontalAlignment = horizontalAlignment
         ) {
@@ -1672,7 +1747,9 @@ fun PlainLyricsLine(
     lyricsAlignment: String = "left",
     showTranslation: Boolean = true,
     showRomanization: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null
 ) {
     val sanitizedLines = remember(line) { line.split("\n") }
     val primaryText = remember(sanitizedLines) { if (sanitizedLines.isNotEmpty()) sanitizeLyricLineText(sanitizedLines[0]) else "" }
@@ -1723,7 +1800,31 @@ fun PlainLyricsLine(
     }
     val translationColor = LocalContentColor.current.copy(alpha = 0.45f)
 
-    Column(modifier = modifier, horizontalAlignment = horizontalAlignment) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
+    // Plain lines have no tap action, so a bare long-press detector stands in for
+    // combinedClickable and its tap ripple.
+    val longClickModifier = if (onLongClick != null && primaryText.isNotBlank()) {
+        Modifier
+            .pointerInput(hapticFeedback) {
+                detectTapGestures(
+                    onLongPress = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        currentOnLongClick?.invoke()
+                    }
+                )
+            }
+            .semantics(mergeDescendants = true) {
+                onLongClick(label = onLongClickLabel) {
+                    currentOnLongClick?.invoke()
+                    true
+                }
+            }
+    } else {
+        Modifier
+    }
+
+    Column(modifier = modifier.then(longClickModifier), horizontalAlignment = horizontalAlignment) {
         if (primaryText.isNotBlank()) {
             Text(text = primaryText, style = style, color = LocalContentColor.current.copy(alpha = 0.7f), textAlign = textAlign)
 
