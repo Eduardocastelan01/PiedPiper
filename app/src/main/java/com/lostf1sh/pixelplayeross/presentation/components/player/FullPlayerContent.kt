@@ -150,7 +150,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import com.lostf1sh.pixelplayeross.presentation.components.rememberModalSheetState
 
-private const val PREVIOUS_TRACK_RESTART_THRESHOLD_MS = 10_000L
 private const val SKIP_COMMAND_GUARD_MS = 96L
 
 private enum class SkipDirection { PREVIOUS, NEXT }
@@ -485,7 +484,9 @@ fun FullPlayerContent(
             SkipDirection.PREVIOUS -> predictSkipPreviousCarouselIndex(
                 currentIndex = baseIndex,
                 queue = queueSnapshot,
-                currentPositionMs = latestCurrentPositionProvider(),
+                restartsCurrentTrack = playerViewModel.previousButtonRestartsAt(
+                    latestCurrentPositionProvider()
+                ),
                 repeatMode = latestRepeatMode,
                 isExternalOutputActive = latestIsExternalOutputActive
             )
@@ -1197,15 +1198,16 @@ private fun predictSkipNextCarouselIndex(
     }
 }
 
+/** Null when [restartsCurrentTrack], since previous then restarts the playing track in place. */
 private fun predictSkipPreviousCarouselIndex(
     currentIndex: Int?,
     queue: ImmutableList<Song>,
-    currentPositionMs: Long,
+    restartsCurrentTrack: Boolean,
     repeatMode: Int,
     isExternalOutputActive: Boolean
 ): Int? {
     if (isExternalOutputActive || queue.size <= 1) return null
-    if (currentPositionMs > PREVIOUS_TRACK_RESTART_THRESHOLD_MS) return null
+    if (restartsCurrentTrack) return null
     val safeCurrentIndex = currentIndex?.takeIf { it in queue.indices } ?: return null
 
     return when {

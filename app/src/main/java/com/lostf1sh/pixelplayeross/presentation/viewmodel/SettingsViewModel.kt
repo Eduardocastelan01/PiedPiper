@@ -19,6 +19,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
 import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
+import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 import com.lostf1sh.pixelplayeross.data.preferences.DEFAULT_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
@@ -100,6 +101,7 @@ data class SettingsUiState(
     val tapBackgroundClosesPlayer: Boolean = false,
     val miniPlayerSwipeToSkip: Boolean = false,
     val autoplayOnSkip: Boolean = true,
+    val previousButtonBehavior: PreviousButtonBehavior = PreviousButtonBehavior.DEFAULT,
     val hapticsEnabled: Boolean = true,
     val immersiveLyricsEnabled: Boolean = false,
     val immersiveLyricsTimeout: Long = 4000L,
@@ -476,6 +478,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.autoplayOnSkipFlow.collect { enabled ->
                 _uiState.update { it.copy(autoplayOnSkip = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.previousButtonBehaviorFlow.collect { behavior ->
+                _uiState.update { it.copy(previousButtonBehavior = behavior) }
             }
         }
 
@@ -1023,6 +1031,12 @@ class SettingsViewModel @Inject constructor(
     fun setAutoplayOnSkip(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setAutoplayOnSkip(enabled)
+        }
+    }
+
+    fun setPreviousButtonBehavior(behavior: PreviousButtonBehavior) {
+        viewModelScope.launch {
+            userPreferencesRepository.setPreviousButtonBehavior(behavior)
         }
     }
 

@@ -128,6 +128,16 @@ class SettingsRegistryTest {
     }
 
     @Test
+    fun `previous button setting is a behavior card found by rewind keywords`() {
+        val previousButton = spec("behavior_previous_button")
+
+        assertThat(previousButton.type).isEqualTo(SettingType.NAVIGABLE_CARD)
+        assertThat(previousButton.category).isEqualTo(SettingsCategory.BEHAVIOR)
+        assertThat(previousButton.itemKey).isEqualTo("item_behavior_previous_button")
+        assertThat(previousButton.keywordsStatic).containsAtLeast("previous", "rewind", "restart")
+    }
+
+    @Test
     fun `every user facing category is represented`() {
         // A category with no registered setting is invisible to search.
         val covered = settings.map { it.category }.toSet()
