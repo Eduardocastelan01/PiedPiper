@@ -7,6 +7,7 @@ import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileNotFoundException
@@ -289,12 +290,18 @@ class PlaybackStatsRepository @Inject constructor(
             .take(MAX_SONG_STATS_COUNT)
         val topSongs = allSongs.take(5)
 
+        // A song tagged "House; Electronic" counts towards both genres.
         val topGenres = segmentsBySong.entries
-            .groupBy { (songId, _) ->
-                val genre = songMap[songId]?.genre
-                if (genre.isNullOrBlank()) "Unknown Genre" else genre
+            .flatMap { entry ->
+                GenreParser.split(songMap[entry.key]?.genre)
+                    .ifEmpty { listOf(UNKNOWN_GENRE_LABEL) }
+                    .map { genre -> genre to entry }
             }
-            .map { (genre, groupedSongs) ->
+            .groupBy { (genre, _) -> GenreParser.key(genre) }
+            .map { (_, genreEntries) ->
+                // Named after the first spelling seen; "rock" and "Rock" are one genre.
+                val genre = genreEntries.first().first
+                val groupedSongs = genreEntries.map { (_, entry) -> entry }
                 val flattened = groupedSongs.flatMap { it.value }
                 val uniqueArtists = groupedSongs
                     .flatMap { (songId, _) ->
@@ -1110,6 +1117,7 @@ class PlaybackStatsRepository @Inject constructor(
         private const val MAX_PLAYBACK_HISTORY_LIMIT = 5_000
         private const val MAX_FILE_UPDATE_RETRIES = 3
         private const val UNKNOWN_ARTIST = "Unknown Artist"
+        private const val UNKNOWN_GENRE_LABEL = "Unknown Genre"
         private val MAX_HISTORY_AGE_MS = TimeUnit.DAYS.toMillis(730)
         private const val SEGMENT_JOIN_TOLERANCE_MS = 0L
         private const val MAX_SONG_STATS_COUNT = 100

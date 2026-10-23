@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import app.cash.turbine.test
 import com.lostf1sh.pixelplayeross.data.model.SortOption
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -535,6 +536,94 @@ class UserPreferencesRepositoryTest {
             repository.ensureLibrarySortDefaults()
 
             assertEquals(SortOption.FolderSongTitleAZ.storageKey, dataStore.data.first()[folderSongsKey])
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `migrateGenresTab appends Genres after the folders backfill of a legacy order`() = runTest {
+        withRepository { repository ->
+            repository.saveLibraryTabsOrder("""["LIKED","SONGS","ALBUMS"]""")
+            repository.migrateTabOrder()
+            repository.migrateGenresTab()
+
+            assertEquals(
+                listOf("LIKED", "FOLDERS", "SONGS", "ALBUMS", "GENRES"),
+                repository.storedLibraryTabsOrder()
+            )
+        }
+    }
+
+    @Test
+    fun `migrateGenresTab does not bring back a Genres tab the user hid`() = runTest {
+        withRepository { repository ->
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS"]""")
+            repository.migrateGenresTab()
+            assertEquals(listOf("SONGS", "ALBUMS", "GENRES"), repository.storedLibraryTabsOrder())
+
+            // The stored order is the visible-tab list, so dropping GENRES hides it.
+            repository.saveLibraryTabsOrder("""["SONGS","ALBUMS"]""")
+            repository.migrateGenresTab()
+
+            assertEquals(listOf("SONGS", "ALBUMS"), repository.storedLibraryTabsOrder())
+        }
+    }
+
+    @Test
+    fun `migrateGenresTab keeps an order that already shows Genres`() = runTest {
+        withRepository { repository ->
+            repository.saveLibraryTabsOrder("""["GENRES","SONGS"]""")
+            repository.migrateGenresTab()
+
+            assertEquals(listOf("GENRES", "SONGS"), repository.storedLibraryTabsOrder())
+        }
+    }
+
+    @Test
+    fun `migrateGenresTab leaves malformed, empty and missing orders alone`() = runTest {
+        withRepository { repository ->
+            repository.migrateGenresTab()
+            assertNull(repository.libraryTabsOrderFlow.first())
+        }
+        withRepository { repository ->
+            repository.saveLibraryTabsOrder("not a tab list")
+            repository.migrateGenresTab()
+            assertEquals("not a tab list", repository.libraryTabsOrderFlow.first())
+        }
+        withRepository { repository ->
+            // An empty order already falls back to the default tabs, Genres included.
+            repository.saveLibraryTabsOrder("[]")
+            repository.migrateGenresTab()
+            assertEquals("[]", repository.libraryTabsOrderFlow.first())
+        }
+    }
+
+    @Test
+    fun `genres sort option defaults to name and persists a valid choice`() = runTest {
+        withRepository { repository ->
+            assertEquals(SortOption.GenreNameAZ.storageKey, repository.genresSortOptionFlow.first())
+
+            repository.setGenresSortOption(SortOption.GenreSongCountDesc.storageKey)
+            assertEquals(SortOption.GenreSongCountDesc.storageKey, repository.genresSortOptionFlow.first())
+
+            repository.setGenresSortOption(SortOption.FolderNameZA.storageKey)
+            assertEquals(SortOption.GenreNameAZ.storageKey, repository.genresSortOptionFlow.first())
+        }
+    }
+
+    private suspend fun TestScope.withRepository(block: suspend (UserPreferencesRepository) -> Unit) {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            block(
+                UserPreferencesRepository(
+                    dataStore = PreferenceDataStoreFactory.create(
+                        scope = backgroundScope,
+                        produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                    ),
+                    json = Json
+                )
+            )
         } finally {
             tempDir.toFile().deleteRecursively()
         }

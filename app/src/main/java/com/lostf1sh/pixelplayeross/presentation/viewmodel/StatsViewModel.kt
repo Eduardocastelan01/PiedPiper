@@ -8,6 +8,7 @@ import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackStatsSummary
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -240,7 +241,7 @@ class StatsViewModel @Inject constructor(
 
     /** False for the synthetic "unknown" bucket stats create for songs without a genre tag. */
     suspend fun isLibraryGenre(name: String): Boolean = withContext(Dispatchers.IO) {
-        loadSongs().any { it.genre == name }
+        loadSongs().any { GenreParser.matches(it.genre, name) }
     }
 
     private companion object {

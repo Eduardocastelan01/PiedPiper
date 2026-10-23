@@ -1011,21 +1011,24 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0
         )
 
+    private val defaultLibraryTabs: ImmutableList<String> =
+        LibraryTabId.entries.map { it.storageKey }.toImmutableList()
+
     val libraryTabsFlow: StateFlow<ImmutableList<String>> = userPreferencesRepository.libraryTabsOrderFlow
         .map { orderJson ->
             if (orderJson != null) {
                 try {
                     // An empty saved order (hand-edited or restored) would leave the library without pages.
                     Json.decodeFromString<List<String>>(orderJson).toImmutableList()
-                        .ifEmpty { persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED") }
+                        .ifEmpty { defaultLibraryTabs }
                 } catch (e: Exception) {
-                    persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
+                    defaultLibraryTabs
                 }
             } else {
-                persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED")
+                defaultLibraryTabs
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf("SONGS", "ALBUMS", "ARTIST", "PLAYLISTS", "FOLDERS", "LIKED"))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), defaultLibraryTabs)
 
     private val _loadedTabs = MutableStateFlow(emptySet<String>())
     private var lastBlockedDirectories: Set<String>? = null
@@ -1047,6 +1050,7 @@ class PlayerViewModel @Inject constructor(
                     LibraryTabId.PLAYLISTS -> SortOption.PLAYLISTS
                     LibraryTabId.FOLDERS -> SortOption.FOLDERS
                     LibraryTabId.LIKED -> SortOption.LIKED
+                    LibraryTabId.GENRES -> SortOption.GENRES
                 }
             } finally {
                 Trace.endSection()
@@ -1068,12 +1072,40 @@ class PlayerViewModel @Inject constructor(
 
     val allSongsFlow: StateFlow<ImmutableList<Song>> = libraryStateHolder.allSongs
 
-    val genres: StateFlow<ImmutableList<Genre>> = libraryStateHolder.genres
+    /** Null until the first genre list arrives, so the Genres tab can tell loading from empty. */
+    private val loadedGenres: StateFlow<ImmutableList<Genre>?> = libraryStateHolder.genres
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    val genres: StateFlow<ImmutableList<Genre>> = loadedGenres
+        .map { it ?: persistentListOf() }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = persistentListOf()
         )
+
+    val currentGenreSortOption: StateFlow<SortOption> = libraryStateHolder.currentGenreSortOption
+
+    /** The Library's Genres tab: [genres] in the chosen sort, or null while still loading. */
+    val libraryGenres: StateFlow<LibraryGenresState?> =
+        combine(loadedGenres, currentGenreSortOption) { genres, sortOption ->
+            genres?.let {
+                LibraryGenresState(
+                    genres = sortGenresList(it, sortOption).toImmutableList(),
+                    sortOption = sortOption
+                )
+            }
+        }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = null
+            )
 
     val paletteRegenerationTargets: StateFlow<List<Song>> = musicRepository.getDistinctAlbumArtSongs()
         .stateIn(
@@ -1439,6 +1471,21 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun shuffleRandomGenre() {
+        viewModelScope.launch {
+            val allGenres = loadedGenres.value ?: libraryStateHolder.genres.first()
+            // Unknown is the bucket of untagged songs, so it is only picked when nothing else is.
+            val randomGenre = allGenres
+                .filterNot { it.id == UNKNOWN_GENRE_ID }
+                .ifEmpty { allGenres }
+                .randomOrNull() ?: return@launch
+            val genreSongs = musicRepository.getMusicByGenre(randomGenre.name).first()
+            if (genreSongs.isNotEmpty()) {
+                playSongsShuffled(genreSongs, randomGenre.name, startAtZero = true)
+            }
+        }
+    }
+
     fun shuffleRandomArtist() {
         viewModelScope.launch {
             val allArtists = libraryStateHolder.artists.value
@@ -1534,6 +1581,7 @@ class PlayerViewModel @Inject constructor(
 
             viewModelScope.launch {
                 userPreferencesRepository.migrateTabOrder()
+                userPreferencesRepository.migrateGenresTab()
             }
 
             viewModelScope.launch {
@@ -4046,6 +4094,10 @@ class PlayerViewModel @Inject constructor(
         libraryStateHolder.sortFolderSongs(sortOption, persist)
     }
 
+    fun sortGenres(sortOption: SortOption, persist: Boolean = true) {
+        libraryStateHolder.sortGenres(sortOption, persist)
+    }
+
     fun setFoldersPlaylistView(isPlaylistView: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setFoldersPlaylistView(isPlaylistView)
@@ -5081,6 +5133,12 @@ class PlayerViewModel @Inject constructor(
     fun toggleGenreViewMode() {
         viewModelScope.launch {
             userPreferencesRepository.setGenreGridView(!isGenreGridView.value)
+        }
+    }
+
+    fun setGenreGridView(isGrid: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setGenreGridView(isGrid)
         }
     }
 

@@ -144,6 +144,7 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.ShimmerBox
 import com.lostf1sh.pixelplayeross.data.model.Album
 import com.lostf1sh.pixelplayeross.data.model.Artist
+import com.lostf1sh.pixelplayeross.data.model.Genre
 import com.lostf1sh.pixelplayeross.data.model.MusicFolder
 import com.lostf1sh.pixelplayeross.data.model.FolderSource
 import com.lostf1sh.pixelplayeross.data.model.Song
@@ -165,6 +166,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.EditMultipleSongsShee
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.LibraryActionRow
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
+import com.lostf1sh.pixelplayeross.presentation.components.GenreMultiSelectionOptionSheet
 import com.lostf1sh.pixelplayeross.presentation.components.MultiSelectionBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistMultiSelectionBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.DeletePlaylistsConfirmationDialog
@@ -283,7 +285,7 @@ private const val ENABLE_FOLDERS_STORAGE_FILTER = false
 private fun LibraryTabId.hasStorageFilterButton(): Boolean = when (this) {
     LibraryTabId.SONGS, LibraryTabId.ALBUMS, LibraryTabId.ARTISTS, LibraryTabId.LIKED -> true
     LibraryTabId.FOLDERS -> ENABLE_FOLDERS_STORAGE_FILTER
-    LibraryTabId.PLAYLISTS -> false
+    LibraryTabId.PLAYLISTS, LibraryTabId.GENRES -> false
 }
 
 private const val FOLDER_NAVIGATION_ROOT_KEY = "__folder_root__"
@@ -424,6 +426,10 @@ fun LibraryScreen(
     var selectedArtists by remember { mutableStateOf<ImmutableList<Artist>>(persistentListOf()) }
     val selectedArtistIds = remember(selectedArtists) { selectedArtists.map { it.id }.toSet() }
     val isArtistSelectionMode = selectedArtists.isNotEmpty()
+    var selectedGenres by remember { mutableStateOf<ImmutableList<Genre>>(persistentListOf()) }
+    val selectedGenreIds = remember(selectedGenres) { selectedGenres.mapTo(HashSet()) { it.id } }
+    val isGenreSelectionMode = selectedGenres.isNotEmpty()
+    var showGenreMultiSelectionSheet by remember { mutableStateOf(false) }
     val latestSelectedAlbums by rememberUpdatedState(selectedAlbums)
     val latestSelectedArtists by rememberUpdatedState(selectedArtists)
     var showBatchEditSheet by remember { mutableStateOf(false) }
@@ -503,6 +509,22 @@ fun LibraryScreen(
 
     val getArtistSelectionIndex: (Long) -> Int? = remember(selectedArtists) {
         { artistId -> selectionIndex(selectedArtists, artistId, Artist::id) }
+    }
+
+    // Genres resolve to their songs only when an action runs, so they skip the song selection.
+    val toggleGenreSelection: (Genre) -> Unit = remember(selectedGenres) {
+        { genre -> selectedGenres = toggleOrderedSelection(selectedGenres, genre, Genre::id).toImmutableList() }
+    }
+
+    val onGenreLongPress: (Genre) -> Unit = remember(toggleGenreSelection, haptic) {
+        { genre ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            toggleGenreSelection(genre)
+        }
+    }
+
+    val getGenreSelectionIndex: (String) -> Int? = remember(selectedGenres) {
+        { genreId -> selectionIndex(selectedGenres, genreId, Genre::id) }
     }
 
     val presentResolvedCategorySongs: (List<Song>) -> Unit = remember(
@@ -672,6 +694,7 @@ fun LibraryScreen(
         LibraryTabId.LIKED,
         LibraryTabId.FOLDERS -> isSelectionMode
         LibraryTabId.ARTISTS -> isArtistSelectionMode
+        LibraryTabId.GENRES -> isGenreSelectionMode
     }
     val canHandleFolderBack = visibleCurrentTabId == LibraryTabId.FOLDERS &&
             canNavigateBackInFolders &&
@@ -714,6 +737,11 @@ fun LibraryScreen(
                         showMultiSelectionSheet = false
                     }
 
+                    LibraryTabId.GENRES -> {
+                        selectedGenres = persistentListOf()
+                        showGenreMultiSelectionSheet = false
+                    }
+
                 }
             }
 
@@ -751,8 +779,10 @@ fun LibraryScreen(
         playlistMultiSelectionState.clearSelection()
         selectedAlbums = persistentListOf()
         selectedArtists = persistentListOf()
+        selectedGenres = persistentListOf()
         showMultiSelectionSheet = false
         showPlaylistMultiSelectionSheet = false
+        showGenreMultiSelectionSheet = false
     }
 
     val fabState by remember { derivedStateOf { currentTabIndex } }
@@ -1017,6 +1047,7 @@ fun LibraryScreen(
                                 .distinctUntilChanged()
                         }.collectAsStateWithLifecycle(initialValue = false)
 
+                        val currentGenreSortOption by playerViewModel.currentGenreSortOption.collectAsStateWithLifecycle()
                         val currentSelectedSortOption: SortOption? = when (currentTabId) {
                             LibraryTabId.SONGS -> playerUiState.currentSongSortOption
                             LibraryTabId.ALBUMS -> playerUiState.currentAlbumSortOption
@@ -1024,6 +1055,7 @@ fun LibraryScreen(
                             LibraryTabId.PLAYLISTS -> playlistUiState.currentPlaylistSortOption
                             LibraryTabId.LIKED -> playerUiState.currentFavoriteSortOption
                             LibraryTabId.FOLDERS -> playerUiState.currentFolderSortOption
+                            LibraryTabId.GENRES -> currentGenreSortOption
                         }
 
                         val locateAction = when (visibleCurrentTabId) {
@@ -1049,6 +1081,7 @@ fun LibraryScreen(
                                     LibraryTabId.PLAYLISTS -> playlistViewModel.sortPlaylists(option)
                                     LibraryTabId.LIKED -> playerViewModel.sortFavoriteSongs(option)
                                     LibraryTabId.FOLDERS -> playerViewModel.sortFolders(option)
+                                    LibraryTabId.GENRES -> playerViewModel.sortGenres(option)
                                 }
                             }
                         }
@@ -1116,6 +1149,22 @@ fun LibraryScreen(
                                         },
                                         onOptionsClick = openSelectedArtistActions
                                     )
+                                } else if (visibleCurrentTabId == LibraryTabId.GENRES && isGenreSelectionMode) {
+                                    SelectionActionRow(
+                                        selectedCount = selectedGenres.size,
+                                        onSelectAll = {
+                                            selectedGenres = appendDistinctSelection(
+                                                current = selectedGenres,
+                                                candidates = playerViewModel.libraryGenres.value?.genres.orEmpty(),
+                                                keyOf = Genre::id
+                                            ).toImmutableList()
+                                        },
+                                        onDeselect = {
+                                            selectedGenres = persistentListOf()
+                                            showGenreMultiSelectionSheet = false
+                                        },
+                                        onOptionsClick = { showGenreMultiSelectionSheet = true }
+                                    )
                                 } else {
                                     SelectionActionRow(
                                         selectedCount = selectedSongs.size,
@@ -1163,6 +1212,7 @@ fun LibraryScreen(
                                             LibraryTabId.LIKED -> playerViewModel.shuffleFavoriteSongs()
                                             LibraryTabId.ALBUMS -> playerViewModel.shuffleRandomAlbum()
                                             LibraryTabId.ARTISTS -> playerViewModel.shuffleRandomArtist()
+                                            LibraryTabId.GENRES -> playerViewModel.shuffleRandomGenre()
                                             else -> playerViewModel.shuffleAllSongs()
                                         }
                                     },
@@ -1210,6 +1260,7 @@ fun LibraryScreen(
                             // Playlist view opens folders as playlists, which sort their own songs.
                             val showsFolderSongs = isFoldersTab &&
                                 (!playerUiState.isFoldersPlaylistView || playerUiState.currentFolder != null)
+                            val isGenresTab = currentTabId == LibraryTabId.GENRES
 
                             LibrarySortBottomSheet(
                                 title = stringResource(R.string.presentation_batch_d_sort_by),
@@ -1276,6 +1327,40 @@ fun LibraryScreen(
                                                 inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 activeCornerRadius = 32.dp,
                                                 onClick = { playerViewModel.setAlbumsListView(true) },
+                                                text = stringResource(R.string.presentation_batch_d_view_list),
+                                                imageVector = Icons.AutoMirrored.Rounded.ViewList
+                                            )
+                                        }
+                                    }
+                                } else if (isGenresTab) {
+                                    {
+                                        val isGenreGridView by playerViewModel.isGenreGridView.collectAsStateWithLifecycle()
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = isGenreGridView,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setGenreGridView(true) },
+                                                text = stringResource(R.string.presentation_batch_d_view_grid),
+                                                imageVector = Icons.Rounded.ViewModule
+                                            )
+
+                                            ToggleSegmentButton(
+                                                modifier = Modifier.weight(1f),
+                                                active = !isGenreGridView,
+                                                activeColor = MaterialTheme.colorScheme.primary,
+                                                inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                activeCornerRadius = 32.dp,
+                                                onClick = { playerViewModel.setGenreGridView(false) },
                                                 text = stringResource(R.string.presentation_batch_d_view_list),
                                                 imageVector = Icons.AutoMirrored.Rounded.ViewList
                                             )
@@ -1370,7 +1455,8 @@ fun LibraryScreen(
                                             )
                                         }
                                     }
-                                    if (!isFoldersTab) {
+                                    // Genres span every source, so "cloud only" would not change that tab.
+                                    if (!isFoldersTab && !isGenresTab) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
                                             text = stringResource(R.string.presentation_batch_d_cloud_sources_heading),
@@ -1598,6 +1684,33 @@ fun LibraryScreen(
                                         )
                                     }
 
+                                    LibraryTabId.GENRES -> {
+                                        val libraryGenres by playerViewModel.libraryGenres.collectAsStateWithLifecycle()
+                                        val stableOnGenreClick: (Genre) -> Unit = remember(navController) {
+                                            { genre: Genre ->
+                                                navController.navigateSafelyReplacing(
+                                                    route = Screen.GenreDetail.createRoute(
+                                                        java.net.URLEncoder.encode(genre.id, "UTF-8")
+                                                    ),
+                                                    patternToPop = Screen.GenreDetail.route
+                                                )
+                                            }
+                                        }
+                                        LibraryGenresTab(
+                                            state = libraryGenres,
+                                            playerViewModel = playerViewModel,
+                                            bottomBarHeight = bottomBarHeightDp,
+                                            onGenreClick = stableOnGenreClick,
+                                            isRefreshing = isRefreshing,
+                                            onRefresh = onRefresh,
+                                            isSelectionMode = isGenreSelectionMode,
+                                            selectedGenreIds = selectedGenreIds,
+                                            onGenreLongPress = onGenreLongPress,
+                                            onGenreSelectionToggle = toggleGenreSelection,
+                                            getSelectionIndex = getGenreSelectionIndex
+                                        )
+                                    }
+
                                     null -> Unit
                                 }
                             }
@@ -1609,6 +1722,7 @@ fun LibraryScreen(
                                 LibraryTabId.SONGS,
                                 LibraryTabId.LIKED,
                                 LibraryTabId.FOLDERS -> selectedSongs.size
+                                LibraryTabId.GENRES -> selectedGenres.size
                             }
                             SelectionCountPill(
                                 selectedCount = selectionCount,
@@ -1794,6 +1908,43 @@ fun LibraryScreen(
     val clearResolvedCategorySelection: () -> Unit = {
         selectedAlbums = persistentListOf()
         selectedArtists = persistentListOf()
+    }
+
+    if (showGenreMultiSelectionSheet && selectedGenres.isNotEmpty()) {
+        val noPlayableGenreSongsMessage = stringResource(R.string.player_no_playable_songs_in_genres)
+        val clearGenreSelection = {
+            selectedGenres = persistentListOf()
+            showGenreMultiSelectionSheet = false
+        }
+        GenreMultiSelectionOptionSheet(
+            selectedGenres = selectedGenres,
+            onDismiss = { showGenreMultiSelectionSheet = false },
+            onPlay = {
+                playerViewModel.playSelectedGenres(selectedGenres)
+                clearGenreSelection()
+            },
+            onPlayNext = {
+                playerViewModel.addSelectedGenresAsNext(selectedGenres)
+                clearGenreSelection()
+            },
+            onAddToQueue = {
+                playerViewModel.addSelectedGenresToQueue(selectedGenres)
+                clearGenreSelection()
+            },
+            onAddToPlaylist = {
+                val genresToResolve = selectedGenres
+                clearGenreSelection()
+                scope.launch {
+                    val songs = playerViewModel.getSongsForGenres(genresToResolve)
+                    if (songs.isNotEmpty()) {
+                        playlistSheetSongs = songs.toImmutableList()
+                        showPlaylistBottomSheet = true
+                    } else {
+                        playerViewModel.sendToast(noPlayableGenreSongsMessage)
+                    }
+                }
+            }
+        )
     }
 
     if (showMultiSelectionSheet && selectedSongs.isNotEmpty()) {
@@ -2636,6 +2787,7 @@ private fun LibraryTabId.iconRes(): Int = when (this) {
     LibraryTabId.PLAYLISTS -> R.drawable.rounded_playlist_play_24
     LibraryTabId.FOLDERS -> R.drawable.rounded_folder_24
     LibraryTabId.LIKED -> R.drawable.round_favorite_24
+    LibraryTabId.GENRES -> R.drawable.rounded_category_24
 }
 
 @Composable

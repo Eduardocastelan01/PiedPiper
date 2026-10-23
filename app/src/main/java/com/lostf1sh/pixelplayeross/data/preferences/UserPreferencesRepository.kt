@@ -126,6 +126,7 @@ constructor(
         val PLAYLISTS_SORT_OPTION = stringPreferencesKey("playlists_sort_option")
         val FOLDERS_SORT_OPTION = stringPreferencesKey("folders_sort_option")
         val FOLDER_SONGS_SORT_OPTION = stringPreferencesKey("folder_songs_sort_option")
+        val GENRES_SORT_OPTION = stringPreferencesKey("genres_sort_option")
         val LIKED_SONGS_SORT_OPTION = stringPreferencesKey("liked_songs_sort_option")
 
         val LAST_LIBRARY_TAB_INDEX =
@@ -145,6 +146,7 @@ constructor(
         val GLOBAL_TRANSITION_SETTINGS = stringPreferencesKey("global_transition_settings_json")
         val LIBRARY_TABS_ORDER = stringPreferencesKey("library_tabs_order")
         val LIBRARY_TABS_FOLDERS_MIGRATED = booleanPreferencesKey("library_tabs_folders_migrated")
+        val LIBRARY_TABS_GENRES_MIGRATED = booleanPreferencesKey("library_tabs_genres_migrated")
         val IS_FOLDER_FILTER_ACTIVE = booleanPreferencesKey("is_folder_filter_active")
         val IS_FOLDERS_PLAYLIST_VIEW = booleanPreferencesKey("is_folders_playlist_view")
         val HIDE_LOCAL_MEDIA = booleanPreferencesKey("hide_local_media")
@@ -1217,6 +1219,16 @@ constructor(
         }
     }
 
+    val genresSortOptionFlow: Flow<String> =
+            dataStore.data.map { preferences ->
+                SortOption.fromStorageKey(
+                                preferences[PreferencesKeys.GENRES_SORT_OPTION],
+                                SortOption.GENRES,
+                                SortOption.GenreNameAZ
+                        )
+                        .storageKey
+            }
+
     val likedSongsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 SortOption.fromStorageKey(
@@ -1261,6 +1273,12 @@ constructor(
     suspend fun setFolderSongsSortOption(optionKey: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.FOLDER_SONGS_SORT_OPTION] = optionKey
+        }
+    }
+
+    suspend fun setGenresSortOption(optionKey: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.GENRES_SORT_OPTION] = optionKey
         }
     }
 
@@ -1332,6 +1350,12 @@ constructor(
                     PreferencesKeys.LIKED_SONGS_SORT_OPTION,
                     SortOption.LIKED,
                     SortOption.LikedSongDateLiked
+            )
+            migrateSortPreference(
+                    preferences,
+                    PreferencesKeys.GENRES_SORT_OPTION,
+                    SortOption.GENRES,
+                    SortOption.GenreNameAZ
             )
         }
     }
@@ -1645,6 +1669,29 @@ constructor(
             if ("FOLDERS" !in order) {
                 val insertAfter = order.indexOf("LIKED").takeIf { it != -1 } ?: order.lastIndex
                 order.add(insertAfter + 1, "FOLDERS")
+                preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
+            }
+        }
+    }
+
+    /**
+     * One-shot backfill of the Genres tab, appended last, for orders saved before it existed.
+     *
+     * Like [migrateTabOrder] it runs once, so a user who later hides Genres keeps it hidden.
+     * Appending keeps every existing tab at its index, which the remembered last tab relies on.
+     */
+    suspend fun migrateGenresTab() {
+        dataStore.edit { preferences ->
+            if (preferences[PreferencesKeys.LIBRARY_TABS_GENRES_MIGRATED] == true) return@edit
+            preferences[PreferencesKeys.LIBRARY_TABS_GENRES_MIGRATED] = true
+
+            val orderJson = preferences[PreferencesKeys.LIBRARY_TABS_ORDER] ?: return@edit
+            val order = runCatching {
+                json.decodeFromString<MutableList<String>>(orderJson)
+            }.getOrNull() ?: return@edit // Abort on malformed data; don't overwrite user data.
+
+            if (order.isNotEmpty() && "GENRES" !in order) {
+                order.add("GENRES")
                 preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = json.encodeToString(order)
             }
         }

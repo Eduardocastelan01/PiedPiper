@@ -85,8 +85,10 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.SectionData
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AlbumData
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.UNKNOWN_GENRE_ID
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import com.lostf1sh.pixelplayeross.utils.formatDuration
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import kotlinx.collections.immutable.ImmutableList
@@ -278,7 +280,9 @@ fun GenreDetailScreen(
     val contentColor = themeColor.onContainer
     
     val initialDisplayName = remember(decodedGenreId) {
-        decodedGenreId
+        // Song info passes the song's whole genre value; the view model opens its first genre, or
+        // the Unknown bucket for a placeholder such as "<unknown>".
+        (GenreParser.split(decodedGenreId).firstOrNull() ?: UNKNOWN_GENRE_ID)
             .replace("_", " ")
             .split(" ")
             .joinToString(" ") { word ->
@@ -307,7 +311,7 @@ fun GenreDetailScreen(
     var showQuickFillDialog by remember { mutableStateOf(false) }
 
     val isUnknownGenre = remember(decodedGenreId) {
-        decodedGenreId.equals("unknown", ignoreCase = true) || decodedGenreId.equals("unknown genre", ignoreCase = true)
+        GenreParser.split(decodedGenreId).isEmpty()
     }
     
     val customGenres by playerViewModel.customGenres.collectAsStateWithLifecycle()

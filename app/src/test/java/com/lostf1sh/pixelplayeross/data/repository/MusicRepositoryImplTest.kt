@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.data.repository
 
 import android.content.Context
+import com.lostf1sh.pixelplayeross.data.database.GenreSongCountRow
 import com.lostf1sh.pixelplayeross.data.database.MusicDao
 import com.lostf1sh.pixelplayeross.data.database.SearchHistoryDao
 import com.lostf1sh.pixelplayeross.data.database.SongEntity
@@ -13,6 +14,7 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.database.FavoritesDao
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -294,68 +296,128 @@ class MusicRepositoryImplTest {
 
     @Test
     fun `getGenres deduplicates normalized genre ids`() = runTest(testDispatcher) {
-        every {
-            mockMusicDao.getUniqueGenres(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(listOf("Rock", " Rock ", "rock"))
-        every {
-            mockMusicDao.hasUnknownGenre(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(false)
+        stubGenreCounts("Rock" to 2, " Rock " to 1, "rock" to 1)
 
         val result = musicRepository.getGenres().first()
 
         assertEquals(1, result.size)
         assertEquals("rock", result.first().id)
         assertEquals("Rock", result.first().name)
+        assertEquals(4, result.first().songCount)
     }
 
     @Test
-    fun `getGenres does not append unknown when already present`() = runTest(testDispatcher) {
-        every {
-            mockMusicDao.getUniqueGenres(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(listOf("Unknown", " unknown "))
-        every {
-            mockMusicDao.hasUnknownGenre(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(true)
+    fun `getGenres splits multi-genre values into single genres with summed counts`() = runTest(testDispatcher) {
+        stubGenreCounts(
+            "Alternative; Indie Rock" to 2,
+            "Alternative" to 3,
+            "House|Electronic" to 1,
+            "Rap/Hip-Hop" to 1
+        )
 
         val result = musicRepository.getGenres().first()
 
-        assertEquals(1, result.size)
-        assertEquals(1, result.count { it.id == "unknown" })
-        assertEquals("Unknown", result.first().name)
+        assertEquals(
+            listOf("Alternative" to 5, "Electronic" to 1, "House" to 1, "Indie Rock" to 2, "Rap/Hip-Hop" to 1),
+            result.map { it.name to it.songCount }
+        )
+        assertEquals("indie_rock", result.single { it.name == "Indie Rock" }.id)
+    }
+
+    @Test
+    fun `getGenres names a genre after its most used spelling`() = runTest(testDispatcher) {
+        stubGenreCounts("hip hop" to 1, "Hip Hop" to 3)
+
+        val result = musicRepository.getGenres().first()
+
+        assertEquals("Hip Hop", result.single().name)
+        assertEquals("hip_hop", result.single().id)
+    }
+
+    @Test
+    fun `getGenres folds untagged and unknown values into one Unknown genre`() = runTest(testDispatcher) {
+        stubGenreCounts(null to 2, "" to 1, "Unknown" to 1, " unknown " to 1, "Rock" to 1)
+
+        val result = musicRepository.getGenres().first()
+
+        assertEquals(listOf("rock", "unknown"), result.map { it.id })
+        assertEquals("Unknown", result.last().name)
+        assertEquals(5, result.last().songCount)
     }
 
     @Test
     fun `getGenres appends unknown only when needed`() = runTest(testDispatcher) {
-        every {
-            mockMusicDao.getUniqueGenres(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(listOf("Rock"))
-        every {
-            mockMusicDao.hasUnknownGenre(
-                any<List<String>>(),
-                any<Boolean>()
-            )
-        } returns flowOf(true)
+        stubGenreCounts("Rock" to 1)
 
         val result = musicRepository.getGenres().first()
 
-        assertEquals(2, result.size)
-        assertTrue(result.any { it.id == "rock" })
-        assertEquals(1, result.count { it.id == "unknown" })
+        assertEquals(1, result.size)
+        assertTrue(result.none { it.id == "unknown" })
+    }
+
+    @Test
+    fun `getMusicByGenre returns songs that list the genre as a whole genre`() = runTest(testDispatcher) {
+        every { mockUserPreferencesRepository.mockGenresEnabledFlow } returns flowOf(false)
+        val patternSlot = slot<String>()
+        every { mockMusicDao.getSongsWithGenreLike(capture(patternSlot), any(), any()) } returns flowOf(
+            listOf(
+                createSongEntity(1L, "Both", "Artist", "Alternative; Indie Rock", "/m/1.mp3", "/m"),
+                createSongEntity(2L, "Only", "Artist", "alternative", "/m/2.mp3", "/m"),
+                createSongEntity(3L, "Other", "Artist", "Alternative Rock", "/m/3.mp3", "/m")
+            )
+        )
+
+        val result = musicRepository.getMusicByGenre("Alternative").first()
+
+        assertEquals(listOf("1", "2"), result.map { it.id })
+        assertEquals("%Alternative%", patternSlot.captured)
+    }
+
+    @Test
+    fun `getMusicByGenre keeps NUL separated lists only when they name the genre`() = runTest(testDispatcher) {
+        every { mockUserPreferencesRepository.mockGenresEnabledFlow } returns flowOf(false)
+        // The DAO returns every value holding a NUL, since SQLite LIKE cannot read past one.
+        every { mockMusicDao.getSongsWithGenreLike(any(), any(), any()) } returns flowOf(
+            listOf(
+                createSongEntity(1L, "Listed second", "Artist", "Rock\u0000Pop", "/m/1.mp3", "/m"),
+                createSongEntity(2L, "Other list", "Artist", "Rock\u0000Jazz", "/m/2.mp3", "/m"),
+                createSongEntity(3L, "Plain", "Artist", "Pop", "/m/3.mp3", "/m")
+            )
+        )
+
+        val result = musicRepository.getMusicByGenre("Pop").first()
+
+        assertEquals(listOf("1", "3"), result.map { it.id })
+    }
+
+    @Test
+    fun `getMusicByGenre for Unknown keeps only songs without any genre`() = runTest(testDispatcher) {
+        every { mockUserPreferencesRepository.mockGenresEnabledFlow } returns flowOf(false)
+        val noGenreCharactersSlot = slot<String>()
+        every {
+            mockMusicDao.getUnknownGenreSongCandidates(capture(noGenreCharactersSlot), any(), any())
+        } returns flowOf(
+            listOf(
+                createSongEntity(1L, "Untagged", "Artist", null, "/m/1.mp3", "/m"),
+                createSongEntity(2L, "Placeholder", "Artist", "<unknown>", "/m/2.mp3", "/m"),
+                createSongEntity(3L, "Tagged", "Artist", "Unknown Pleasures; Post-Punk", "/m/3.mp3", "/m"),
+                createSongEntity(4L, "Tab and separators", "Artist", ";\t|", "/m/4.mp3", "/m"),
+                createSongEntity(5L, "Ideographic space", "Artist", "\u3000", "/m/5.mp3", "/m"),
+                createSongEntity(6L, "NUL placeholder", "Artist", "\u0000Unknown", "/m/6.mp3", "/m"),
+                createSongEntity(7L, "NUL list", "Artist", "Rock\u0000Pop", "/m/7.mp3", "/m")
+            )
+        )
+
+        val result = musicRepository.getMusicByGenre("unknown").first()
+
+        assertEquals(listOf("1", "2", "4", "5", "6"), result.map { it.id })
+        assertEquals(GenreParser.noGenreCharacters, noGenreCharactersSlot.captured)
+    }
+
+    private fun stubGenreCounts(vararg rows: Pair<String?, Int>) {
+        every {
+            mockMusicDao.getGenreSongCounts(any<List<String>>(), any<Boolean>())
+        } returns flowOf(rows.map { (genre, count) -> GenreSongCountRow(genre, count) })
     }
 
     @Nested
@@ -431,7 +493,7 @@ class MusicRepositoryImplTest {
         id: Long,
         title: String,
         artistName: String,
-        genre: String,
+        genre: String?,
         filePath: String,
         parentDirectoryPath: String
     ): SongEntity {

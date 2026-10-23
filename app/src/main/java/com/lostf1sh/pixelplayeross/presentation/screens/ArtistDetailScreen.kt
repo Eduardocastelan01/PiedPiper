@@ -782,14 +782,13 @@ private fun CollapsibleAlbumSectionHeader(
         label = "ArtistAlbumExpandRotation"
     )
     val songCountText = formatSongCount(section.songs.size)
-    val subtitle = remember(section.year, songCountText) {
-        buildString {
-            section.year?.takeIf { it > 0 }?.let {
-                append(it.toString())
-                append(" • ")
-            }
-            append(songCountText)
-        }
+    val subtitle = remember(section.year, section.genre, songCountText) {
+        // The genre goes last so a long one is what gets ellipsized, not the song count.
+        listOfNotNull(
+            section.year?.takeIf { it > 0 }?.toString(),
+            songCountText,
+            section.genre
+        ).joinToString(" • ")
     }
 
     val containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)

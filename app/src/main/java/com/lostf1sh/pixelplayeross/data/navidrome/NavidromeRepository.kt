@@ -28,6 +28,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepositor
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.stream.BulkSyncResult
 import com.lostf1sh.pixelplayeross.data.stream.CloudMusicUtils
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,7 @@ class NavidromeRepository @Inject constructor(
         private const val NAVIDROME_ALBUM_ID_OFFSET = 10_000_000_000_000L
         private const val NAVIDROME_ARTIST_ID_OFFSET = 11_000_000_000_000L
         private const val NAVIDROME_PARENT_DIRECTORY = "/Cloud/Navidrome"
-        private const val NAVIDROME_GENRE = "Navidrome"
+        private const val NAVIDROME_GENRE = GenreParser.NAVIDROME_PLACEHOLDER
         private const val NAVIDROME_PLAYLIST_PREFIX = "navidrome_playlist:"
         const val LIBRARY_PLAYLIST_ID = "__library__"
     }
