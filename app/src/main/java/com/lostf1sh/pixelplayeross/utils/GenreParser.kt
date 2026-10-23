@@ -30,7 +30,10 @@ object GenreParser {
     /** Placeholders tag editors and MediaStore write for a missing genre. */
     private val UNKNOWN_VALUES = setOf("unknown", "<unknown>", "unknown genre")
 
-    private val SOURCE_PLACEHOLDER_KEYS = setOf(key(JELLYFIN_PLACEHOLDER), key(NAVIDROME_PLACEHOLDER))
+    /** Every cloud source placeholder, see [JELLYFIN_PLACEHOLDER]. */
+    val SOURCE_PLACEHOLDERS: List<String> = listOf(JELLYFIN_PLACEHOLDER, NAVIDROME_PLACEHOLDER)
+
+    private val SOURCE_PLACEHOLDER_KEYS = SOURCE_PLACEHOLDERS.mapTo(HashSet(), ::key)
 
     /**
      * Every character that [split] drops when it stands alone: the separators, '&' and all
@@ -79,6 +82,12 @@ object GenreParser {
             .lowercase(Locale.ROOT)
             .replace(' ', '_')
             .replace('/', '_')
+
+    /**
+     * Whether [genre], one genre as [split] returns it, is a cloud source placeholder rather than
+     * real music, compared by [key].
+     */
+    fun isSourcePlaceholder(genre: String): Boolean = key(genre) in SOURCE_PLACEHOLDER_KEYS
 
     /** Whether one of the genres in [raw] is [genre], compared by [key]. */
     fun matches(raw: String?, genre: String): Boolean {

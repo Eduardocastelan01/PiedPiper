@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.ArtistRef
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import io.mockk.every
 import io.mockk.mockk
 import java.time.DayOfWeek
@@ -199,6 +200,27 @@ class PlaybackStatsRepositoryRecapTest {
             .hasSize(5)
         assertThat(summary.topGenres.map { it.genre }.filter { it != PlaybackStatsRepository.UNKNOWN_GENRE })
             .hasSize(5)
+    }
+
+    @Test
+    fun `recap genre list keeps five named genres when the cloud placeholders and unknown bucket lead it`() {
+        val tagged = (1..5).map { song("tagged-$it", genre = "Genre $it") }
+        val songs = tagged + song("jellyfin", genre = "Jellyfin") + song("navidrome", genre = "Navidrome")
+        val events = tagged.mapIndexed { index, song ->
+            play(song.id, LocalDateTime.of(2025, 2, 1 + index, 10, 0), minutes(10L - index))
+        } +
+            play("jellyfin", LocalDateTime.of(2025, 2, 8, 10, 0), minutes(60)) +
+            play("navidrome", LocalDateTime.of(2025, 2, 9, 10, 0), minutes(55)) +
+            // No longer in the library: counted under the unknown genre.
+            play("deleted", LocalDateTime.of(2025, 2, 10, 10, 0), minutes(50))
+
+        val summary = recap(2025, events, songs = songs)!!.summary
+
+        assertThat(
+            summary.topGenres
+                .map { it.genre }
+                .filter { it != PlaybackStatsRepository.UNKNOWN_GENRE && !GenreParser.isSourcePlaceholder(it) }
+        ).containsExactly("Genre 1", "Genre 2", "Genre 3", "Genre 4", "Genre 5").inOrder()
     }
 
     @Test

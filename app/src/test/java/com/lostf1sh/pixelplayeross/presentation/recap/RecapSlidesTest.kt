@@ -82,6 +82,45 @@ class RecapSlidesTest {
     }
 
     @Test
+    fun `cloud source placeholders are left out of the genre ranking and the summary`() {
+        // What the Jellyfin and Navidrome sync store for songs the server sent without a genre.
+        val cloudLed = recap(
+            summary = summary(
+                genres = listOf(
+                    genre("Jellyfin", 40 * hour),
+                    genre("Navidrome", 35 * hour),
+                    genre("Indie Rock", 30 * hour),
+                    genre("Electronic", 10 * hour)
+                )
+            )
+        )
+
+        val slides = buildRecapSlides(cloudLed, isSoFar = false, artistImages = emptyMap(), canPlayTopSongs = true)
+
+        val genres = slides.filterIsInstance<RecapSlide.Genres>().single().genres
+        assertThat(genres.map { it.name }).containsExactly("Indie Rock", "Electronic").inOrder()
+        assertThat((slides.last() as RecapSlide.Summary).topGenre).isEqualTo("Indie Rock")
+    }
+
+    @Test
+    fun `omits genres slide when only cloud source placeholders and unknown genre`() {
+        val onlyPlaceholders = recap(
+            summary = summary(
+                genres = listOf(
+                    genre("jellyfin", 5 * hour),
+                    genre(PlaybackStatsRepository.UNKNOWN_GENRE, 4 * hour),
+                    genre("NAVIDROME", 3 * hour)
+                )
+            )
+        )
+
+        val slides = buildRecapSlides(onlyPlaceholders, isSoFar = false, artistImages = emptyMap(), canPlayTopSongs = true)
+
+        assertThat(slides.none { it is RecapSlide.Genres }).isTrue()
+        assertThat((slides.last() as RecapSlide.Summary).topGenre).isNull()
+    }
+
+    @Test
     fun `unknown buckets are left out of the rankings`() {
         val withUnknowns = recap(
             summary = summary(

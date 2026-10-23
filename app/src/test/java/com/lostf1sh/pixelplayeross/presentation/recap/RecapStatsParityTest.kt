@@ -6,6 +6,7 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackEvent
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDateTime
@@ -103,8 +104,9 @@ class RecapStatsParityTest {
 
     @Test
     fun `top lists show the year view's entries and listened time`() {
-        // The recap looks one entry deeper so its list stays full once the unknown bucket is
-        // left out; everything the year view lists by name must lead it unchanged.
+        // The recap looks deeper so its list stays full once the unknown bucket (and, for
+        // genres, the cloud source placeholders) is left out; everything else the year view
+        // lists must lead it unchanged.
         assertLeads(
             recap = slide<RecapSlide.TopArtists>().artists.map { it.name to it.durationMs },
             yearView = yearView.topArtists
@@ -120,7 +122,7 @@ class RecapStatsParityTest {
         assertLeads(
             recap = slide<RecapSlide.Genres>().genres.map { it.name to it.durationMs },
             yearView = yearView.topGenres
-                .filter { it.genre != PlaybackStatsRepository.UNKNOWN_GENRE }
+                .filter { it.genre != PlaybackStatsRepository.UNKNOWN_GENRE && !GenreParser.isSourcePlaceholder(it.genre) }
                 .map { it.genre to it.totalDurationMs }
         )
         val topSongs = slide<RecapSlide.TopSongs>()

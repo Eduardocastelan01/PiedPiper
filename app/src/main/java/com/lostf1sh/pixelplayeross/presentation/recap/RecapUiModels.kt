@@ -6,6 +6,7 @@ import com.lostf1sh.pixelplayeross.data.stats.ListeningRecap
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.SongPlaybackSummary
 import com.lostf1sh.pixelplayeross.data.stats.peakIndex
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.collections.immutable.ImmutableList
@@ -158,7 +159,8 @@ sealed interface RecapSlide {
 
 /**
  * The story for [recap]: intro, minutes and summary always, every other slide only when it has
- * something to show. The repository's "unknown" buckets are grouping keys, never shown.
+ * something to show. The repository's "unknown" buckets are grouping keys, never shown, and
+ * neither are the cloud source placeholders ([GenreParser.isSourcePlaceholder]) among genres.
  *
  * @param artistImages picture per artist name, see [RecapArtistItem.imageUri].
  * @param canPlayTopSongs whether any top song is still in the library to play.
@@ -194,8 +196,13 @@ internal fun buildRecapSlides(
                 playCount = it.playCount
             )
         }
+    // Jellyfin and Navidrome songs without a genre are stored under the source's name.
     val genres = summary.topGenres
-        .filter { it.genre != PlaybackStatsRepository.UNKNOWN_GENRE && it.totalDurationMs > 0L }
+        .filter {
+            it.genre != PlaybackStatsRepository.UNKNOWN_GENRE &&
+                !GenreParser.isSourcePlaceholder(it.genre) &&
+                it.totalDurationMs > 0L
+        }
         .take(RECAP_RANKING_SIZE)
         .map {
             RecapGenreItem(

@@ -128,6 +128,15 @@ class GenreParserTest {
     }
 
     @Test
+    fun `isSourcePlaceholder matches the cloud placeholders by key only`() {
+        assertTrue(GenreParser.isSourcePlaceholder("Jellyfin"))
+        assertTrue(GenreParser.isSourcePlaceholder(" navidrome "))
+        assertTrue(GenreParser.isSourcePlaceholder("JELLYFIN"))
+        assertFalse(GenreParser.isSourcePlaceholder("Jellyfin Jazz"))
+        assertFalse(GenreParser.isSourcePlaceholder("Indie Rock"))
+    }
+
+    @Test
     fun `likePattern widens spacing, slashes and non ASCII letters to wildcards`() {
         assertEquals("%Indie%Pop%", GenreParser.likePattern("Indie Pop"))
         assertEquals("%Rap%Hip-Hop%", GenreParser.likePattern("Rap/Hip-Hop"))
