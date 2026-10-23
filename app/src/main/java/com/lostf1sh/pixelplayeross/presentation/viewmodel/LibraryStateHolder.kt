@@ -116,6 +116,9 @@ class LibraryStateHolder @Inject constructor(
     private val _currentFolderSortOption = MutableStateFlow<SortOption>(SortOption.FolderNameAZ)
     val currentFolderSortOption = _currentFolderSortOption.asStateFlow()
 
+    private val _currentFolderSongSortOption = MutableStateFlow<SortOption>(SortOption.FolderSongTitleAZ)
+    val currentFolderSongSortOption = _currentFolderSongSortOption.asStateFlow()
+
     private val _currentFavoriteSortOption = MutableStateFlow<SortOption>(SortOption.LikedSongDateLiked)
     val currentFavoriteSortOption = _currentFavoriteSortOption.asStateFlow()
 
@@ -203,6 +206,9 @@ class LibraryStateHolder @Inject constructor(
 
             val folderSortKey = userPreferencesRepository.foldersSortOptionFlow.first()
             _currentFolderSortOption.value = SortOption.FOLDERS.find { it.storageKey == folderSortKey } ?: SortOption.FolderNameAZ
+
+            val folderSongSortKey = userPreferencesRepository.folderSongsSortOptionFlow.first()
+            _currentFolderSongSortOption.value = SortOption.FOLDER_SONGS.find { it.storageKey == folderSongSortKey } ?: SortOption.FolderSongTitleAZ
 
             val likedSortKey = userPreferencesRepository.likedSongsSortOptionFlow.first()
             _currentFavoriteSortOption.value = SortOption.LIKED.find { it.storageKey == likedSortKey } ?: SortOption.LikedSongDateLiked
@@ -395,6 +401,19 @@ class LibraryStateHolder @Inject constructor(
                 sortFoldersList(_musicFolders.value, sortOption).toImmutableList()
             }
             _musicFolders.value = sorted
+        }
+    }
+
+    /** The Folders tab orders the open folder's songs itself; this only stores the choice. */
+    fun sortFolderSongs(sortOption: SortOption, persist: Boolean = true) {
+        scope?.launch {
+            if (persist && _currentFolderSongSortOption.value.storageKey == sortOption.storageKey) {
+                return@launch
+            }
+            if (persist) {
+                userPreferencesRepository.setFolderSongsSortOption(sortOption.storageKey)
+            }
+            _currentFolderSongSortOption.value = sortOption
         }
     }
 

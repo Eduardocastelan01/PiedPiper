@@ -109,6 +109,7 @@ class PlayerViewModelTest {
     private val _selectedSearchFilterFlow = MutableStateFlow(SearchFilterType.ALL)
     private val _repeatModeFlow = MutableStateFlow(Player.REPEAT_MODE_OFF)
     private val _favoriteIdsFlow = MutableStateFlow<Set<String>>(emptySet())
+    private val folderSongSortFlow = MutableStateFlow<SortOption>(SortOption.FolderSongTitleAZ)
     private lateinit var stablePlayerStateFlow: MutableStateFlow<StablePlayerState>
     private lateinit var mockController: MediaController
     private val controllerRepeatModeWrites = mutableListOf<Int>()
@@ -135,6 +136,7 @@ class PlayerViewModelTest {
         coEvery { mockUserPreferencesRepository.tapBackgroundClosesPlayerFlow } returns flowOf(true)
         coEvery { mockUserPreferencesRepository.hapticsEnabledFlow } returns flowOf(true)
         coEvery { mockUserPreferencesRepository.foldersSortOptionFlow } returns flowOf("FolderNameAZ")
+        coEvery { mockUserPreferencesRepository.folderSongsSortOptionFlow } returns flowOf(SortOption.FolderSongTitleAZ.storageKey)
         coEvery { mockUserPreferencesRepository.persistentShuffleEnabledFlow } returns flowOf(false)
         coEvery { mockUserPreferencesRepository.isShuffleOnFlow } returns flowOf(false)
         every { mockUserPreferencesRepository.repeatModeFlow } returns _repeatModeFlow
@@ -150,6 +152,7 @@ class PlayerViewModelTest {
         every { mockLibraryStateHolder.currentAlbumSortOption } returns MutableStateFlow<SortOption>(SortOption.AlbumTitleAZ)
         every { mockLibraryStateHolder.currentArtistSortOption } returns MutableStateFlow<SortOption>(SortOption.ArtistNameAZ)
         every { mockLibraryStateHolder.currentFolderSortOption } returns MutableStateFlow<SortOption>(SortOption.FolderNameAZ)
+        every { mockLibraryStateHolder.currentFolderSongSortOption } returns folderSongSortFlow
         every { mockLibraryStateHolder.currentFavoriteSortOption } returns MutableStateFlow<SortOption>(SortOption.LikedSongTitleAZ)
         every { mockLibraryStateHolder.currentStorageFilter } returns MutableStateFlow(StorageFilter.ALL)
 
@@ -368,6 +371,33 @@ class PlayerViewModelTest {
 
         assertTrue(controllerRepeatModeWrites.isEmpty())
         assertEquals(Player.REPEAT_MODE_OFF, controllerRepeatMode)
+    }
+
+    @Test
+    fun `startup applies the stored folder song sort without writing it back`() = runTest {
+        advanceUntilIdle()
+
+        verify { mockLibraryStateHolder.sortFolderSongs(SortOption.FolderSongTitleAZ, false) }
+        assertEquals(SortOption.FolderSongTitleAZ, playerViewModel.playerUiState.value.currentFolderSongSortOption)
+    }
+
+    @Test
+    fun `folder song sort changes reach the ui state without touching the folder sort`() = runTest {
+        advanceUntilIdle()
+
+        folderSongSortFlow.value = SortOption.FolderSongAlbumArtistDesc
+        advanceUntilIdle()
+
+        val state = playerViewModel.playerUiState.value
+        assertEquals(SortOption.FolderSongAlbumArtistDesc, state.currentFolderSongSortOption)
+        assertEquals(SortOption.FolderNameAZ, state.currentFolderSortOption)
+    }
+
+    @Test
+    fun `sorting folder songs is persisted through the library state holder`() = runTest {
+        playerViewModel.sortFolderSongs(SortOption.FolderSongDuration)
+
+        verify { mockLibraryStateHolder.sortFolderSongs(SortOption.FolderSongDuration, true) }
     }
 
     @Test
