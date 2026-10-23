@@ -65,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -530,7 +531,25 @@ fun SearchScreen(
                             isAlbumSelectionMode -> selectedAlbums.size
                             else -> 0
                         }
-                        if (resultSelectionCount > 0) {
+                        SearchResultsHeader(
+                            showSelectionActions = resultSelectionCount > 0,
+                            modifier = Modifier.fillMaxWidth(),
+                            filterChips = {
+                                FlowRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp, horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                ) {
+                                    SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
+                                }
+                            }
+                        ) {
                             SelectionActionRow(
                                 selectedCount = resultSelectionCount,
                                 onSelectAll = {
@@ -572,20 +591,6 @@ fun SearchScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp, horizontal = 8.dp)
                             )
-                        } else {
-                            FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp, horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(0.dp)
-                            ) {
-                                SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
-                                SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
-                            }
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
                             Crossfade(
@@ -1799,6 +1804,40 @@ fun SearchFilterChip(
             Spacer(Modifier.width(8.dp))
         }
         Text(stringResource(searchFilterLabelRes(filterType)))
+    }
+}
+
+/**
+ * The filter chips above the search results, or the selection actions in their place while
+ * results are selected.
+ *
+ * The header keeps the height of the taller of the two either way. The chips can wrap to two
+ * rows while the actions take one, and a header that shrank as a long press started a selection
+ * would pull the results up under the finger, so the drag that follows the long press would
+ * start on the row below. Both stay composed so both can be measured; only the one shown is
+ * placed, so the other is neither drawn nor reachable by touch, focus or accessibility.
+ */
+@Composable
+internal fun SearchResultsHeader(
+    showSelectionActions: Boolean,
+    filterChips: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    selectionActions: @Composable () -> Unit,
+) {
+    Layout(
+        contents = listOf(filterChips, selectionActions),
+        modifier = modifier,
+    ) { (chipMeasurables, actionMeasurables), constraints ->
+        val childConstraints = constraints.copy(minHeight = 0)
+        val chips = chipMeasurables.map { it.measure(childConstraints) }
+        val actions = actionMeasurables.map { it.measure(childConstraints) }
+        val all = chips + actions
+        val width = (all.maxOfOrNull { it.width } ?: 0).coerceIn(constraints.minWidth, constraints.maxWidth)
+        val height = (all.maxOfOrNull { it.height } ?: 0).coerceIn(constraints.minHeight, constraints.maxHeight)
+        layout(width, height) {
+            val shown = if (showSelectionActions) actions else chips
+            shown.forEach { it.placeRelative(x = 0, y = (height - it.height) / 2) }
+        }
     }
 }
 
