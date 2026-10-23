@@ -127,7 +127,8 @@ internal object TtmlLyricsParser {
 
     /**
      * Maps `ttm:agent` ids to singer numbers: Apple's `v1`, `v2` and `v1000` keep their number,
-     * agents declared as a group sing in the middle, and any other id is numbered by first use.
+     * agents declared as a group sing in the middle, and any other id is numbered by first use,
+     * skipping the numbers the document's `vN` agents hold so two singers never share one.
      */
     private class AgentVoices(document: Document) {
         private val groupAgentIds = buildSet {
@@ -139,18 +140,31 @@ internal object TtmlLyricsParser {
                 }
             }
         }
+        private val numberedVoices = buildSet {
+            add(GROUP_AGENT_VOICE)
+            val elements = document.getElementsByTagName("*")
+            for (index in 0 until elements.length) {
+                val element = elements.item(index) as? Element ?: continue
+                agentIdOf(element)?.let(::numberedVoiceOf)?.let(::add)
+            }
+        }
         private val ordinals = mutableMapOf<String, Int>()
+        private var nextOrdinal = 1
 
         fun voiceOf(paragraph: Element): Int? {
             val agentId = agentIdOf(paragraph)
                 ?: (paragraph.parentNode as? Element)?.let(::agentIdOf)
                 ?: return null
-            NUMBERED_AGENT_REGEX.matchEntire(agentId)?.let { match ->
-                return match.groupValues[1].toInt()
-            }
+            numberedVoiceOf(agentId)?.let { return it }
             if (agentId in groupAgentIds) return GROUP_AGENT_VOICE
-            return ordinals.getOrPut(agentId) { ordinals.size + 1 }
+            return ordinals.getOrPut(agentId) {
+                while (nextOrdinal in numberedVoices) nextOrdinal++
+                nextOrdinal++
+            }
         }
+
+        private fun numberedVoiceOf(agentId: String): Int? =
+            NUMBERED_AGENT_REGEX.matchEntire(agentId)?.groupValues?.get(1)?.toInt()
 
         private fun agentIdOf(element: Element): String? =
             element.getAttributeNS(TTML_METADATA_NS, "agent")

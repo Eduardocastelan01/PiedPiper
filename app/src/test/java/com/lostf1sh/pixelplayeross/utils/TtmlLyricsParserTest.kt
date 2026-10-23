@@ -57,6 +57,52 @@ class TtmlLyricsParserTest {
     }
 
     @Test
+    fun namedAgents_skipTheNumbersOfNumberedAgentsEvenWhenTheyAppearFirst() {
+        val synced = requireNotNull(
+            LyricsUtils.parseLyrics(
+                ttml(
+                    head = """
+                        <ttm:agent type="person" xml:id="v1"/>
+                        <ttm:agent type="person" xml:id="guest"/>
+                        <ttm:agent type="person" xml:id="v3"/>
+                        <ttm:agent type="person" xml:id="choir"/>
+                    """.trimIndent(),
+                    body = """
+                        <p begin="1.000" ttm:agent="guest">Guest first</p>
+                        <p begin="2.000" ttm:agent="choir">Choir</p>
+                        <p begin="3.000" ttm:agent="v1">Lead</p>
+                        <p begin="4.000" ttm:agent="v3">Third</p>
+                    """.trimIndent()
+                )
+            ).synced
+        )
+
+        assertEquals(listOf(2, 4, 1, 3), synced.map { it.voice })
+    }
+
+    @Test
+    fun namedAndNumberedAgentsSingingTogether_stayTwoSungLines() {
+        val synced = requireNotNull(
+            LyricsUtils.parseLyrics(
+                ttml(
+                    head = """
+                        <ttm:agent type="person" xml:id="v1"/>
+                        <ttm:agent type="person" xml:id="guest"/>
+                    """.trimIndent(),
+                    body = """
+                        <p begin="1.000" ttm:agent="v1">Lead part</p>
+                        <p begin="1.000" ttm:agent="guest">Guest part</p>
+                    """.trimIndent()
+                )
+            ).synced
+        )
+
+        assertEquals(listOf("Lead part", "Guest part"), synced.map { it.line })
+        assertEquals(listOf(1, 2), synced.map { it.voice })
+        assertTrue(synced.all { it.translation == null })
+    }
+
+    @Test
     fun backgroundSpans_becomeBackgroundVocalsInsteadOfJoiningTheLine() {
         val synced = requireNotNull(
             LyricsUtils.parseLyrics(
