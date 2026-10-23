@@ -75,7 +75,9 @@ import com.lostf1sh.pixelplayeross.utils.formatListeningDurationLong
 import java.text.NumberFormat
 import java.time.DayOfWeek
 import java.time.Month
+import java.time.ZoneOffset
 import java.time.format.TextStyle
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.PI
@@ -590,12 +592,13 @@ private fun DedicationSlide(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val biggestDay = remember(slide.biggestDay, locale) {
-        // ICU, unlike java.time, also localizes the digits (e.g. Arabic-Indic ones).
-        val calendar = android.icu.util.Calendar.getInstance(locale).apply {
-            clear()
-            set(slide.biggestDay.year, slide.biggestDay.monthValue - 1, slide.biggestDay.dayOfMonth, 12, 0)
+        // ICU, unlike java.time, also localizes the digits (e.g. Arabic-Indic ones). It gets an
+        // instant, not calendar fields: a locale that asks for another calendar (such as
+        // th-TH-u-ca-buddhist) then shows the same day in that calendar.
+        val format = android.icu.text.DateFormat.getDateInstance(android.icu.text.DateFormat.MEDIUM, locale).apply {
+            timeZone = android.icu.util.TimeZone.GMT_ZONE
         }
-        android.icu.text.DateFormat.getDateInstance(android.icu.text.DateFormat.MEDIUM, locale).format(calendar.time)
+        format.format(Date(slide.biggestDay.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()))
     }
     val streak = slide.longestStreakDays.coerceAtLeast(1)
 
