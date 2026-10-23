@@ -59,6 +59,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtQuality
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
+import com.lostf1sh.pixelplayeross.data.preferences.restartsAtPosition
 import com.lostf1sh.pixelplayeross.data.repository.LyricsSearchResult
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.service.MusicNotificationProvider
@@ -3972,6 +3973,13 @@ class PlayerViewModel @Inject constructor(
         )
         playbackStateHolder.previousSong()
     }
+
+    /**
+     * Whether [previousSong] at [positionMs] restarts the current track under the "Previous
+     * button" preference, ignoring queue bounds. Read at event time, so it adds no UI state.
+     */
+    fun previousButtonRestartsAt(positionMs: Long): Boolean =
+        playbackStateHolder.currentPreviousButtonBehavior().restartsAtPosition(positionMs)
 
     /** Steps back to the previous track even past the restart threshold of [previousSong]. */
     fun forcePreviousSong() {

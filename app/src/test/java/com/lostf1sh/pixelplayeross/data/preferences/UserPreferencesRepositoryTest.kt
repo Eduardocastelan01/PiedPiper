@@ -258,6 +258,30 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `previous button restarts the track by default and persists previous track`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            assertEquals(PreviousButtonBehavior.RESTART_TRACK, repository.previousButtonBehaviorFlow.first())
+
+            repository.setPreviousButtonBehavior(PreviousButtonBehavior.PREVIOUS_TRACK)
+            assertEquals(PreviousButtonBehavior.PREVIOUS_TRACK, repository.previousButtonBehaviorFlow.first())
+
+            repository.setPreviousButtonBehavior(PreviousButtonBehavior.RESTART_TRACK)
+            assertEquals(PreviousButtonBehavior.RESTART_TRACK, repository.previousButtonBehaviorFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `migrateTabOrder backfills Folders right after Liked for a legacy order`() = runTest {
         val tempDir = Files.createTempDirectory("user-preferences-repository-test")
         try {
