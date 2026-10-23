@@ -95,12 +95,18 @@ import androidx.navigation.NavController
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveTopBarContent
+import com.lostf1sh.pixelplayeross.presentation.settings.search.LocalSettingsHighlightTarget
 import com.lostf1sh.pixelplayeross.presentation.settings.search.settingHighlight
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ArtistSettingsViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+// LazyColumn indices of the sections below that settings search can point into.
+private const val ARTIST_SETTINGS_LIBRARY_ORG_ITEM_INDEX = 2
+private const val ARTIST_SETTINGS_ARTIST_PAGE_ITEM_INDEX = 3
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -169,6 +175,22 @@ fun ArtistSettingsScreen(
         }
     }
 
+    // The sections live in separate lazy items, and on a short or landscape screen the lower
+    // ones start below the viewport, so they are never composed and their row cannot scroll
+    // itself into view. Bring the target's item in first; the row then clears the bars itself.
+    // Skipped once the highlight was consumed, so returning here or rotating does not scroll.
+    val highlightPending = LocalSettingsHighlightTarget.current != null
+    LaunchedEffect(highlightKey) {
+        if (!highlightPending) return@LaunchedEffect
+        val targetIndex = when (highlightKey) {
+            "item_artist_group_by_album_artist" -> ARTIST_SETTINGS_LIBRARY_ORG_ITEM_INDEX
+            "item_artist_albums_collapsed_by_default" -> ARTIST_SETTINGS_ARTIST_PAGE_ITEM_INDEX
+            else -> return@LaunchedEffect
+        }
+        delay(200)
+        lazyListState.animateScrollToItem(targetIndex)
+    }
+
     Box(
         modifier = Modifier
             .nestedScroll(nestedScrollConnection)
@@ -181,6 +203,7 @@ fun ArtistSettingsScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = currentTopBarHeightDp + 8.dp, bottom = 100.dp)
         ) {
+            // Item order matters: the search-highlight scroll above targets items by index.
             item {
                 AnimatedVisibility(
                     visible = uiState.rescanRequired,
