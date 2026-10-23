@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -117,6 +118,8 @@ import com.lostf1sh.pixelplayeross.presentation.components.resolveMainScreenBott
 import com.lostf1sh.pixelplayeross.presentation.components.resolveNavBarOccupiedHeight
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.screens.search.components.GenreCategoriesGrid
+import com.lostf1sh.pixelplayeross.presentation.selection.dragToSelect
+import com.lostf1sh.pixelplayeross.presentation.selection.rememberDragToSelectState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import kotlinx.collections.immutable.ImmutableList
@@ -618,6 +621,9 @@ fun SearchScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             multiSelectionState.toggleSelection(song)
                                         },
+                                        isSongSelected = multiSelectionState::isSelected,
+                                        onSongDragSelectionChange = multiSelectionState::applyDragSelection,
+                                        bottomBarHeight = bottomBarHeightDp,
                                         isAlbumSelectionMode = isAlbumSelectionMode,
                                         selectedAlbumIds = selectedAlbumIds,
                                         getAlbumSelectionIndex = { albumId ->
@@ -1125,6 +1131,9 @@ fun SearchResultsList(
     selectedSongIds: Set<String> = emptySet(),
     getSongSelectionIndex: (String) -> Int? = { null },
     onSongLongPress: (Song) -> Unit = {},
+    isSongSelected: (String) -> Boolean = { false },
+    onSongDragSelectionChange: (select: List<Song>, deselect: List<Song>) -> Unit = { _, _ -> },
+    bottomBarHeight: Dp = 0.dp,
     isAlbumSelectionMode: Boolean = false,
     selectedAlbumIds: Set<Long> = emptySet(),
     getAlbumSelectionIndex: (Long) -> Int? = { null },
@@ -1208,6 +1217,34 @@ fun SearchResultsList(
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
     val systemBarPaddingBottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 94.dp
 
+    val listState = rememberLazyListState()
+    val dragSelectState = rememberDragToSelectState()
+    // Section headers, albums, artists and playlists share the list with the songs but are not
+    // selectable, so each list index maps to its song, if any.
+    val dragSelectRows = remember(groupedResults) {
+        buildList<Song?> {
+            sectionOrder.forEach { filterType ->
+                val itemsForSection = groupedResults[filterType].orEmpty()
+                if (itemsForSection.isNotEmpty()) {
+                    add(null)
+                    itemsForSection.forEach { add((it as? SearchResultItem.SongItem)?.song) }
+                }
+            }
+        }
+    }
+    val dragSelectSongAt: (Int) -> Song? = remember(dragSelectRows) {
+        { index -> dragSelectRows.getOrNull(index) }
+    }
+    val isDragSelectSongSelected: (Song) -> Boolean = remember(isSongSelected) {
+        { song -> isSongSelected(song.id) }
+    }
+    val hasCurrentSong = playerStableState.currentSong.let { it != null && it != Song.emptySong() }
+    // The keyboard, when open, covers the navigation bar and the mini player.
+    val dragSelectBottomInset = maxOf(
+        with(localDensity) { WindowInsets.ime.getBottom(this).toDp() },
+        if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight
+    )
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1216,6 +1253,14 @@ fun SearchResultsList(
                     topStart = 28.dp,
                     topEnd = 28.dp
                 )
+            )
+            .dragToSelect(
+                state = dragSelectState,
+                listState = listState,
+                itemAt = dragSelectSongAt,
+                isSelected = isDragSelectSongSelected,
+                onSelectionChange = onSongDragSelectionChange,
+                bottomInset = dragSelectBottomInset
             ),
         state = listState,
         contentPadding = PaddingValues(
@@ -1264,7 +1309,10 @@ fun SearchResultsList(
                                     isSelected = item.song.id in selectedSongIds,
                                     selectionIndex = getSongSelectionIndex(item.song.id),
                                     isSelectionMode = isSongSelectionMode,
-                                    onLongPress = { onSongLongPress(item.song) }
+                                    onLongPress = {
+                                        onSongLongPress(item.song)
+                                        dragSelectState.onItemLongPressed()
+                                    }
                                 )
                             }
 
