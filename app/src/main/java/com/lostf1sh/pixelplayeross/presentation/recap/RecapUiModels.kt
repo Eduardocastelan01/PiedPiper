@@ -216,7 +216,8 @@ internal fun buildRecapSlides(
                 year = recap.year,
                 totalMs = totalMs,
                 activeDays = summary.activeDays,
-                averageDailyMs = totalMs / recap.daysInRange.coerceAtLeast(1)
+                // The Stats year view's own per-day figure, so the two screens agree.
+                averageDailyMs = summary.averageDailyDurationMs
             )
         )
         peakIndex(recap.monthlyDurationsMs)?.let { peak ->

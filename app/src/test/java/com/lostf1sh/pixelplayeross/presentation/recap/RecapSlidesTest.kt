@@ -155,16 +155,18 @@ class RecapSlidesTest {
     }
 
     @Test
-    fun `minutes slide averages over every day the recap covers`() {
+    fun `minutes slide shows the Stats year view's daily average and active days`() {
+        // The year view averages up to the last day with music, here not the recap's last day.
         val slides = buildRecapSlides(
-            recap(summary = summary(totalMs = 365 * hour), daysInRange = 365),
-            isSoFar = false,
+            recap(summary = summary(totalMs = 300 * hour, averageDailyMs = 2 * hour), daysInRange = 296),
+            isSoFar = true,
             artistImages = emptyMap(),
             canPlayTopSongs = true
         )
 
         val minutes = slides.filterIsInstance<RecapSlide.Minutes>().single()
-        assertThat(minutes.averageDailyMs).isEqualTo(hour)
+        assertThat(minutes.totalMs).isEqualTo(300 * hour)
+        assertThat(minutes.averageDailyMs).isEqualTo(2 * hour)
         assertThat(minutes.activeDays).isEqualTo(120)
     }
 
@@ -208,6 +210,7 @@ class RecapSlidesTest {
 
     private fun summary(
         totalMs: Long = 100 * hour,
+        averageDailyMs: Long = 0L,
         songs: List<SongPlaybackSummary> = listOf(
             SongPlaybackSummary("1", "Morning Static", "Aurora Fields", null, 9 * hour, 80),
             SongPlaybackSummary("2", "Low Tide", "Aurora Fields feat. Mira", null, 5 * hour, 40)
@@ -222,7 +225,7 @@ class RecapSlidesTest {
         totalDurationMs = totalMs,
         totalPlayCount = 500,
         uniqueSongs = 42,
-        averageDailyDurationMs = 0L,
+        averageDailyDurationMs = averageDailyMs,
         songs = songs,
         topSongs = songs,
         topGenres = genres,
