@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -1079,6 +1080,8 @@ private fun SongsSlide(
 ) {
     val leader = slide.songs.first()
     val spin = rememberSpin(active = isActive, periodMillis = 6_000)
+    // The disc starts tucked towards the sleeve, which sits on the reading-start side.
+    val towardsSleeve = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1f else -1f
     RecapSlideColumn(contentPadding = contentPadding) {
         RecapKicker(
             text = stringResource(R.string.recap_songs_kicker),
@@ -1099,7 +1102,7 @@ private fun SongsSlide(
                     .align(Alignment.CenterEnd)
                     .graphicsLayer {
                         val fraction = revealFraction(reveal(), order = 2f)
-                        translationX = -60.dp.toPx() * (1f - fraction)
+                        translationX = towardsSleeve * 60.dp.toPx() * (1f - fraction)
                         alpha = fraction
                         rotationZ = spin.value
                     }
