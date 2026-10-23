@@ -132,6 +132,7 @@ class LyricsRepositoryImpl @Inject constructor(
         private const val MAX_CALLS_PER_MINUTE = 30
         private const val NETWORK_RETRY_ATTEMPTS = 3
         private const val NETWORK_RETRY_INITIAL_DELAY_MS = 500L
+        private const val REPLACEMENT_CHARACTER = '�'
 
         private val BRACKETED_QUALIFIER_REGEX = Regex("""[\(\[\{\uFF08\uFF3B\uFF5B\u3010\u300E\u300C\u3014\u3008\u300A]([^)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]*)[\)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]""")
         private val FEATURE_QUALIFIER_REGEX = Regex("""\b(feat(?:uring)?|ft)\.?\b""", RegexOption.IGNORE_CASE)
@@ -910,12 +911,12 @@ class LyricsRepositoryImpl @Inject constructor(
             lyricsDir.mkdirs()
 
             val wordByWordLyrics = lyrics.synced
-                ?.takeIf { lines -> lines.any { !it.words.isNullOrEmpty() } }
-                ?.let(::toWordByWordLrc)
+                ?.takeIf { it.hasWordTimings() }
+                ?.let { LyricsUtils.toEnhancedLrc(it) }
 
             val lyricsData = LyricsData(
                 plainLyrics = lyrics.plain?.joinToString("\n"),
-                syncedLyrics = lyrics.synced?.joinToString("\n") { "[${formatTimestamp(it.time)}]${it.line}" },
+                syncedLyrics = lyrics.synced?.let { LyricsUtils.toEnhancedLrc(it, includeWordTimings = false) },
                 wordByWordLyrics = wordByWordLyrics
             )
 
@@ -965,30 +966,8 @@ class LyricsRepositoryImpl @Inject constructor(
         return null
     }
 
-    private fun formatTimestamp(timeMs: Int): String {
-        val totalSeconds = timeMs / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        val hundredths = (timeMs % 1000) / 10
-        return String.format(Locale.US, "%02d:%02d.%02d", minutes, seconds, hundredths)
-    }
-
-    private fun toWordByWordLrc(lines: List<SyncedLine>): String {
-        return lines.joinToString("\n") { line ->
-            val linePrefix = "[${formatTimestamp(line.time)}]"
-            val words = line.words
-            if (words.isNullOrEmpty()) {
-                linePrefix + line.line
-            } else {
-                val wordsPart = words.mapIndexed { index, word ->
-                    val separator = if (index > 0 && word.startsNewWord) " " else ""
-                    "$separator<${formatTimestamp(word.time)}>${word.word}"
-                }
-                    .joinToString("")
-                linePrefix + wordsPart
-            }
-        }
-    }
+    private fun List<SyncedLine>.hasWordTimings(): Boolean =
+        any { !it.words.isNullOrEmpty() || !it.background?.words.isNullOrEmpty() }
 
     private fun looksLikeFlattenedWordByWordCache(lyrics: Lyrics): Boolean {
         val synced = lyrics.synced ?: return false
@@ -1084,6 +1063,12 @@ class LyricsRepositoryImpl @Inject constructor(
     }
 
     private fun parseStoredLyrics(rawLyrics: String): Lyrics? {
+        // Builds before 0.3.0-alpha.19 "repaired" accented text such as Vietnamese into U+FFFD
+        // and saved it back. Skip such copies so a clean embedded tag or .lrc file is used.
+        if (rawLyrics.contains(REPLACEMENT_CHARACTER)) {
+            Timber.tag(TAG).w("Skipping stored lyrics that contain U+FFFD replacement characters")
+            return null
+        }
         val parsedLyrics = LyricsUtils.parseLyrics(rawLyrics)
         return parsedLyrics
             .takeIf { it.isValid() }
@@ -1093,14 +1078,7 @@ class LyricsRepositoryImpl @Inject constructor(
     private fun lyricsToRawContent(lyrics: Lyrics): String? {
         val syncedLyrics = lyrics.synced
         if (!syncedLyrics.isNullOrEmpty()) {
-            val hasWordTimestamps = syncedLyrics.any { !it.words.isNullOrEmpty() }
-            return if (hasWordTimestamps) {
-                toWordByWordLrc(syncedLyrics)
-            } else {
-                syncedLyrics.joinToString("\n") { line ->
-                    "[${formatTimestamp(line.time)}]${line.line}"
-                }
-            }
+            return LyricsUtils.toEnhancedLrc(syncedLyrics, includeWordTimings = syncedLyrics.hasWordTimings())
         }
 
         return lyrics.plain

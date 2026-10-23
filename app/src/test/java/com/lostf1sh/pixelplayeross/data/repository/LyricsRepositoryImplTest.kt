@@ -384,6 +384,73 @@ class LyricsRepositoryImplTest {
         coVerify(exactly = 1) { lyricsDao.insert(any()) }
     }
 
+    @Test
+    fun getLyrics_skipsStoredLyricsDamagedIntoReplacementCharacters() = runTest {
+        // Builds before 0.3.0-alpha.19 could save Vietnamese lyrics back with U+FFFD in place
+        // of letters; a clean copy elsewhere must win over the damaged one.
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        coEvery { lyricsDao.getLyrics(131L) } returns LyricsEntity(
+            songId = 131L,
+            content = "[00:01.00]Anh vẫn nhớ thân em",
+            isSynced = true,
+            source = "manual"
+        )
+        val repository = LyricsRepositoryImpl(
+            context = testContext(),
+            lrcLibApiService = mockk<LrcLibApiService>(relaxed = true),
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository(externalLyricsEnabled = false)
+        )
+        val song = testSong(id = "131", title = "Mùa Thu", artist = "Sài Gòn Echo", duration = 180_000L)
+            .copy(lyrics = "[00:01.00]Anh v\uFFFDn nh? th\uFFFDn em")
+
+        val lyrics = repository.getLyrics(song, LyricsSourcePreference.EMBEDDED_FIRST)
+
+        assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh vẫn nhớ thân em")
+    }
+
+    @Test
+    fun fetchFromRemote_diskCacheKeepsSingersAndBackgroundVocals() = runTest {
+        val filesDir = Files.createTempDirectory("pixelplayer-lyrics-test").toFile()
+        val apiService = mockk<LrcLibApiService>(relaxed = true)
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        coEvery { lyricsDao.getLyrics(107L) } returns null
+        coEvery { apiService.searchLyrics(any(), any(), any(), any()) } returns arrayOf(
+            lrcResponse(name = "Bones", artistName = "Neon Duo", duration = 180.0).copy(
+                syncedLyrics = """
+                    [00:02.00]v1:<00:02.00>There's <00:02.60>a <00:03.00>whis<00:03.40>per<00:04.00>
+                    [bg:<00:04.20>(whis<00:04.60>per)]
+                    [00:07.00]v2:<00:07.00>Kee<00:07.40>ping <00:07.90>me
+                """.trimIndent()
+            )
+        )
+        val song = testSong(id = "107", title = "Bones", artist = "Neon Duo", duration = 180_000L)
+        LyricsRepositoryImpl(
+            context = testContext(filesDir),
+            lrcLibApiService = apiService,
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository()
+        ).fetchFromRemote(song).getOrThrow()
+
+        // A fresh repository has no memory cache, so this reads the JSON written above.
+        val cached = LyricsRepositoryImpl(
+            context = testContext(filesDir),
+            lrcLibApiService = mockk<LrcLibApiService>(relaxed = true),
+            lyricsDao = mockk<LyricsDao>(relaxed = true),
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository(externalLyricsEnabled = false)
+        ).getLyrics(song, LyricsSourcePreference.EMBEDDED_FIRST)
+
+        val lines = cached!!.synced!!
+        assertThat(lines.map { it.voice }).containsExactly(1, 2).inOrder()
+        assertThat(lines.first().words!!.map { it.word }).containsExactly("There's", "a", "whis", "per").inOrder()
+        assertThat(lines.first().words!!.last().endTime).isEqualTo(4_000)
+        assertThat(lines.first().background!!.text).isEqualTo("(whisper)")
+        assertThat(lines[1].words!!.map { it.startsNewWord }).containsExactly(true, false, true).inOrder()
+    }
+
     private fun testContext(filesDir: File = Files.createTempDirectory("pixelplayer-lyrics-test").toFile()): Context {
         return mockk<Context>(relaxed = true) {
             every { this@mockk.filesDir } returns filesDir
