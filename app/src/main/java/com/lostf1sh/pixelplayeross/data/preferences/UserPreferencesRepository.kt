@@ -1636,6 +1636,42 @@ constructor(
         }
     }
 
+    val lyricsWordHighlightStyleFlow: Flow<LyricsWordHighlightStyle> = dataStore.data
+        .map { preferences ->
+            LyricsWordHighlightStyle.fromStorage(preferences[LYRICS_WORD_HIGHLIGHT_STYLE_KEY])
+        }
+        .distinctUntilChanged()
+
+    suspend fun setLyricsWordHighlightStyle(style: LyricsWordHighlightStyle) {
+        dataStore.edit { preferences ->
+            preferences[LYRICS_WORD_HIGHLIGHT_STYLE_KEY] = style.storageValue
+        }
+    }
+
+    val lyricsDuetLayoutEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[LYRICS_DUET_LAYOUT_KEY] ?: DEFAULT_LYRICS_DUET_LAYOUT_ENABLED
+        }
+        .distinctUntilChanged()
+
+    suspend fun setLyricsDuetLayoutEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[LYRICS_DUET_LAYOUT_KEY] = enabled
+        }
+    }
+
+    val showLyricsBackgroundVocalsFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[SHOW_LYRICS_BACKGROUND_VOCALS_KEY] ?: DEFAULT_SHOW_LYRICS_BACKGROUND_VOCALS
+        }
+        .distinctUntilChanged()
+
+    suspend fun setShowLyricsBackgroundVocals(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_LYRICS_BACKGROUND_VOCALS_KEY] = enabled
+        }
+    }
+
     val libraryTabsOrderFlow: Flow<String?> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
