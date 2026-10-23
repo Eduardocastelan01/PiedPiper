@@ -292,7 +292,8 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(searchQuery, currentFilter) {
+    // A filter change re-runs the query inside the search holder, so only the query restarts it.
+    LaunchedEffect(searchQuery) {
         playerViewModel.performSearch(searchQuery)
     }
     val searchResults = searchUiState.searchResults
