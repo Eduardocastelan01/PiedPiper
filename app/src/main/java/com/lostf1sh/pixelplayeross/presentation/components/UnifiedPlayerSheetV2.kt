@@ -48,6 +48,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -695,6 +697,10 @@ fun UnifiedPlayerSheetV2(
                             }
                             .semantics {
                                 contentDescription = playerSheetSemanticsDescription
+                                // Language-independent marker the baseline profile benchmarks
+                                // find through UiAutomator's resource id.
+                                testTagsAsResourceId = true
+                                testTag = playerSheetTestTag(currentSheetContentState)
                             }
                     ) {
                         // Measures the player content at the full container height and, while

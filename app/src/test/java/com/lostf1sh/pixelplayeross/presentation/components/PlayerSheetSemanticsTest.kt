@@ -40,7 +40,52 @@ class PlayerSheetSemanticsTest {
     }
 
     @Test
-    fun `english description names the track after the text the benchmarks look for`() {
+    fun `collapsed and expanded sheets carry distinct plain test tags`() {
+        assertEquals(PLAYER_SHEET_COLLAPSED_TEST_TAG, playerSheetTestTag(PlayerSheetState.COLLAPSED))
+        assertEquals(PLAYER_SHEET_EXPANDED_TEST_TAG, playerSheetTestTag(PlayerSheetState.EXPANDED))
+        assertNotEquals(PLAYER_SHEET_COLLAPSED_TEST_TAG, PLAYER_SHEET_EXPANDED_TEST_TAG)
+        PlayerSheetState.entries.map(::playerSheetTestTag).forEach { tag ->
+            assertTrue(RESOURCE_ID_SAFE.matches(tag), "Not a plain resource id: $tag")
+        }
+    }
+
+    @Test
+    fun `player sheet exposes its state tag as a resource id`() {
+        val sheet = File(javaSourceDirectory(), "$COMPONENTS_DIR/UnifiedPlayerSheetV2.kt").readText()
+
+        assertTrue(sheet.contains("testTagsAsResourceId = true"), "The sheet tag is not exposed as a resource id")
+        assertTrue(
+            sheet.contains("testTag = playerSheetTestTag(currentSheetContentState)"),
+            "The sheet does not tag its current state",
+        )
+    }
+
+    @Test
+    fun `player sheet benchmarks wait on the app's sheet tags instead of the translated description`() {
+        val benchmarks = benchmarkSource().readText()
+
+        assertTrue(
+            benchmarks.contains("SHEET_COLLAPSED_RESOURCE_ID = \"$PLAYER_SHEET_COLLAPSED_TEST_TAG\""),
+            "PlayerSheetAnimationBenchmarks no longer matches $PLAYER_SHEET_COLLAPSED_TEST_TAG",
+        )
+        assertTrue(
+            benchmarks.contains("SHEET_EXPANDED_RESOURCE_ID = \"$PLAYER_SHEET_EXPANDED_TEST_TAG\""),
+            "PlayerSheetAnimationBenchmarks no longer matches $PLAYER_SHEET_EXPANDED_TEST_TAG",
+        )
+        val englishDescriptions = listOf(
+            R.string.cd_player_sheet_collapsed_no_track,
+            R.string.cd_player_sheet_expanded_no_track,
+        ).map { stringsIn("values").getValue(nameOf(it)) }
+        englishDescriptions.forEach { description ->
+            assertTrue(
+                !benchmarks.contains(description, ignoreCase = true),
+                "PlayerSheetAnimationBenchmarks still waits on the translated text \"$description\"",
+            )
+        }
+    }
+
+    @Test
+    fun `english description names the sheet state and the track`() {
         val english = resourcesFor("values")
 
         assertEquals(
@@ -118,7 +163,7 @@ class PlayerSheetSemanticsTest {
 
     @Test
     fun `player chrome sources pass labels through string resources`() {
-        val sources = File(javaSourceDirectory(), "com/lostf1sh/pixelplayeross/presentation/components")
+        val sources = File(javaSourceDirectory(), COMPONENTS_DIR)
         val leftovers = PLAYER_CHROME_SOURCES.flatMap { path ->
             val file = File(sources, path)
             assertTrue(file.isFile, "Missing ${file.path}")
@@ -134,6 +179,11 @@ class PlayerSheetSemanticsTest {
         File("src/main/java"),
         File("app/src/main/java"),
     ).first { it.isDirectory }
+
+    private fun benchmarkSource(): File = sequenceOf(
+        File("../baselineprofile"),
+        File("baselineprofile"),
+    ).map { File(it, BENCHMARK_SOURCE) }.first { it.isFile }
 
     /** A [Resources] that answers from the XML of [folder], the way the device would for that locale. */
     private fun resourcesFor(folder: String): Resources {
@@ -155,6 +205,11 @@ class PlayerSheetSemanticsTest {
 
     private companion object {
         val FORMAT_ARG = Regex("""%\d+\$[a-z]""")
+        val RESOURCE_ID_SAFE = Regex("[a-z_]+")
+
+        const val COMPONENTS_DIR = "com/lostf1sh/pixelplayeross/presentation/components"
+        const val BENCHMARK_SOURCE =
+            "src/main/java/com/lostf1sh/pixelplayeross/baselineprofile/PlayerSheetAnimationBenchmarks.kt"
 
         /** A label or TalkBack text given as an English literal: `contentDesc = "Shuffle"`, `isX -> "Loading…"`. */
         val HARDCODED_LABEL = Regex(

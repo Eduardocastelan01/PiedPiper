@@ -6,10 +6,23 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerSheetState
 
 /**
+ * Test tags of the player sheet card, exposed to UiAutomator as its resource id. They stay the same
+ * in every language, so the baseline profile benchmarks wait on them instead of the translated
+ * [playerSheetContentDescription]. PlayerSheetAnimationBenchmarks repeats these values.
+ */
+internal const val PLAYER_SHEET_COLLAPSED_TEST_TAG = "player_sheet_collapsed"
+internal const val PLAYER_SHEET_EXPANDED_TEST_TAG = "player_sheet_expanded"
+
+internal fun playerSheetTestTag(state: PlayerSheetState): String =
+    when (state) {
+        PlayerSheetState.COLLAPSED -> PLAYER_SHEET_COLLAPSED_TEST_TAG
+        PlayerSheetState.EXPANDED -> PLAYER_SHEET_EXPANDED_TEST_TAG
+    }
+
+/**
  * TalkBack description of the player sheet card, naming [songTitle] when there is one.
  *
- * Takes the caller's [resources] so it follows the in-app language. The English text starts with
- * "PixelPlayer player sheet collapsed/expanded", which the baseline profile benchmarks match.
+ * Takes the caller's [resources] so it follows the in-app language.
  */
 internal fun playerSheetContentDescription(
     resources: Resources,
