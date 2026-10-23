@@ -1,5 +1,8 @@
 package com.lostf1sh.pixelplayeross.utils
 
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.parsers.ParserConfigurationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -136,5 +139,54 @@ class TtmlLyricsParserTest {
         assertFalse(lrc.contains("v1:"))
         assertNull(LyricsUtils.parseLyrics(lrc).synced!!.single().voice)
         assertTrue(lrc.startsWith("[00:01.00]Solo"))
+    }
+
+    @Test
+    fun parsesWithAnXmlParserThatSupportsNoHardeningFeatures() {
+        // Android's DocumentBuilderFactory throws for XInclude, attributes and these features.
+        val previous = System.setProperty(FACTORY_PROPERTY, FeaturelessDocumentBuilderFactory::class.java.name)
+        val lrc = try {
+            assertTrue(DocumentBuilderFactory.newInstance() is FeaturelessDocumentBuilderFactory)
+            TtmlLyricsParser.parseToEnhancedLrc(
+                ttml(body = """<p begin="1.000" ttm:agent="v2"><span begin="1.000" end="1.500">Still</span> <span begin="1.500">here</span></p>""")
+            )
+        } finally {
+            if (previous == null) System.clearProperty(FACTORY_PROPERTY) else System.setProperty(FACTORY_PROPERTY, previous)
+        }
+
+        assertEquals("[00:01.00]v2:<00:01.00>Still <00:01.50>here", lrc)
+    }
+
+    @Test
+    fun documentTypeDeclarations_areRefusedBeforeParsing() {
+        val withInternalEntity = """
+            <!DOCTYPE tt [<!ENTITY chorus "la la la">]>
+            <tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="1.000">&chorus;</p></div></body></tt>
+        """.trimIndent()
+
+        assertNull(TtmlLyricsParser.parseToEnhancedLrc(withInternalEntity))
+    }
+
+    /** Behaves like Android's factory: only namespace awareness, no hardening settings. */
+    class FeaturelessDocumentBuilderFactory : DocumentBuilderFactory() {
+        override fun newDocumentBuilder(): DocumentBuilder =
+            newInstance(JDK_FACTORY, null)
+                .also { it.isNamespaceAware = isNamespaceAware }
+                .newDocumentBuilder()
+
+        override fun setAttribute(name: String, value: Any?) = throw IllegalArgumentException(name)
+
+        override fun getAttribute(name: String): Any = throw IllegalArgumentException(name)
+
+        override fun setFeature(name: String, value: Boolean) = throw ParserConfigurationException(name)
+
+        override fun getFeature(name: String): Boolean = throw ParserConfigurationException(name)
+
+        override fun setXIncludeAware(state: Boolean) = throw UnsupportedOperationException()
+    }
+
+    private companion object {
+        const val FACTORY_PROPERTY = "javax.xml.parsers.DocumentBuilderFactory"
+        const val JDK_FACTORY = "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl"
     }
 }

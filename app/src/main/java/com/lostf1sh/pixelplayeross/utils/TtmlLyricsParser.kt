@@ -21,22 +21,32 @@ internal object TtmlLyricsParser {
     // A closing tag that the next syllable's opening tag repeats ("I<00:09.44> <00:09.44>bet").
     private val REDUNDANT_END_TAG_REGEX = Regex("<(\\d{2}:\\d{2}\\.\\d{2})>(\\s*)(?=<\\1>)")
 
+    // TTML never declares a document type. Refusing one up front keeps entity declarations out on
+    // every XML parser, including Android's, which supports none of the hardening features below.
+    private val DOCUMENT_TYPE_DECLARATION_REGEX = Regex("<!\\s*(DOCTYPE|ENTITY)", RegexOption.IGNORE_CASE)
+
+    private val HARDENING_FEATURES = listOf(
+        XMLConstants.FEATURE_SECURE_PROCESSING to true,
+        "http://apache.org/xml/features/disallow-doctype-decl" to true,
+        "http://xml.org/sax/features/external-general-entities" to false,
+        "http://xml.org/sax/features/external-parameter-entities" to false,
+        "http://apache.org/xml/features/nonvalidating/load-external-dtd" to false
+    )
+
     fun parseToEnhancedLrc(ttmlText: String): String? {
         return runCatching {
             val normalizedTtml = normalizeTtmlDocument(ttmlText)
-            if (normalizedTtml.isBlank()) {
+            if (normalizedTtml.isBlank() || DOCUMENT_TYPE_DECLARATION_REGEX.containsMatchIn(normalizedTtml)) {
                 return null
             }
 
             val builder = DocumentBuilderFactory.newInstance().apply {
                 isNamespaceAware = true
-                isXIncludeAware = false
                 setExpandEntityReferences(false)
-                setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-                setFeature("http://xml.org/sax/features/external-general-entities", false)
-                setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-                setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                // Android's factory throws for XInclude and for every feature but namespaces and
+                // validation, so each setting is best effort.
+                runCatching { isXIncludeAware = false }
+                HARDENING_FEATURES.forEach { (feature, enabled) -> runCatching { setFeature(feature, enabled) } }
                 runCatching { setAttribute("http://javax.xml.XMLConstants/property/accessExternalDTD", "") }
                 runCatching { setAttribute("http://javax.xml.XMLConstants/property/accessExternalSchema", "") }
             }.newDocumentBuilder().apply {
