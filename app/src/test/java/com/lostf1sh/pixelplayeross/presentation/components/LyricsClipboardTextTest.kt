@@ -158,9 +158,18 @@ class LyricsClipboardTextTest {
     @Test
     fun fullLyrics_keepsDecomposedVietnameseMarks() {
         val decomposed = Normalizer.normalize("Người ơi người ở đừng về", Normalizer.Form.NFD)
-        val lyrics = LyricsUtils.parseLyrics("[00:01.00]$decomposed")
+        val lyrics = Lyrics(synced = listOf(SyncedLine(time = 1000, line = decomposed)))
 
         assertEquals(decomposed, LyricsClipboardText.fullLyrics(lyrics))
+    }
+
+    @Test
+    fun fullLyrics_parsedDecomposedVietnamese_copiesComposedMarks() {
+        val composed = "Người ơi người ở đừng về"
+        val decomposed = Normalizer.normalize(composed, Normalizer.Form.NFD)
+        val lyrics = LyricsUtils.parseLyrics("[00:01.00]$decomposed")
+
+        assertEquals(composed, LyricsClipboardText.fullLyrics(lyrics))
     }
 
     @Test
