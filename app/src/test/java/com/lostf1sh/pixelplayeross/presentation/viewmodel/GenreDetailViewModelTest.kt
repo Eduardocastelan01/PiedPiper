@@ -77,6 +77,25 @@ class GenreDetailViewModelTest {
         verify { musicRepository.getMusicByGenre("Shoegaze") }
     }
 
+    @Test
+    fun `a placeholder genre value opens the Unknown bucket`() = runTest {
+        val viewModel = createViewModel("<unknown>")
+
+        assertEquals("unknown", viewModel.uiState.value.genre?.id)
+        verify { musicRepository.getMusicByGenre("Unknown") }
+    }
+
+    @Test
+    fun `a placeholder genre value lists untagged songs when the library has no Unknown bucket`() = runTest {
+        every { musicRepository.getGenres() } returns flowOf(libraryGenres.filterNot { it.id == "unknown" })
+
+        val viewModel = createViewModel("Unknown Genre")
+
+        assertEquals("unknown", viewModel.uiState.value.genre?.id)
+        assertEquals("Unknown", viewModel.uiState.value.genre?.name)
+        verify { musicRepository.getMusicByGenre("Unknown") }
+    }
+
     private fun createViewModel(genreArgument: String) = GenreDetailViewModel(
         musicRepository = musicRepository,
         savedStateHandle = SavedStateHandle(

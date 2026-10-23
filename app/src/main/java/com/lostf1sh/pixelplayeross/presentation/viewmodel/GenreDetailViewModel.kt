@@ -21,6 +21,9 @@ import javax.inject.Inject
 
 enum class SortOption { ARTIST, ALBUM, TITLE }
 
+/** Matches the name MusicRepository gives its Unknown bucket. */
+private const val UNKNOWN_GENRE_NAME = "Unknown"
+
 data class AlbumData(
     val name: String,
     val artUri: String?,
@@ -182,24 +185,29 @@ class GenreDetailViewModel @Inject constructor(
     /**
      * Resolves the navigation argument to a library genre. Genre tiles pass an id, while song info
      * and stats pass a genre name or a song's whole genre value, such as "Alternative; Indie Rock",
-     * which opens its first genre.
+     * which opens its first genre. A placeholder such as "<unknown>" holds no genre, so it opens
+     * the Unknown bucket its songs are counted in.
      */
     private fun findGenre(genres: List<Genre>, genreId: String): Genre? {
-        val requestedKey = GenreParser.key(GenreParser.split(genreId).firstOrNull() ?: genreId)
+        val requestedName = GenreParser.split(genreId).firstOrNull()
+            ?: return genres.find { it.id == UNKNOWN_GENRE_ID }
+        val requestedKey = GenreParser.key(requestedName)
         return genres.find { it.id.equals(genreId, ignoreCase = true) }
             ?: genres.find { it.id == requestedKey }
     }
 
     private fun fallbackGenre(genreId: String): Genre {
-        val requestedName = GenreParser.split(genreId).firstOrNull() ?: genreId
-        // A bare id such as "hip_hop" reads better with its spaces back.
-        val name = if (requestedName.none(Char::isWhitespace) && '_' in requestedName) {
-            requestedName.replace("_", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        } else {
-            requestedName
+        val requestedName = GenreParser.split(genreId).firstOrNull()
+        val name = when {
+            // getMusicByGenre lists the untagged songs for the Unknown id.
+            requestedName == null -> UNKNOWN_GENRE_NAME
+            // A bare id such as "hip_hop" reads better with its spaces back.
+            requestedName.none(Char::isWhitespace) && '_' in requestedName ->
+                requestedName.replace("_", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            else -> requestedName
         }
         return Genre(
-            id = GenreParser.key(requestedName),
+            id = if (requestedName == null) UNKNOWN_GENRE_ID else GenreParser.key(requestedName),
             name = name,
             lightColorHex = "#9E9E9E", onLightColorHex = "#000000",
             darkColorHex = "#616161", onDarkColorHex = "#FFFFFF"
