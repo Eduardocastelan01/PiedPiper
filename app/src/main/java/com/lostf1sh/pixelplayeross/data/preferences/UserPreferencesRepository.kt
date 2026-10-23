@@ -190,6 +190,8 @@ constructor(
         val ARTIST_WORD_DELIMITERS = stringPreferencesKey("artist_word_delimiters")
         val EXTRACT_ARTISTS_FROM_TITLE = booleanPreferencesKey("extract_artists_from_title")
         val GROUP_BY_ALBUM_ARTIST = booleanPreferencesKey("group_by_album_artist")
+        val ARTIST_ALBUMS_COLLAPSED_BY_DEFAULT =
+                booleanPreferencesKey("artist_albums_collapsed_by_default")
         val ARTIST_SETTINGS_RESCAN_REQUIRED =
                 booleanPreferencesKey("artist_settings_rescan_required")
 
@@ -550,6 +552,18 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.GROUP_BY_ALBUM_ARTIST] = enabled
             preferences[PreferencesKeys.ARTIST_SETTINGS_RESCAN_REQUIRED] = true
+        }
+    }
+
+    /** Display-only: the artist page reads it when it opens, so no rescan is needed. */
+    val artistAlbumsCollapsedByDefaultFlow: Flow<Boolean> =
+            dataStore.data.map { preferences ->
+                preferences[PreferencesKeys.ARTIST_ALBUMS_COLLAPSED_BY_DEFAULT] ?: false
+            }.distinctUntilChanged()
+
+    suspend fun setArtistAlbumsCollapsedByDefault(collapsed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ARTIST_ALBUMS_COLLAPSED_BY_DEFAULT] = collapsed
         }
     }
 
