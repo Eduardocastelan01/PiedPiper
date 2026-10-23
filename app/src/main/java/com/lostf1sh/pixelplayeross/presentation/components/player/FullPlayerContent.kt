@@ -1776,7 +1776,7 @@ private fun EfficientSlider(
         isPlaying = isPlaying,
         isVisible = isVisible,
         trackEdgePadding = trackEdgePadding,
-        semanticsLabel = "Playback position",
+        semanticsLabel = stringResource(R.string.cd_playback_position),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp, horizontal = 0.dp)
@@ -2486,7 +2486,7 @@ private fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onShuffleToggle,
                 iconId = R.drawable.rounded_shuffle_24,
-                contentDesc = "Shuffle"
+                contentDesc = stringResource(R.string.cd_shuffle)
             )
             val repeatActive = repeatMode != Player.REPEAT_MODE_OFF
             val repeatIcon = when (repeatMode) {
@@ -2504,7 +2504,7 @@ private fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onRepeatToggle,
                 iconId = repeatIcon,
-                contentDesc = "Repeat"
+                contentDesc = stringResource(R.string.cd_repeat)
             )
             ToggleSegmentButton(
                 modifier = commonModifier,
@@ -2516,7 +2516,7 @@ private fun BottomToggleRow(
                 inactiveContentColor = inactiveContentColor,
                 onClick = onFavoriteToggle,
                 iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
-                contentDesc = "Favorite"
+                contentDesc = stringResource(R.string.cd_favorite)
             )
         }
     }

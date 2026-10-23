@@ -1,7 +1,9 @@
 package com.lostf1sh.pixelplayeross
 
+import com.lostf1sh.pixelplayeross.LocaleStringResources.assertTranslatedEverywhere
+import com.lostf1sh.pixelplayeross.LocaleStringResources.nameOf
+import com.lostf1sh.pixelplayeross.LocaleStringResources.stringsIn
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
-import java.io.File
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -23,7 +25,7 @@ class MainNavItemsTest {
 
     @Test
     fun `every navigation label is translated in every locale`() {
-        assertTranslatedEverywhere(MainNavItems.map { stringResourceName(it.labelResId) })
+        assertTranslatedEverywhere(MainNavItems.map { nameOf(it.labelResId) })
     }
 
     @Test
@@ -32,7 +34,7 @@ class MainNavItemsTest {
         val chinese = stringsIn("values-zh-rCN")
 
         MainNavItems.forEach { item ->
-            val name = stringResourceName(item.labelResId)
+            val name = nameOf(item.labelResId)
             val label = chinese[name]
             assertTrue(!label.isNullOrEmpty(), "values-zh-rCN has no text for $name")
             assertNotEquals(english[name], label, "$name is still English in values-zh-rCN")
@@ -53,7 +55,7 @@ class MainNavItemsTest {
                 R.string.song_info_label_provider,
                 R.string.song_info_label_path,
                 R.string.cd_playlist_artwork,
-            ).map(::stringResourceName)
+            ).map(LocaleStringResources::nameOf)
         )
     }
 
@@ -66,43 +68,7 @@ class MainNavItemsTest {
                 R.string.queue_name_all_songs_shuffled,
                 R.string.queue_name_liked_songs_shuffled,
                 R.string.queue_name_selected_songs,
-            ).map(::stringResourceName)
+            ).map(LocaleStringResources::nameOf)
         )
-    }
-
-    private fun assertTranslatedEverywhere(names: List<String>) {
-        val localeDirs = resDirectory().listFiles { file ->
-            file.isDirectory && (file.name == "values" || LOCALE_DIR.matches(file.name))
-        }.orEmpty()
-        assertTrue(localeDirs.size > 1, "No locale folders found under ${resDirectory()}")
-
-        localeDirs.forEach { dir ->
-            val strings = stringsIn(dir.name)
-            names.forEach { name ->
-                assertTrue(!strings[name].isNullOrEmpty(), "${dir.name} has no text for $name")
-            }
-        }
-    }
-
-    private fun stringsIn(folder: String): Map<String, String> {
-        val xml = File(resDirectory(), folder).listFiles { file -> file.extension == "xml" }.orEmpty()
-            .joinToString("\n") { it.readText() }
-        return STRING_ENTRY.findAll(xml).associate { match ->
-            match.groupValues[1] to match.groupValues[2].trim()
-        }
-    }
-
-    private fun stringResourceName(id: Int): String =
-        R.string::class.java.fields.first { it.getInt(null) == id }.name
-
-    private fun resDirectory(): File = sequenceOf(
-        File("src/main/res"),
-        File("app/src/main/res"),
-    ).first { it.isDirectory }
-
-    private companion object {
-        // Translation folders such as values-ru or values-zh-rCN, not qualifiers like values-night.
-        val LOCALE_DIR = Regex("""values-[a-z]{2,3}(-r[A-Z]{2})?""")
-        val STRING_ENTRY = Regex("""<string name="([^"]+)"[^>]*>([^<]*)</string>""")
     }
 }

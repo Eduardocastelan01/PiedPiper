@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
@@ -605,12 +606,14 @@ fun UnifiedPlayerSheetV2(
 
     if (!actuallyShowSheetContent) return
 
+    val sheetResources = LocalResources.current
+    val currentSongTitle = infrequentPlayerState.currentSong?.title
     val playerSheetSemanticsDescription = remember(
+        sheetResources,
         currentSheetContentState,
-        infrequentPlayerState.currentSong?.title
+        currentSongTitle
     ) {
-        "PixelPlayer player sheet ${currentSheetContentState.name.lowercase()} " +
-            (infrequentPlayerState.currentSong?.title ?: "")
+        playerSheetContentDescription(sheetResources, currentSheetContentState, currentSongTitle)
     }
 
     Surface(

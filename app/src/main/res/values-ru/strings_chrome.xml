@@ -10,4 +10,19 @@
     <string name="queue_name_all_songs_shuffled">Все треки (вперемешку)</string>
     <string name="queue_name_liked_songs_shuffled">Избранные треки (вперемешку)</string>
     <string name="queue_name_selected_songs">Выбранные треки</string>
+
+    <!-- Player sheet, mini player and full player chrome -->
+    <string name="cd_player_sheet_collapsed">Панель плеера PixelPlayer свёрнута, %1$s</string>
+    <string name="cd_player_sheet_expanded">Панель плеера PixelPlayer развёрнута, %1$s</string>
+    <string name="cd_player_sheet_collapsed_no_track">Панель плеера PixelPlayer свёрнута</string>
+    <string name="cd_player_sheet_expanded_no_track">Панель плеера PixelPlayer развёрнута</string>
+    <string name="mini_player_connecting_device">Подключение к устройству…</string>
+    <string name="mini_player_preparing_playback">Подготовка воспроизведения…</string>
+    <string name="mini_player_loading_audio">Загрузка аудио…</string>
+    <string name="cd_shuffle">Перемешать</string>
+    <string name="cd_playback_position">Позиция воспроизведения</string>
+    <string name="add_bookmark_title">Сохранить закладку</string>
+    <string name="add_bookmark_saved_point">Сохранённая позиция воспроизведения</string>
+    <string name="add_bookmark_use_lyric_line">Использовать строку текста</string>
+    <string name="add_bookmark_default_name">Закладка @ %1$s</string>
 </resources>
