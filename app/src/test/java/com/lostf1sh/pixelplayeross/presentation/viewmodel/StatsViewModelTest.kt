@@ -12,6 +12,7 @@ import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackEvent
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackStatsSummary
 import com.lostf1sh.pixelplayeross.data.stats.StatsTimeRange
+import com.lostf1sh.pixelplayeross.di.DispatcherProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -22,6 +23,7 @@ import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempDirectory
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,9 +37,19 @@ import timber.log.Timber
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatsViewModelTest {
 
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @JvmField
     @RegisterExtension
-    val mainCoroutineExtension = MainCoroutineExtension(UnconfinedTestDispatcher())
+    val mainCoroutineExtension = MainCoroutineExtension(testDispatcher)
+
+    // Loads run on the test scheduler: one still running on a real pool when a test ends would
+    // resume through Dispatchers.Main after it is reset and fail a later test.
+    private val dispatchers = object : DispatcherProvider {
+        override val main: CoroutineDispatcher = testDispatcher
+        override val io: CoroutineDispatcher = testDispatcher
+        override val default: CoroutineDispatcher = testDispatcher
+    }
 
     /**
      * Builds summaries with the real aggregation code. Its history file is not used: AtomicFile is
@@ -276,7 +288,8 @@ class StatsViewModelTest {
     private fun createViewModel() = StatsViewModel(
         playbackStatsRepository = playbackStatsRepository,
         musicRepository = musicRepository,
-        artistImageRepository = artistImageRepository
+        artistImageRepository = artistImageRepository,
+        dispatchers = dispatchers
     )
 
     /** Skips the initial Loading state when the first load has not finished yet. */
