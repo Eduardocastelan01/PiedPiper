@@ -148,6 +148,27 @@ class TtmlLyricsParserTest {
     }
 
     @Test
+    fun paragraphSungOnlyInTheBackground_keepsItsTranslationOnTheBackingLine() {
+        val ttmlText = ttml(
+            body = """
+                <p begin="1.000" ttm:agent="v1">Lead line</p>
+                <p begin="10.000" ttm:agent="v2"><span ttm:role="x-bg"><span begin="10.000" end="10.500">(Ooh</span> <span begin="10.500" end="11.200">ooh)</span></span><span ttm:role="x-translation" xml:lang="es">(Uh uh)</span></p>
+            """.trimIndent()
+        )
+        val lyrics = LyricsUtils.parseLyrics(ttmlText)
+
+        val synced = requireNotNull(lyrics.synced)
+        assertEquals(listOf("Lead line", ""), synced.map { it.line })
+        val backingLine = synced[1]
+        assertEquals(10_000, backingLine.time)
+        assertEquals(2, backingLine.voice)
+        assertEquals("(Uh uh)", backingLine.translation)
+        assertEquals("(Ooh ooh)", backingLine.background!!.text)
+        assertEquals("(Ooh ooh)\n(Uh uh)", lyrics.plain!![1])
+        assertEquals(synced, LyricsUtils.parseLyrics(LyricsUtils.toEnhancedLrc(synced)).synced)
+    }
+
+    @Test
     fun spanEndTimes_closeEachSyllable() {
         val words = requireNotNull(
             LyricsUtils.parseLyrics(

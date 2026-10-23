@@ -688,6 +688,8 @@ object LyricsUtils {
         val syncedLines = mutableListOf<SyncedLine>()
         val plainLines = mutableListOf<String>()
         var isSynced = false
+        // True while the only synced line is the empty one made for backing vocals before any line.
+        var holdsOpeningBackground = false
 
         normalizedInput.lines().forEach { rawLine ->
             val line = sanitizeLrcLine(rawLine)
@@ -709,6 +711,7 @@ object LyricsUtils {
                     // own, like a TTML paragraph sung only in the background, so they still hide
                     // with the background vocals setting.
                     isSynced = true
+                    holdsOpeningBackground = true
                     syncedLines.add(
                         SyncedLine(
                             time = background.words.first().time,
@@ -733,19 +736,27 @@ object LyricsUtils {
                 val millis = if (lineMatcher.group(3)?.length == 2) fraction * 10 else fraction
                 val lineTimestamp = minutes * 60 * 1000 + seconds * 1000 + millis
 
-                if (text.contains(LRC_WORD_TAG_REGEX)) {
+                val syncedLine = if (text.contains(LRC_WORD_TAG_REGEX)) {
                     val words = parseTimedWords(text, lineTimestamp)
                     val displayText = LRC_WORD_TAG_REGEX.replace(text, "")
-                    syncedLines.add(
-                        SyncedLine(
-                            time = lineTimestamp.toInt(),
-                            line = displayText,
-                            words = words.takeIf { it.isNotEmpty() },
-                            voice = voice
-                        )
+                    SyncedLine(
+                        time = lineTimestamp.toInt(),
+                        line = displayText,
+                        words = words.takeIf { it.isNotEmpty() },
+                        voice = voice
                     )
                 } else {
-                    syncedLines.add(SyncedLine(time = lineTimestamp.toInt(), line = text, voice = voice))
+                    SyncedLine(time = lineTimestamp.toInt(), line = text, voice = voice)
+                }
+                // Backing vocals written just before a line at that line's own time are sung with
+                // it. Kept on an empty line of their own, the line would pair as their translation.
+                val opening = syncedLines.singleOrNull()
+                    ?.takeIf { holdsOpeningBackground && it.line.isBlank() && it.time == syncedLine.time }
+                holdsOpeningBackground = false
+                if (opening != null) {
+                    syncedLines[0] = syncedLine.copy(background = opening.background)
+                } else {
+                    syncedLines.add(syncedLine)
                 }
             } else {
                 val stripped = stripLrcTimestamps(stripFormatCharacters(line))
@@ -1050,6 +1061,8 @@ object LyricsUtils {
      * The second line is treated as a translation of the first.
      * Only pairs one translation per original — a third line at the same timestamp stays separate.
      * A line marked for another singer (`v2:` after `v1:`) is a duet part, not a translation.
+     * An empty line that carries backing vocals (a TTML paragraph sung only in the background)
+     * takes an untimed line as its translation, so it hides with them; a word-timed one is sung.
      */
     internal fun pairTranslationLines(lines: List<SyncedLine>): List<SyncedLine> {
         if (lines.size < 2) return lines
@@ -1062,9 +1075,9 @@ object LyricsUtils {
                 next != null &&
                 next.time == current.time &&
                 current.translation == null &&
-                current.line.isNotBlank() &&
                 next.line.isNotBlank() &&
-                (next.voice == null || next.voice == current.voice)
+                (next.voice == null || next.voice == current.voice) &&
+                (current.line.isNotBlank() || current.takesTranslationAsBackingOnlyLine(next))
             ) {
                 val translationParts = mutableListOf(next.line)
                 var consumed = 2
@@ -1088,6 +1101,12 @@ object LyricsUtils {
         }
         return result
     }
+
+    private fun SyncedLine.takesTranslationAsBackingOnlyLine(next: SyncedLine): Boolean =
+        line.isBlank() &&
+            !background?.text.isNullOrBlank() &&
+            next.words.isNullOrEmpty() &&
+            next.background == null
 
     internal fun stripLrcTimestamps(value: String): String {
         if (value.isEmpty()) return value

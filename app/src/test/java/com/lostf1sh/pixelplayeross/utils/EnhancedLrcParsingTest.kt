@@ -160,7 +160,7 @@ class EnhancedLrcParsingTest {
     }
 
     @Test
-    fun timedBackgroundLineBeforeALineAtTheSameTime_isNotPairedAsItsTranslation() {
+    fun timedBackgroundLineBeforeALineAtTheSameTime_isSungUnderThatLineRatherThanPairedAsItsTranslation() {
         val lines = parseSynced(
             """
             [bg:<00:03.00>(oh)]
@@ -168,9 +168,69 @@ class EnhancedLrcParsingTest {
             """.trimIndent()
         )
 
-        assertEquals(listOf("", "First line"), lines.map { it.line })
-        assertEquals("(oh)", lines.first().background!!.text)
-        assertNull(lines[1].translation)
+        val line = lines.single()
+        assertEquals("First line", line.line)
+        assertEquals("(oh)", line.background!!.text)
+        assertNull(line.translation)
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
+        val untimed = parseSynced(LyricsUtils.syncedToLrcString(lines)).single()
+        assertEquals("First line", untimed.line)
+        assertEquals(BackgroundVocals(text = "(oh)"), untimed.background)
+        assertNull(untimed.translation)
+    }
+
+    @Test
+    fun untimedLineAtTheTimeOfABackingOnlyLine_isItsTranslation() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            [00:10.00]v2:
+            [bg:<00:10.00>(Ooh <00:10.50>ooh)<00:11.20>]
+            [00:10.00](Uh uh)
+            [00:12.00]v1:Lead line
+            """.trimIndent()
+        )
+
+        val lines = requireNotNull(lyrics.synced)
+        assertEquals(listOf("", "Lead line"), lines.map { it.line })
+        val backingLine = lines.first()
+        assertEquals(2, backingLine.voice)
+        assertEquals("(Uh uh)", backingLine.translation)
+        assertEquals("(Ooh ooh)", backingLine.background!!.text)
+        assertEquals("(Ooh ooh)\n(Uh uh)", lyrics.plain!!.first())
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
+        val untimed = parseSynced(LyricsUtils.syncedToLrcString(lines)).first()
+        assertEquals("", untimed.line)
+        assertEquals("(Uh uh)", untimed.translation)
+        assertEquals(BackgroundVocals(text = "(Ooh ooh)"), untimed.background)
+    }
+
+    @Test
+    fun wordTimedLineAtTheTimeOfABackingOnlyLine_staysASungLine() {
+        val lines = parseSynced(
+            """
+            [00:10.00]
+            [bg:<00:10.00>(ooh)]
+            [00:10.00]<00:10.00>Sung <00:10.50>line
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "Sung line"), lines.map { it.line })
+        assertTrue(lines.all { it.translation == null })
+    }
+
+    @Test
+    fun lineForAnotherSingerAtTheTimeOfABackingOnlyLine_staysASungLine() {
+        val lines = parseSynced(
+            """
+            [00:10.00]v2:
+            [bg:<00:10.00>(ooh)]
+            [00:10.00]v1:Lead line
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "Lead line"), lines.map { it.line })
+        assertEquals(listOf(2, 1), lines.map { it.voice })
+        assertTrue(lines.all { it.translation == null })
     }
 
     @Test

@@ -200,6 +200,24 @@ class LyricsClipboardTextTest {
     }
 
     @Test
+    fun fullLyrics_ttmlBackingOnlyParagraph_leavesItsTranslationOut() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+              <body><div>
+                <p begin="1.000" ttm:agent="v1">Lead line</p>
+                <p begin="4.000" ttm:agent="v2"><span ttm:role="x-bg"><span begin="4.000" end="4.500">(Ooh</span> <span begin="4.500" end="5.000">ooh)</span></span><span ttm:role="x-translation" xml:lang="es">(Uh uh)</span></p>
+              </div></body>
+            </tt>
+            """.trimIndent()
+        )
+
+        assertEquals("Lead line\n(Ooh ooh)", LyricsClipboardText.fullLyrics(lyrics, includeBackground = true))
+        assertEquals("Lead line", LyricsClipboardText.fullLyrics(lyrics, includeBackground = false))
+    }
+
+    @Test
     fun syncedLine_wordTimedLine_matchesTheWordsTheScreenDraws() {
         // Kugou producers can omit spaces between timed Latin tokens. The parser keeps the raw
         // text in `line` but marks the word boundary, and the lyrics screen draws "Hello world".
