@@ -265,6 +265,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
 import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.LibrarySortBottomSheet
+import com.lostf1sh.pixelplayeross.presentation.library.KeepUnscrolledListAtTop
 import com.lostf1sh.pixelplayeross.presentation.library.sortFolderSongs
 import timber.log.Timber
 import java.io.File
@@ -2775,8 +2776,10 @@ fun LibraryFoldersTab(
         }.toImmutableList()
 
         val songsToShow = remember(activeFolder, songSortOption) {
-            sortFolderSongs(activeFolder?.songs ?: emptyList(), songSortOption)
-        }.toImmutableList()
+            sortFolderSongs(activeFolder?.songs ?: emptyList(), songSortOption).toImmutableList()
+        }
+        // Uncached folder songs re-sort once their details load; an unscrolled folder stays at its top.
+        KeepUnscrolledListAtTop(listState = listState, rows = songsToShow)
         val currentSongId = currentSong?.id
         val currentSongIndexInSongs = remember(songsToShow, currentSongId) {
             currentSongId?.let { songId -> songsToShow.indexOfFirst { it.id == songId } } ?: -1
