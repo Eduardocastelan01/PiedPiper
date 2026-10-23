@@ -3,7 +3,9 @@ package com.lostf1sh.pixelplayeross.data.preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import app.cash.turbine.test
+import com.lostf1sh.pixelplayeross.data.model.SortOption
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.decodeFromString
@@ -391,6 +393,104 @@ class UserPreferencesRepositoryTest {
             repository.migrateTabOrder()
 
             assertEquals(listOf("SONGS", "LIKED"), repository.storedLibraryTabsOrder())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `folder songs sort defaults to title ascending and persists a new choice`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            assertEquals(SortOption.FolderSongTitleAZ.storageKey, repository.folderSongsSortOptionFlow.first())
+
+            repository.setFolderSongsSortOption(SortOption.FolderSongAlbumArtistDesc.storageKey)
+
+            assertEquals(
+                SortOption.FolderSongAlbumArtistDesc.storageKey,
+                repository.folderSongsSortOptionFlow.first()
+            )
+            assertEquals(SortOption.FolderNameAZ.storageKey, repository.foldersSortOptionFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `folder songs sort keeps title descending for a legacy folder name Z-A choice`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.setFoldersSortOption(SortOption.FolderNameZA.storageKey)
+            assertEquals(SortOption.FolderSongTitleZA.storageKey, repository.folderSongsSortOptionFlow.first())
+
+            repository.setFolderSongsSortOption(SortOption.FolderSongDuration.storageKey)
+            assertEquals(SortOption.FolderSongDuration.storageKey, repository.folderSongsSortOptionFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `ensureLibrarySortDefaults stores the inherited folder songs sort so later folder sorts leave it alone`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val dataStore = PreferenceDataStoreFactory.create(
+                scope = backgroundScope,
+                produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+            )
+            val repository = UserPreferencesRepository(dataStore = dataStore, json = Json)
+            // An install from before the folder songs sort existed, still holding the old display name.
+            dataStore.edit { it[stringPreferencesKey("folders_sort_option")] = SortOption.FolderNameZA.displayName }
+
+            repository.ensureLibrarySortDefaults()
+            repository.setFoldersSortOption(SortOption.FolderSongCountDesc.storageKey)
+
+            assertEquals(
+                SortOption.FolderSongTitleZA.storageKey,
+                dataStore.data.first()[stringPreferencesKey("folder_songs_sort_option")]
+            )
+            assertEquals(SortOption.FolderSongTitleZA.storageKey, repository.folderSongsSortOptionFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `an unknown folder songs sort falls back to title ascending and is repaired`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val dataStore = PreferenceDataStoreFactory.create(
+                scope = backgroundScope,
+                produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+            )
+            val repository = UserPreferencesRepository(dataStore = dataStore, json = Json)
+            val folderSongsKey = stringPreferencesKey("folder_songs_sort_option")
+            dataStore.edit {
+                it[stringPreferencesKey("folders_sort_option")] = SortOption.FolderNameZA.storageKey
+                it[folderSongsKey] = "song_artist"
+            }
+
+            assertEquals(SortOption.FolderSongTitleAZ.storageKey, repository.folderSongsSortOptionFlow.first())
+
+            repository.ensureLibrarySortDefaults()
+
+            assertEquals(SortOption.FolderSongTitleAZ.storageKey, dataStore.data.first()[folderSongsKey])
         } finally {
             tempDir.toFile().deleteRecursively()
         }

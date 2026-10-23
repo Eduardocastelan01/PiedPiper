@@ -125,6 +125,7 @@ constructor(
         val ARTISTS_SORT_OPTION = stringPreferencesKey("artists_sort_option")
         val PLAYLISTS_SORT_OPTION = stringPreferencesKey("playlists_sort_option")
         val FOLDERS_SORT_OPTION = stringPreferencesKey("folders_sort_option")
+        val FOLDER_SONGS_SORT_OPTION = stringPreferencesKey("folder_songs_sort_option")
         val LIKED_SONGS_SORT_OPTION = stringPreferencesKey("liked_songs_sort_option")
 
         val LAST_LIBRARY_TAB_INDEX =
@@ -1172,6 +1173,36 @@ constructor(
                         .storageKey
             }
 
+    val folderSongsSortOptionFlow: Flow<String> =
+            dataStore.data.map { preferences ->
+                resolveFolderSongsSortOption(preferences).storageKey
+            }
+
+    /**
+     * Folder songs used to follow the folder sort: Name (Z-A) listed them Z-A too. Until a folder
+     * songs sort is stored, that order is derived from the folder sort so updating keeps it.
+     */
+    private fun resolveFolderSongsSortOption(preferences: Preferences): SortOption {
+        val stored = preferences[PreferencesKeys.FOLDER_SONGS_SORT_OPTION]
+        if (stored != null) {
+            return SortOption.fromStorageKey(
+                    stored,
+                    SortOption.FOLDER_SONGS,
+                    SortOption.FolderSongTitleAZ
+            )
+        }
+        val folderSort = SortOption.fromStorageKey(
+                preferences[PreferencesKeys.FOLDERS_SORT_OPTION],
+                SortOption.FOLDERS,
+                SortOption.FolderNameAZ
+        )
+        return if (folderSort == SortOption.FolderNameZA) {
+            SortOption.FolderSongTitleZA
+        } else {
+            SortOption.FolderSongTitleAZ
+        }
+    }
+
     val likedSongsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 SortOption.fromStorageKey(
@@ -1210,6 +1241,12 @@ constructor(
     suspend fun setFoldersSortOption(optionKey: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.FOLDERS_SORT_OPTION] = optionKey
+        }
+    }
+
+    suspend fun setFolderSongsSortOption(optionKey: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FOLDER_SONGS_SORT_OPTION] = optionKey
         }
     }
 
@@ -1271,6 +1308,11 @@ constructor(
                     SortOption.FOLDERS,
                     SortOption.FolderNameAZ
             )
+            // Stored once, so the folder songs sort stops following a later folder sort change.
+            val folderSongsSort = resolveFolderSongsSortOption(preferences).storageKey
+            if (preferences[PreferencesKeys.FOLDER_SONGS_SORT_OPTION] != folderSongsSort) {
+                preferences[PreferencesKeys.FOLDER_SONGS_SORT_OPTION] = folderSongsSort
+            }
             migrateSortPreference(
                     preferences,
                     PreferencesKeys.LIKED_SONGS_SORT_OPTION,
