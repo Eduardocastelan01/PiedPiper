@@ -170,6 +170,19 @@ class LyricsClipboardTextTest {
     }
 
     @Test
+    fun fullLyrics_openingBackingVocals_areLeftOutWhenHidden() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            [bg:<00:01.00>(Ooh <00:01.50>ooh)<00:02.20>]
+            [00:03.00]Lead line
+            """.trimIndent()
+        )
+
+        assertEquals("(Ooh ooh)\nLead line", LyricsClipboardText.fullLyrics(lyrics, includeBackground = true))
+        assertEquals("Lead line", LyricsClipboardText.fullLyrics(lyrics, includeBackground = false))
+    }
+
+    @Test
     fun fullLyrics_ttmlBackgroundSpans_followTheirParagraph() {
         val lyrics = LyricsUtils.parseLyrics(
             """

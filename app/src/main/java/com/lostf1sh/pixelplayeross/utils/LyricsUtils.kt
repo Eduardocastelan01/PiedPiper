@@ -705,12 +705,15 @@ object LyricsUtils {
                     syncedLines[syncedLines.lastIndex] =
                         previous.copy(background = previous.background.mergedWith(background))
                 } else if (!background.words.isNullOrEmpty()) {
+                    // Backing vocals before the first sung line get an empty main line of their
+                    // own, like a TTML paragraph sung only in the background, so they still hide
+                    // with the background vocals setting.
                     isSynced = true
                     syncedLines.add(
                         SyncedLine(
                             time = background.words.first().time,
-                            line = background.text,
-                            words = background.words
+                            line = "",
+                            background = background
                         )
                     )
                 }

@@ -139,12 +139,53 @@ class EnhancedLrcParsingTest {
     }
 
     @Test
-    fun timedBackgroundLineBeforeAnyLine_becomesItsOwnLine() {
-        val line = parseSynced("[bg:<00:01.00>(oh <00:01.50>yeah)]").single()
+    fun timedBackgroundLineBeforeAnyLine_becomesAnEmptyLineCarryingTheBackingVocals() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            [bg:<00:01.00>(oh <00:01.50>yeah)]
+            [00:03.00]First line
+            """.trimIndent()
+        )
 
-        assertEquals(1_000, line.time)
-        assertEquals("(oh yeah)", line.line)
-        assertEquals(listOf("(oh", "yeah)"), line.words!!.map { it.word })
+        val lines = requireNotNull(lyrics.synced)
+        assertEquals(listOf(1_000, 3_000), lines.map { it.time })
+        assertEquals(listOf("", "First line"), lines.map { it.line })
+        val opening = lines.first()
+        assertNull(opening.words)
+        val background = requireNotNull(opening.background)
+        assertEquals("(oh yeah)", background.text)
+        assertEquals(listOf("(oh", "yeah)"), background.words!!.map { it.word })
+        assertNull(lines[1].background)
+        assertEquals("(oh yeah)", lyrics.plain!!.first())
+    }
+
+    @Test
+    fun timedBackgroundLineBeforeALineAtTheSameTime_isNotPairedAsItsTranslation() {
+        val lines = parseSynced(
+            """
+            [bg:<00:03.00>(oh)]
+            [00:03.00]First line
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "First line"), lines.map { it.line })
+        assertEquals("(oh)", lines.first().background!!.text)
+        assertNull(lines[1].translation)
+    }
+
+    @Test
+    fun openingBackgroundLines_areJoinedOnTheirEmptyLine() {
+        val line = parseSynced("[bg:<00:01.00>(oh)]\n[bg:<00:02.00>(yeah)]").single()
+
+        assertEquals("", line.line)
+        assertEquals("(oh) (yeah)", line.background!!.text)
+    }
+
+    @Test
+    fun openingBackgroundLine_survivesAnEnhancedLrcRoundTrip() {
+        val parsed = parseSynced("[bg:<00:01.00>(oh <00:01.50>yeah)<00:02.00>]\n[00:03.00]First line")
+
+        assertEquals(parsed, parseSynced(LyricsUtils.toEnhancedLrc(parsed)))
     }
 
     @Test
