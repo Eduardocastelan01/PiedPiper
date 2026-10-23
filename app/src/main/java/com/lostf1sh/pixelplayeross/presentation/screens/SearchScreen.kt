@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1217,7 +1216,6 @@ fun SearchResultsList(
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
     val systemBarPaddingBottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 94.dp
 
-    val listState = rememberLazyListState()
     val dragSelectState = rememberDragToSelectState()
     // Section headers, albums, artists and playlists share the list with the songs but are not
     // selectable, so each list index maps to its song, if any.
