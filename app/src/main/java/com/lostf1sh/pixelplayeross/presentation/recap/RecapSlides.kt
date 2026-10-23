@@ -2,6 +2,7 @@
 
 package com.lostf1sh.pixelplayeross.presentation.recap
 
+import android.icu.text.ListFormatter
 import android.text.format.DateFormat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
@@ -60,9 +61,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +86,9 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+
+/** Bars on the listening clock, one per hour. */
+private const val HOURS_PER_DAY = 24
 
 /** What the summary slide's buttons do; the rest of the story only reads. */
 @Immutable
@@ -324,6 +330,15 @@ private fun MonthsSlide(
         Month.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale) }
     }
     val peakMs = slide.monthlyMs[slide.peakMonthIndex]
+    // The bars and their one-letter labels are hidden from screen readers; this reads them out.
+    val resources = LocalResources.current
+    val chartDescription = remember(slide.monthlyMs, locale, resources) {
+        val monthNames = Month.entries.map { it.getDisplayName(TextStyle.FULL_STANDALONE, locale) }
+        resources.getString(
+            R.string.recap_cd_months_chart,
+            ListFormatter.getInstance(locale).format(recapChartEntries(resources, monthNames, slide.monthlyMs))
+        )
+    }
 
     RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
         RecapKicker(
@@ -352,6 +367,7 @@ private fun MonthsSlide(
             peakIndex = slide.peakMonthIndex,
             palette = palette,
             reveal = reveal,
+            description = chartDescription,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
@@ -385,10 +401,11 @@ private fun MonthBars(
     peakIndex: Int,
     palette: RecapPalette,
     reveal: () -> Float,
+    description: String,
     modifier: Modifier = Modifier
 ) {
     val max = monthlyMs.maxOrNull()?.coerceAtLeast(1L) ?: 1L
-    Canvas(modifier = modifier.clearAndSetSemantics { }) {
+    Canvas(modifier = modifier.clearAndSetSemantics { contentDescription = description }) {
         val count = monthlyMs.size
         if (count == 0) return@Canvas
         val slot = size.width / count
@@ -430,16 +447,25 @@ private fun ClockSlide(
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
+    // One label per hour of the day, midnight first like the clock's bars.
     val hourLabels = remember(locale, context) {
         // ICU formats its own skeleton patterns, which java.time cannot always parse.
         val skeleton = if (DateFormat.is24HourFormat(context)) "H" else "ha"
         val formatter = android.icu.text.DateFormat.getInstanceForSkeleton(skeleton, locale)
         val calendar = android.icu.util.Calendar.getInstance(locale)
-        listOf(0, 6, 12, 18).map { hour ->
+        List(HOURS_PER_DAY) { hour ->
             calendar.clear()
             calendar.set(2000, android.icu.util.Calendar.JANUARY, 1, hour, 0)
             formatter.format(calendar.time)
         }
+    }
+    // The clock face is one node for screen readers, which hear every hour's listening.
+    val resources = LocalResources.current
+    val clockDescription = remember(slide.hourlyMs, hourLabels, locale, resources) {
+        resources.getString(
+            R.string.recap_cd_clock_chart,
+            ListFormatter.getInstance(locale).format(recapChartEntries(resources, hourLabels, slide.hourlyMs))
+        )
     }
     val favoriteDay = slide.favoriteDay?.let { day -> rememberDayName(day, locale) }
 
@@ -456,6 +482,7 @@ private fun ClockSlide(
                 .fillMaxWidth(0.84f)
                 .widthIn(max = 320.dp)
                 .aspectRatio(1f)
+                .clearAndSetSemantics { contentDescription = clockDescription }
                 .recapReveal(reveal, order = 1, distance = 0.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -485,9 +512,9 @@ private fun ClockSlide(
             val labelStyle = MaterialTheme.typography.labelMedium
             val labelColor = palette.content.copy(alpha = 0.75f)
             Text(hourLabels[0], style = labelStyle, color = labelColor, modifier = Modifier.align(Alignment.TopCenter))
-            Text(hourLabels[1], style = labelStyle, color = labelColor, modifier = Modifier.align(AbsoluteAlignment.CenterRight))
-            Text(hourLabels[2], style = labelStyle, color = labelColor, modifier = Modifier.align(Alignment.BottomCenter))
-            Text(hourLabels[3], style = labelStyle, color = labelColor, modifier = Modifier.align(AbsoluteAlignment.CenterLeft))
+            Text(hourLabels[6], style = labelStyle, color = labelColor, modifier = Modifier.align(AbsoluteAlignment.CenterRight))
+            Text(hourLabels[12], style = labelStyle, color = labelColor, modifier = Modifier.align(Alignment.BottomCenter))
+            Text(hourLabels[18], style = labelStyle, color = labelColor, modifier = Modifier.align(AbsoluteAlignment.CenterLeft))
         }
         Spacer(Modifier.height(20.dp))
         RecapHeadline(

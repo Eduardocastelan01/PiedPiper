@@ -61,6 +61,9 @@
     <string name="recap_personality_night_owl">بومة الليل</string>
     <string name="recap_personality_night_owl_desc">كلما تأخر الوقت، زاد استماعك.</string>
     <string name="recap_clock_favorite_day">يومك المفضّل: %1$s</string>
+    <string name="recap_cd_chart_entry">%1$s: %2$s</string>
+    <string name="recap_cd_months_chart">الاستماع حسب الشهر: %1$s</string>
+    <string name="recap_cd_clock_chart">الاستماع حسب الساعة: %1$s</string>
     <string name="recap_dedication_kicker">أطول سلسلة استماع</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="zero">يوم متتالٍ</item>

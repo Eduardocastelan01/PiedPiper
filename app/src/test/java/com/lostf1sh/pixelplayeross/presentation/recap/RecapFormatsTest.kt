@@ -22,6 +22,7 @@ class RecapFormatsTest {
         R.string.duration_hours_short to "%1\$dh",
         R.string.duration_minutes_short to "%1\$dm",
         R.string.duration_seconds_short to "%1\$ds",
+        R.string.recap_cd_chart_entry to "%1\$s: %2\$s",
     )
 
     /** Every string id a format asked for. */
@@ -80,6 +81,23 @@ class RecapFormatsTest {
         assertThat(recapListenedMinutes(ms)).isEqualTo(80L)
         assertThat(formatRecapDuration(resources, ms)).isEqualTo("1h 20m")
         assertThat(recapListenedMinutes(TimeUnit.SECONDS.toMillis(59))).isEqualTo(0L)
+    }
+
+    @Test
+    fun `chart entries read out every amount with listening in chart order`() {
+        val months = listOf("January", "February", "March", "April")
+        val listened = listOf(minutes(200), 0L, minutes(65), TimeUnit.SECONDS.toMillis(40))
+
+        assertThat(recapChartEntries(resources, months, listened)).containsExactly(
+            "January: 3h 20m",
+            "March: 1h 05m",
+            "April: 40s"
+        ).inOrder()
+    }
+
+    @Test
+    fun `chart entries are empty without listening`() {
+        assertThat(recapChartEntries(resources, listOf("12 AM", "1 AM"), listOf(0L, 0L))).isEmpty()
     }
 
     @Test

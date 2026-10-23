@@ -46,6 +46,9 @@
     <string name="recap_personality_night_owl">夜猫子</string>
     <string name="recap_personality_night_owl_desc">夜越深，你听得越多。</string>
     <string name="recap_clock_favorite_day">最爱的一天：%1$s</string>
+    <string name="recap_cd_chart_entry">%1$s：%2$s</string>
+    <string name="recap_cd_months_chart">每月收听时长：%1$s</string>
+    <string name="recap_cd_clock_chart">每小时收听时长：%1$s</string>
     <string name="recap_dedication_kicker">你最长的连续收听</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="other">天连续收听</item>

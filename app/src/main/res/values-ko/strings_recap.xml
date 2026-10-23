@@ -46,6 +46,9 @@
     <string name="recap_personality_night_owl">올빼미형 리스너</string>
     <string name="recap_personality_night_owl_desc">밤이 깊어질수록 더 많이 들었어요.</string>
     <string name="recap_clock_favorite_day">가장 좋아한 요일: %1$s</string>
+    <string name="recap_cd_chart_entry">%1$s: %2$s</string>
+    <string name="recap_cd_months_chart">월별 감상 시간: %1$s</string>
+    <string name="recap_cd_clock_chart">시간대별 감상 시간: %1$s</string>
     <string name="recap_dedication_kicker">가장 긴 연속 기록</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="other">일 연속</item>

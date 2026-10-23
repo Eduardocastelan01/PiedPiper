@@ -49,6 +49,9 @@
     <string name="recap_personality_night_owl">Nattugle</string>
     <string name="recap_personality_night_owl_desc">Jo senere det ble, jo mer lyttet du.</string>
     <string name="recap_clock_favorite_day">Favorittdag: %1$s</string>
+    <string name="recap_cd_chart_entry">%1$s: %2$s</string>
+    <string name="recap_cd_months_chart">Lytting per måned: %1$s</string>
+    <string name="recap_cd_clock_chart">Lytting per time: %1$s</string>
     <string name="recap_dedication_kicker">Din lengste rekke</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="one">dag på rad</item>

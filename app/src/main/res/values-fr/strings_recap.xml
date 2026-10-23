@@ -52,6 +52,9 @@
     <string name="recap_personality_night_owl">Oiseau de nuit</string>
     <string name="recap_personality_night_owl_desc">Plus il était tard, plus vous écoutiez.</string>
     <string name="recap_clock_favorite_day">Jour préféré : %1$s</string>
+    <string name="recap_cd_chart_entry">%1$s : %2$s</string>
+    <string name="recap_cd_months_chart">Écoute par mois : %1$s</string>
+    <string name="recap_cd_clock_chart">Écoute par heure : %1$s</string>
     <string name="recap_dedication_kicker">Votre plus longue série</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="one">jour d’affilée</item>

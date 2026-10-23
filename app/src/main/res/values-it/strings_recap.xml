@@ -52,6 +52,9 @@
     <string name="recap_personality_night_owl">Nottambulo</string>
     <string name="recap_personality_night_owl_desc">Più si faceva tardi, più ascoltavi.</string>
     <string name="recap_clock_favorite_day">Giorno preferito: %1$s</string>
+    <string name="recap_cd_chart_entry">%1$s: %2$s</string>
+    <string name="recap_cd_months_chart">Ascolto per mese: %1$s</string>
+    <string name="recap_cd_clock_chart">Ascolto per ora: %1$s</string>
     <string name="recap_dedication_kicker">La tua serie più lunga</string>
     <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
         <item quantity="one">giorno di fila</item>
