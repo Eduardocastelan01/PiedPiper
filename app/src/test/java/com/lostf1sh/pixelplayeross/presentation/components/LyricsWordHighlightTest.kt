@@ -113,6 +113,76 @@ class LyricsWordHighlightTest {
         assertTrue(frame.fraction in 0f..1f)
     }
 
+    private data class LitPart(val line: Int, val left: Float, val right: Float, val alpha: Float)
+
+    private fun litParts(span: SyllableSpan, syllableAlpha: Float): List<LitPart> = buildList {
+        forEachLitPart(span, syllableAlpha) { line, left, right, alpha -> add(LitPart(line, left, right, alpha)) }
+    }
+
+    private val open = Float.POSITIVE_INFINITY
+
+    @Test
+    fun litParts_instantSyllableWrappedOverLines_isLitThroughItsLastCharacterAtOnce() {
+        // A long unspaced phrase: the syllable starts at x=40 on row 0 and ends at x=25 on row 2.
+        val span = SyllableSpan(startLine = 0, endLine = 2, fromX = 40f, toX = 25f, rtl = false)
+
+        assertEquals(
+            listOf(LitPart(0, -open, open, 1f), LitPart(1, -open, open, 1f), LitPart(2, -open, 25f, 1f)),
+            litParts(span, syllableAlpha = 1f)
+        )
+    }
+
+    @Test
+    fun litParts_fadingSyllableWrappedOverLines_fadesAllOfItAndKeepsEarlierSyllablesLit() {
+        val span = SyllableSpan(startLine = 1, endLine = 3, fromX = 40f, toX = 25f, rtl = false)
+
+        assertEquals(
+            listOf(
+                LitPart(0, -open, open, 1f),
+                LitPart(1, -open, 40f, 1f),
+                LitPart(1, 40f, open, 0.3f),
+                LitPart(2, -open, open, 0.3f),
+                LitPart(3, -open, 25f, 0.3f)
+            ),
+            litParts(span, syllableAlpha = 0.3f)
+        )
+    }
+
+    @Test
+    fun litParts_fadingRightToLeftSyllableWrappedOverLines_fadesFromTheRight() {
+        val span = SyllableSpan(startLine = 0, endLine = 1, fromX = 60f, toX = 80f, rtl = true)
+
+        assertEquals(
+            listOf(
+                LitPart(0, 60f, open, 1f),
+                LitPart(0, -open, 60f, 0.5f),
+                LitPart(1, 80f, open, 0.5f)
+            ),
+            litParts(span, syllableAlpha = 0.5f)
+        )
+    }
+
+    @Test
+    fun litParts_syllableOnOneLine_fadesOnlyItsOwnGlyphs() {
+        val span = SyllableSpan(startLine = 1, endLine = 1, fromX = 10f, toX = 30f, rtl = false)
+
+        assertEquals(
+            listOf(LitPart(0, -open, open, 1f), LitPart(1, -open, 10f, 1f), LitPart(1, 10f, 30f, 0.25f)),
+            litParts(span, syllableAlpha = 0.25f)
+        )
+        assertEquals(
+            listOf(LitPart(0, -open, open, 1f), LitPart(1, -open, 30f, 1f)),
+            litParts(span, syllableAlpha = 1f)
+        )
+    }
+
+    @Test
+    fun litParts_instantRightToLeftSyllable_isLitFromTheRightEdge() {
+        val span = SyllableSpan(startLine = 0, endLine = 0, fromX = 90f, toX = 60f, rtl = true)
+
+        assertEquals(listOf(LitPart(0, 60f, open, 1f)), litParts(span, syllableAlpha = 1f))
+    }
+
     @Test
     fun activeClusterIndex_picksTheLastStartedWordInsideTheLine() {
         val starts = listOf(10_000L, 10_250L, 10_500L)

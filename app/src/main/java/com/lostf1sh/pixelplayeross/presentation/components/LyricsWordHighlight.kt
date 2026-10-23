@@ -348,7 +348,7 @@ private fun LyricWordCluster(
 
 /**
  * Paints the sung part of a word over its dim base in [color]. Visual lines before the syllable
- * being sung are fully lit; on the syllable's line the [style] decides the edge.
+ * being sung are fully lit; the [style] decides how the syllable itself lights up.
  */
 private fun DrawScope.drawSungPortion(
     layout: TextLayoutResult,
@@ -364,86 +364,128 @@ private fun DrawScope.drawSungPortion(
     val syllableEnd = cluster.syllableEnd(syllable)
     if (syllableEnd <= syllableStart) return
 
-    val edge = resolveSweepEdge(layout, syllableStart, syllableEnd, frame.fraction, style, featherPx)
+    val span = resolveSyllableSpan(layout, syllableStart, syllableEnd)
+    if (style != LyricsWordHighlightStyle.WIPE) {
+        // Instant and Fade light the whole syllable together, on every line it wraps over.
+        val syllableAlpha = if (style == LyricsWordHighlightStyle.FADE) frame.fraction else 1f
+        forEachLitPart(span, syllableAlpha) { line, left, right, alpha ->
+            clipLine(layout, line) {
+                clipBetween(left, right) { drawText(layout, color = color, alpha = alpha) }
+            }
+        }
+        return
+    }
+
+    val edge = resolveSweepEdge(layout, span, syllableStart, syllableEnd, frame.fraction, featherPx)
     for (line in 0 until edge.line) {
         clipLine(layout, line) { drawText(layout, color = color) }
     }
-
-    val litTowardsLeft = !edge.rtl
+    val litTowardsLeft = !span.rtl
+    val half = featherPx / 2f
+    val brush = Brush.horizontalGradient(
+        colors = listOf(color, color.copy(alpha = 0f)),
+        startX = if (litTowardsLeft) edge.x - half else edge.x + half,
+        endX = if (litTowardsLeft) edge.x + half else edge.x - half
+    )
     clipLine(layout, edge.line) {
-        when (style) {
-            LyricsWordHighlightStyle.WIPE -> {
-                val half = featherPx / 2f
-                val brush = Brush.horizontalGradient(
-                    colors = listOf(color, color.copy(alpha = 0f)),
-                    startX = if (litTowardsLeft) edge.x - half else edge.x + half,
-                    endX = if (litTowardsLeft) edge.x + half else edge.x - half
-                )
-                // Without an explicit alpha the brush takes the dim base text's alpha.
-                drawText(layout, brush = brush, alpha = 1f)
-            }
-            LyricsWordHighlightStyle.FADE -> {
-                clipSide(edge.syllableFromX, litTowardsLeft) { drawText(layout, color = color) }
-                clipBetween(edge.syllableFromX, edge.syllableToX) {
-                    drawText(layout, color = color, alpha = frame.fraction)
-                }
-            }
-            LyricsWordHighlightStyle.CLASSIC -> {
-                clipSide(edge.syllableToX, litTowardsLeft) { drawText(layout, color = color) }
-            }
-        }
+        // Without an explicit alpha the brush takes the dim base text's alpha.
+        drawText(layout, brush = brush, alpha = 1f)
     }
 }
 
-private class SweepEdge(
-    val line: Int,
-    /** Where the soft edge sits on [line]. */
-    val x: Float,
-    val syllableFromX: Float,
-    val syllableToX: Float,
+/** Where the syllable being sung sits in its word's text, which may wrap over several lines. */
+internal class SyllableSpan(
+    val startLine: Int,
+    val endLine: Int,
+    /** Leading edge of the syllable's first character, on [startLine]. */
+    val fromX: Float,
+    /** Trailing edge of the syllable's last character, on [endLine]. */
+    val toX: Float,
     val rtl: Boolean
 )
 
-private fun resolveSweepEdge(
-    layout: TextLayoutResult,
-    syllableStart: Int,
-    syllableEnd: Int,
-    fraction: Float,
-    style: LyricsWordHighlightStyle,
-    featherPx: Float
-): SweepEdge {
-    val startLine = layout.getLineForOffset(syllableStart)
-    val endLine = layout.getLineForOffset(syllableEnd - 1)
+private fun resolveSyllableSpan(layout: TextLayoutResult, syllableStart: Int, syllableEnd: Int): SyllableSpan {
     val rtl = layout.getBidiRunDirection(syllableStart) == ResolvedTextDirection.Rtl
     val first = layout.getBoundingBox(syllableStart)
     val last = layout.getBoundingBox(syllableEnd - 1)
+    return SyllableSpan(
+        startLine = layout.getLineForOffset(syllableStart),
+        endLine = layout.getLineForOffset(syllableEnd - 1),
+        fromX = if (rtl) first.right else first.left,
+        toX = if (rtl) last.left else last.right,
+        rtl = rtl
+    )
+}
 
-    if (startLine != endLine) {
+/**
+ * The lit parts of a word for the Instant and Fade styles, one [part] per piece of a visual line
+ * with its horizontal bounds (infinite where the piece runs to the line's edge) and alpha: what
+ * was sung before the syllable at full strength, and the whole syllable, on every line it wraps
+ * over, at [syllableAlpha].
+ */
+internal inline fun forEachLitPart(
+    span: SyllableSpan,
+    syllableAlpha: Float,
+    part: (line: Int, left: Float, right: Float, alpha: Float) -> Unit
+) {
+    val open = Float.POSITIVE_INFINITY
+    if (syllableAlpha >= 1f) {
+        // A fully lit syllable joins what was sung before it: lit up to its last character.
+        for (line in 0 until span.endLine) part(line, -open, open, 1f)
+        if (span.rtl) part(span.endLine, span.toX, open, 1f) else part(span.endLine, -open, span.toX, 1f)
+        return
+    }
+
+    for (line in 0 until span.startLine) part(line, -open, open, 1f)
+    // Earlier syllables on the line where this one starts.
+    if (span.rtl) part(span.startLine, span.fromX, open, 1f) else part(span.startLine, -open, span.fromX, 1f)
+    if (span.startLine == span.endLine) {
+        part(span.startLine, minOf(span.fromX, span.toX), maxOf(span.fromX, span.toX), syllableAlpha)
+        return
+    }
+    if (span.rtl) {
+        part(span.startLine, -open, span.fromX, syllableAlpha)
+    } else {
+        part(span.startLine, span.fromX, open, syllableAlpha)
+    }
+    for (line in span.startLine + 1 until span.endLine) part(line, -open, open, syllableAlpha)
+    if (span.rtl) {
+        part(span.endLine, span.toX, open, syllableAlpha)
+    } else {
+        part(span.endLine, -open, span.toX, syllableAlpha)
+    }
+}
+
+/** Where the soft edge of the gradient sweep sits: on [line], at [x]. */
+private class SweepEdge(val line: Int, val x: Float)
+
+private fun resolveSweepEdge(
+    layout: TextLayoutResult,
+    span: SyllableSpan,
+    syllableStart: Int,
+    syllableEnd: Int,
+    fraction: Float,
+    featherPx: Float
+): SweepEdge {
+    if (span.startLine != span.endLine) {
         // A syllable broken over lines: follow it character by character.
         val position = syllableStart + fraction * (syllableEnd - syllableStart)
         val charIndex = position.toInt().coerceIn(syllableStart, syllableEnd - 1)
         val box = layout.getBoundingBox(charIndex)
         val charFraction = position - charIndex
-        val x = if (rtl) lerp(box.right, box.left, charFraction) else lerp(box.left, box.right, charFraction)
-        val line = layout.getLineForOffset(charIndex)
-        return SweepEdge(line, x, if (rtl) box.right else box.left, x, rtl)
+        val x = if (span.rtl) lerp(box.right, box.left, charFraction) else lerp(box.left, box.right, charFraction)
+        return SweepEdge(layout.getLineForOffset(charIndex), x)
     }
 
-    val fromX = if (rtl) first.right else first.left
-    val toX = if (rtl) last.left else last.right
-    var sweepFromX = fromX
-    var sweepToX = toX
-    if (style == LyricsWordHighlightStyle.WIPE) {
-        // At the outer edges of a word the soft edge runs fully off the glyphs, so the word
-        // starts fully dim and ends fully lit instead of snapping when the next word starts.
-        val outward = if (rtl) -featherPx / 2f else featherPx / 2f
-        val startsLine = syllableStart == 0 || layout.getLineForOffset(syllableStart - 1) != startLine
-        val endsLine = syllableEnd >= layout.layoutInput.text.length ||
-            layout.getLineForOffset(syllableEnd) != startLine
-        if (startsLine) sweepFromX -= outward
-        if (endsLine) sweepToX += outward
-    }
-    return SweepEdge(startLine, lerp(sweepFromX, sweepToX, fraction), fromX, toX, rtl)
+    // At the outer edges of a word the soft edge runs fully off the glyphs, so the word
+    // starts fully dim and ends fully lit instead of snapping when the next word starts.
+    val outward = if (span.rtl) -featherPx / 2f else featherPx / 2f
+    val startsLine = syllableStart == 0 || layout.getLineForOffset(syllableStart - 1) != span.startLine
+    val endsLine = syllableEnd >= layout.layoutInput.text.length ||
+        layout.getLineForOffset(syllableEnd) != span.startLine
+    val sweepFromX = if (startsLine) span.fromX - outward else span.fromX
+    val sweepToX = if (endsLine) span.toX + outward else span.toX
+    return SweepEdge(span.startLine, lerp(sweepFromX, sweepToX, fraction))
 }
 
 /** Clips to one visual line; the first and last lines stay open so tall accents are not cut. */
@@ -458,24 +500,13 @@ private inline fun DrawScope.clipLine(layout: TextLayoutResult, line: Int, block
     )
 }
 
-/** Clips to the side of [x] that has been sung. */
-private inline fun DrawScope.clipSide(x: Float, litTowardsLeft: Boolean, block: DrawScope.() -> Unit) {
+/** Clips to the strip between [left] and [right]; infinite bounds stay open past the glyphs. */
+private inline fun DrawScope.clipBetween(left: Float, right: Float, block: DrawScope.() -> Unit) {
     val overflow = size.height + size.width
     clipRect(
-        left = if (litTowardsLeft) -overflow else x,
+        left = left.coerceAtLeast(-overflow),
         top = -overflow,
-        right = if (litTowardsLeft) x else size.width + overflow,
-        bottom = size.height + overflow,
-        block = block
-    )
-}
-
-private inline fun DrawScope.clipBetween(fromX: Float, toX: Float, block: DrawScope.() -> Unit) {
-    val overflow = size.height + size.width
-    clipRect(
-        left = minOf(fromX, toX),
-        top = -overflow,
-        right = maxOf(fromX, toX),
+        right = right.coerceAtMost(size.width + overflow),
         bottom = size.height + overflow,
         block = block
     )
