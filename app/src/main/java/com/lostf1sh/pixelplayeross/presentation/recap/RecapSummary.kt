@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lostf1sh.pixelplayeross.R
 import java.text.NumberFormat
-import java.util.concurrent.TimeUnit
 
 /** Closing slide: a shareable card of the year's highlights, plus what to do next. */
 @Composable
@@ -149,7 +148,7 @@ internal fun RecapSummarySlide(
 private fun RecapSummaryCard(slide: RecapSlide.Summary, palette: RecapPalette) {
     val locale = LocalConfiguration.current.locales[0]
     val minutes = remember(slide.totalMs, locale) {
-        NumberFormat.getIntegerInstance(locale).format(TimeUnit.MILLISECONDS.toMinutes(slide.totalMs))
+        NumberFormat.getIntegerInstance(locale).format(recapListenedMinutes(slide.totalMs))
     }
     val ink = palette.onAccent
     val cells = buildList {

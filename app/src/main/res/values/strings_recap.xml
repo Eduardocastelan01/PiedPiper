@@ -46,7 +46,7 @@
     <string name="recap_minutes_daily_average">Daily average</string>
     <string name="recap_minutes_active_days">Days with music</string>
 
-    <!-- Months. %1$s is a duration, e.g. "32 hr 10 min". -->
+    <!-- Months. %1$s is a compact duration, e.g. "32h 10m". -->
     <string name="recap_months_kicker">Your biggest month</string>
     <string name="recap_months_detail">%1$s of listening</string>
 

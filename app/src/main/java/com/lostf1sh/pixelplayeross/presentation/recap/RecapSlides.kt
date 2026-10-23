@@ -72,8 +72,6 @@ import androidx.compose.ui.unit.sp
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.stats.ListeningPersonality
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
-import com.lostf1sh.pixelplayeross.utils.formatListeningDurationCompact
-import com.lostf1sh.pixelplayeross.utils.formatListeningDurationLong
 import java.text.NumberFormat
 import java.time.DayOfWeek
 import java.time.Month
@@ -227,7 +225,7 @@ private fun MinutesSlide(
     contentPadding: PaddingValues,
     scrollState: ScrollState
 ) {
-    val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(slide.totalMs)
+    val totalMinutes = recapListenedMinutes(slide.totalMs)
     val minutesForPlural = totalMinutes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     val days = TimeUnit.MILLISECONDS.toDays(slide.totalMs).toInt()
     val hours = TimeUnit.MILLISECONDS.toHours(slide.totalMs).toInt()
@@ -289,7 +287,7 @@ private fun MinutesSlide(
             ) {
                 RecapStatTile(
                     label = stringResource(R.string.recap_minutes_daily_average),
-                    value = formatListeningDurationCompact(slide.averageDailyMs),
+                    value = formatRecapDuration(slide.averageDailyMs),
                     color = palette.content,
                     modifier = Modifier.weight(1f)
                 )
@@ -344,7 +342,7 @@ private fun MonthsSlide(
         )
         Spacer(Modifier.height(8.dp))
         RecapBody(
-            text = stringResource(R.string.recap_months_detail, formatListeningDurationLong(peakMs)),
+            text = stringResource(R.string.recap_months_detail, formatRecapDuration(peakMs)),
             color = palette.content,
             modifier = Modifier.recapReveal(reveal, order = 2)
         )
@@ -651,14 +649,14 @@ private fun DedicationSlide(
             ) {
                 RecapStatTile(
                     label = stringResource(R.string.recap_dedication_longest_session),
-                    value = formatListeningDurationCompact(slide.longestSessionMs),
+                    value = formatRecapDuration(slide.longestSessionMs),
                     color = palette.content,
                     modifier = Modifier.weight(1f)
                 )
                 RecapStatTile(
                     label = stringResource(R.string.recap_dedication_biggest_day),
                     value = biggestDay,
-                    detail = formatListeningDurationCompact(slide.biggestDayMs),
+                    detail = formatRecapDuration(slide.biggestDayMs),
                     color = palette.content,
                     modifier = Modifier.weight(1f)
                 )
@@ -960,7 +958,7 @@ private fun AlbumsSlide(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            RecapChip(text = formatListeningDurationCompact(leader.durationMs), color = palette.content)
+            RecapChip(text = formatRecapDuration(leader.durationMs), color = palette.content)
             RecapChip(
                 text = pluralStringResource(R.plurals.stats_plays_count, leader.playCount, leader.playCount),
                 color = palette.content
@@ -974,7 +972,7 @@ private fun AlbumsSlide(
                     rank = index + 2,
                     title = album.title,
                     subtitle = null,
-                    trailing = formatListeningDurationCompact(album.durationMs),
+                    trailing = formatRecapDuration(album.durationMs),
                     artUri = album.artUri
                 )
             },
@@ -1052,7 +1050,7 @@ private fun ArtistsSlide(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            RecapChip(text = formatListeningDurationCompact(leader.durationMs), color = palette.content)
+            RecapChip(text = formatRecapDuration(leader.durationMs), color = palette.content)
             RecapChip(
                 text = pluralStringResource(R.plurals.stats_tracks_count, leader.songCount, leader.songCount),
                 color = palette.content
@@ -1066,7 +1064,7 @@ private fun ArtistsSlide(
                     rank = index + 2,
                     title = artist.name,
                     subtitle = null,
-                    trailing = formatListeningDurationCompact(artist.durationMs),
+                    trailing = formatRecapDuration(artist.durationMs),
                     artUri = artist.imageUri,
                     monogramSource = artist.name
                 )
@@ -1158,7 +1156,7 @@ private fun SongsSlide(
                 text = pluralStringResource(R.plurals.stats_plays_count, leader.playCount, leader.playCount),
                 color = palette.content
             )
-            RecapChip(text = formatListeningDurationCompact(leader.durationMs), color = palette.content)
+            RecapChip(text = formatRecapDuration(leader.durationMs), color = palette.content)
         }
         RankedList(
             reveal = reveal,

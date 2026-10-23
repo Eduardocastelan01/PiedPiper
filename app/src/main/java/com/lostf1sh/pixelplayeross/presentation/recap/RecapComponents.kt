@@ -379,7 +379,7 @@ internal fun RecapChip(text: String, color: Color, modifier: Modifier = Modifier
     )
 }
 
-/** A labelled figure, e.g. "Daily average · 34 min", optionally with a smaller [detail] line. */
+/** A labelled figure, e.g. "Daily average · 34m", optionally with a smaller [detail] line. */
 @Composable
 internal fun RecapStatTile(
     label: String,
