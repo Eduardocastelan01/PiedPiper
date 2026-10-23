@@ -94,11 +94,14 @@ import com.lostf1sh.pixelplayeross.presentation.components.HomeOptionsBottomShee
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
 import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSection
 import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSectionMinSongsToShow
+import com.lostf1sh.pixelplayeross.presentation.components.RecentlyPlayedSongOptionsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.StatsOverviewCard
 import com.lostf1sh.pixelplayeross.presentation.components.resolveMainScreenBottomGradientHeight
 import com.lostf1sh.pixelplayeross.presentation.model.collectRecentlyPlayedSongIds
 import com.lostf1sh.pixelplayeross.presentation.model.mapRecentlyPlayedSongs
+import com.lostf1sh.pixelplayeross.presentation.model.withUpdatedSongs
+import com.lostf1sh.pixelplayeross.presentation.model.withoutSong
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.PlayingEqIcon
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.components.StreamingProviderSheet
@@ -199,8 +202,11 @@ fun HomeScreen(
 
     LaunchedEffect(latestRecentlyPlayedSongs, lifecycleOwner) {
         val isHomeVisible = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
-        if (recentlyPlayedSongs.isEmpty() || !isHomeVisible) {
-            recentlyPlayedSongs = latestRecentlyPlayedSongs
+        recentlyPlayedSongs = if (recentlyPlayedSongs.isEmpty() || !isHomeVisible) {
+            latestRecentlyPlayedSongs
+        } else {
+            // Keep the pills in place while Home is on screen, but show edits to their songs.
+            recentlyPlayedSongs.withUpdatedSongs(latestRecentlyPlayedSongs)
         }
     }
 
@@ -253,6 +259,7 @@ fun HomeScreen(
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
     var showBetaInfoBottomSheet by remember { mutableStateOf(false) }
     var showStreamingProviderSheet by remember { mutableStateOf(false) }
+    var recentSongForOptions by remember { mutableStateOf<Song?>(null) }
     val sheetState = rememberModalSheetState()
     val betaSheetState = rememberModalSheetState()
     val scope = rememberCoroutineScope()
@@ -486,6 +493,9 @@ fun HomeScreen(
                                     )
                                 }
                             },
+                            onSongLongClick = { song ->
+                                recentSongForOptions = song
+                            },
                             onOpenAllClick = {
                                 navController.navigateSafely(Screen.RecentlyPlayed.route)
                             },
@@ -574,6 +584,35 @@ fun HomeScreen(
             isJellyfinLoggedIn = isJellyfinLoggedIn,
             onNavigateToJellyfinDashboard = {
                 navController.navigateSafely(Screen.JellyfinDashboard.route)
+            }
+        )
+    }
+    recentSongForOptions?.let { song ->
+        RecentlyPlayedSongOptionsSheet(
+            song = song,
+            queueSongs = recentlyPlayedQueue,
+            queueName = recentlyPlayedQueueName,
+            playerViewModel = playerViewModel,
+            onDismiss = { recentSongForOptions = null },
+            onSongDeleted = { deletedSong ->
+                recentlyPlayedSongs = recentlyPlayedSongs.withoutSong(deletedSong.id)
+            },
+            onNavigateToAlbum = { selectedSong ->
+                navController.navigateSafelyReplacing(
+                    route = Screen.AlbumDetail.createRoute(selectedSong.albumId),
+                    patternToPop = Screen.AlbumDetail.route
+                )
+            },
+            onNavigateToArtist = { artistId ->
+                navController.navigateSafelyReplacing(
+                    route = Screen.ArtistDetail.createRoute(artistId),
+                    patternToPop = Screen.ArtistDetail.route
+                )
+            },
+            onNavigateToGenre = { selectedSong ->
+                selectedSong.genre?.let {
+                    navController.navigateSafely(Screen.GenreDetail.createRoute(java.net.URLEncoder.encode(it, "UTF-8")))
+                }
             }
         )
     }
