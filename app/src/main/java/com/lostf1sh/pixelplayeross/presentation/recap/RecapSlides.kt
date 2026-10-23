@@ -4,6 +4,7 @@ package com.lostf1sh.pixelplayeross.presentation.recap
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -99,6 +100,8 @@ internal data class RecapSummaryActions(
  * @param reveal the page's entrance progress from 0 to 1; only read in draw phases.
  * @param isActive whether the page is settled on screen with motion allowed, which gates its
  *   looping decorations.
+ * @param scrollState the page's vertical scroll, for pages that do not fit; hoisted so the story
+ *   can pause while it is being scrolled.
  */
 @Composable
 internal fun RecapSlideContent(
@@ -107,23 +110,24 @@ internal fun RecapSlideContent(
     reveal: () -> Float,
     isActive: Boolean,
     contentPadding: PaddingValues,
+    scrollState: ScrollState,
     summaryActions: RecapSummaryActions,
     modifier: Modifier = Modifier
 ) {
     // Decorations bleed off the slide's edges; keep them out of the neighbouring pages.
     Box(modifier = modifier.fillMaxSize().clipToBounds()) {
         when (slide) {
-            is RecapSlide.Intro -> IntroSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.Minutes -> MinutesSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.Months -> MonthsSlide(slide, palette, reveal, contentPadding)
-            is RecapSlide.Clock -> ClockSlide(slide, palette, reveal, contentPadding)
-            is RecapSlide.Dedication -> DedicationSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.Genres -> GenresSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.Decade -> DecadeSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.TopAlbums -> AlbumsSlide(slide, palette, reveal, contentPadding)
-            is RecapSlide.TopArtists -> ArtistsSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.TopSongs -> SongsSlide(slide, palette, reveal, isActive, contentPadding)
-            is RecapSlide.Summary -> RecapSummarySlide(slide, palette, reveal, contentPadding, summaryActions)
+            is RecapSlide.Intro -> IntroSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.Minutes -> MinutesSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.Months -> MonthsSlide(slide, palette, reveal, contentPadding, scrollState)
+            is RecapSlide.Clock -> ClockSlide(slide, palette, reveal, contentPadding, scrollState)
+            is RecapSlide.Dedication -> DedicationSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.Genres -> GenresSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.Decade -> DecadeSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.TopAlbums -> AlbumsSlide(slide, palette, reveal, contentPadding, scrollState)
+            is RecapSlide.TopArtists -> ArtistsSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.TopSongs -> SongsSlide(slide, palette, reveal, isActive, contentPadding, scrollState)
+            is RecapSlide.Summary -> RecapSummarySlide(slide, palette, reveal, contentPadding, scrollState, summaryActions)
         }
     }
 }
@@ -136,9 +140,10 @@ private fun IntroSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
-    RecapSlideColumn(contentPadding = contentPadding, horizontalAlignment = Alignment.CenterHorizontally) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState, horizontalAlignment = Alignment.CenterHorizontally) {
         RecapKicker(
             text = stringResource(R.string.recap_intro_kicker),
             color = palette.content,
@@ -219,7 +224,8 @@ private fun MinutesSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(slide.totalMs)
     val minutesForPlural = totalMinutes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -239,7 +245,7 @@ private fun MinutesSlide(
                 .align(Alignment.BottomEnd)
                 .offset(x = 120.dp, y = 100.dp)
         )
-        RecapSlideColumn(contentPadding = contentPadding) {
+        RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
             RecapKicker(
                 text = stringResource(R.string.recap_minutes_kicker, slide.year),
                 color = palette.content,
@@ -307,7 +313,8 @@ private fun MonthsSlide(
     slide: RecapSlide.Months,
     palette: RecapPalette,
     reveal: () -> Float,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val peakMonth = remember(slide.peakMonthIndex, locale) {
@@ -320,7 +327,7 @@ private fun MonthsSlide(
     }
     val peakMs = slide.monthlyMs[slide.peakMonthIndex]
 
-    RecapSlideColumn(contentPadding = contentPadding) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
         RecapKicker(
             text = stringResource(R.string.recap_months_kicker),
             color = palette.content,
@@ -420,7 +427,8 @@ private fun ClockSlide(
     slide: RecapSlide.Clock,
     palette: RecapPalette,
     reveal: () -> Float,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
@@ -437,7 +445,7 @@ private fun ClockSlide(
     }
     val favoriteDay = slide.favoriteDay?.let { day -> rememberDayName(day, locale) }
 
-    RecapSlideColumn(contentPadding = contentPadding, horizontalAlignment = Alignment.CenterHorizontally) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState, horizontalAlignment = Alignment.CenterHorizontally) {
         RecapKicker(
             text = stringResource(R.string.recap_clock_kicker),
             color = palette.content,
@@ -589,7 +597,8 @@ private fun DedicationSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val biggestDay = remember(slide.biggestDay, locale) {
@@ -613,7 +622,7 @@ private fun DedicationSlide(
                 .align(Alignment.BottomEnd)
                 .offset(x = 110.dp, y = 120.dp)
         )
-        RecapSlideColumn(contentPadding = contentPadding) {
+        RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
             RecapKicker(
                 text = stringResource(R.string.recap_dedication_kicker),
                 color = palette.content,
@@ -711,7 +720,8 @@ private fun GenresSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val percent = remember(locale) { NumberFormat.getPercentInstance(locale) }
@@ -735,7 +745,7 @@ private fun GenresSlide(
                 .align(Alignment.BottomStart)
                 .offset(x = (-120).dp, y = 120.dp)
         )
-        RecapSlideColumn(contentPadding = contentPadding) {
+        RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
             RecapKicker(
                 text = stringResource(R.string.recap_genres_kicker),
                 color = palette.content,
@@ -826,13 +836,14 @@ private fun DecadeSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val percent = remember(slide.share, locale) {
         NumberFormat.getPercentInstance(locale).format(slide.share.toDouble())
     }
-    RecapSlideColumn(contentPadding = contentPadding, horizontalAlignment = Alignment.CenterHorizontally) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState, horizontalAlignment = Alignment.CenterHorizontally) {
         RecapKicker(
             text = stringResource(R.string.recap_decade_kicker),
             color = palette.content,
@@ -890,11 +901,12 @@ private fun AlbumsSlide(
     slide: RecapSlide.TopAlbums,
     palette: RecapPalette,
     reveal: () -> Float,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val leader = slide.albums.first()
     val fanned = slide.albums.take(3)
-    RecapSlideColumn(contentPadding = contentPadding) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
         RecapKicker(
             text = stringResource(R.string.recap_albums_kicker),
             color = palette.content,
@@ -984,11 +996,12 @@ private fun ArtistsSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val leader = slide.artists.first()
     val spin = rememberSpin(active = isActive, periodMillis = 30_000)
-    RecapSlideColumn(contentPadding = contentPadding) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
         RecapKicker(
             text = stringResource(R.string.recap_artists_kicker),
             color = palette.content,
@@ -1076,13 +1089,14 @@ private fun SongsSlide(
     palette: RecapPalette,
     reveal: () -> Float,
     isActive: Boolean,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    scrollState: ScrollState
 ) {
     val leader = slide.songs.first()
     val spin = rememberSpin(active = isActive, periodMillis = 6_000)
     // The disc starts tucked towards the sleeve, which sits on the reading-start side.
     val towardsSleeve = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1f else -1f
-    RecapSlideColumn(contentPadding = contentPadding) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState) {
         RecapKicker(
             text = stringResource(R.string.recap_songs_kicker),
             color = palette.content,

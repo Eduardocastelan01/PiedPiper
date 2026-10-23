@@ -8,6 +8,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -207,6 +207,7 @@ internal fun rememberSpin(active: Boolean, periodMillis: Int): State<Float> {
 @Composable
 internal fun RecapSlideColumn(
     contentPadding: PaddingValues,
+    scrollState: ScrollState,
     modifier: Modifier = Modifier,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     content: @Composable ColumnScope.() -> Unit
@@ -217,7 +218,7 @@ internal fun RecapSlideColumn(
             modifier = Modifier
                 .widthIn(max = RecapMaxContentWidth)
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .heightIn(min = minHeight)
                 .padding(contentPadding)
                 .padding(horizontal = RecapGutter),

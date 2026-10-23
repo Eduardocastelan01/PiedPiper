@@ -11,6 +11,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -56,10 +57,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -97,6 +100,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /** How long a slide stays before the story moves on by itself. */
@@ -107,6 +111,17 @@ private const val PREVIOUS_TAP_ZONE = 0.3f
 
 /** Space the progress bar and buttons take above the slides, below the status bar. */
 private val ChromeHeight = 72.dp
+
+/** Runs the slide timer at its real length whatever the system animator duration scale. */
+private object UnscaledMotion : MotionDurationScale {
+    override val scaleFactor: Float get() = 1f
+}
+
+/** Keeps each slide's scroll position across configuration changes, as rememberScrollState does. */
+private val SlideScrollStatesSaver = listSaver<List<ScrollState>, Int>(
+    save = { states -> states.map { it.value } },
+    restore = { positions -> positions.map { ScrollState(initial = it) } }
+)
 
 /**
  * The year's listening as a full-screen story: tap the end side (or swipe) for the next slide,
@@ -189,10 +204,16 @@ private fun RecapStory(
     var isHeld by remember { mutableStateOf(false) }
     var isPausedByUser by rememberSaveable { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
+    // Hoisted out of the pages so the timer can tell when a slide that does not fit (landscape,
+    // large fonts) is being scrolled.
+    val slideScrollStates = rememberSaveable(slides.size, saver = SlideScrollStatesSaver) {
+        List(slides.size) { ScrollState(initial = 0) }
+    }
 
     // Each settled slide restarts the timer; pausing (holding, the pause button, leaving the
-    // app, dragging) freezes it where it is, and resuming runs only the time that is left.
-    // The flags are read in snapshotFlow, so holding a slide never recomposes the story.
+    // app, dragging or scrolling a slide) freezes it where it is, and resuming runs only the
+    // time that is left. The flags are read in snapshotFlow, so holding a slide never
+    // recomposes the story.
     LaunchedEffect(pagerState, autoAdvance) {
         snapshotFlow { pagerState.settledPage }.collectLatest { page ->
             if (!autoAdvance) {
@@ -204,13 +225,24 @@ private fun RecapStory(
                 isHeld ||
                     isPausedByUser ||
                     !lifecycleState.isAtLeast(Lifecycle.State.RESUMED) ||
-                    pagerState.isScrollInProgress
+                    pagerState.isScrollInProgress ||
+                    slideScrollStates[page].isScrollInProgress
             }
                 .distinctUntilChanged()
                 .collectLatest { blocked ->
                     if (blocked) return@collectLatest
+                    // A full bar while this slide is still the settled one means its move to the
+                    // next slide was undone (tapped or dragged back mid-way): give it its time
+                    // again rather than moving straight on.
+                    if (progress.value >= 1f && page < lastIndex) progress.snapTo(0f)
                     val remaining = ((1f - progress.value) * SLIDE_DURATION_MS).roundToInt()
-                    if (remaining > 0) progress.animateTo(1f, tween(remaining, easing = LinearEasing))
+                    if (remaining > 0) {
+                        // Reading time, not decoration: the system animation speed must not
+                        // stretch or shorten it.
+                        withContext(UnscaledMotion) {
+                            progress.animateTo(1f, tween(remaining, easing = LinearEasing))
+                        }
+                    }
                     // Scrolling flips isScrollInProgress, which would cancel this collector.
                     if (page < lastIndex) scope.launch { pagerState.animateScrollToPage(page + 1) }
                 }
@@ -311,6 +343,7 @@ private fun RecapStory(
                     reveal = { reveal.value },
                     isActive = isActive,
                     contentPadding = slidePadding,
+                    scrollState = slideScrollStates[page],
                     summaryActions = summaryActions
                 )
             }

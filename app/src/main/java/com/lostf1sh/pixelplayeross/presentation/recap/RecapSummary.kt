@@ -2,6 +2,7 @@
 
 package com.lostf1sh.pixelplayeross.presentation.recap
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,10 +57,11 @@ internal fun RecapSummarySlide(
     palette: RecapPalette,
     reveal: () -> Float,
     contentPadding: PaddingValues,
+    scrollState: ScrollState,
     actions: RecapSummaryActions
 ) {
     val cardLayer = rememberGraphicsLayer()
-    RecapSlideColumn(contentPadding = contentPadding, horizontalAlignment = Alignment.CenterHorizontally) {
+    RecapSlideColumn(contentPadding = contentPadding, scrollState = scrollState, horizontalAlignment = Alignment.CenterHorizontally) {
         RecapKicker(
             text = stringResource(R.string.recap_summary_kicker),
             color = palette.content,
