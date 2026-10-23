@@ -4068,6 +4068,7 @@ class PlayerViewModel @Inject constructor(
             path = path,
             getUiState = { _playerUiState.value },
             updateUiState = { mutation -> _playerUiState.update(mutation) },
+            cachedSongsById = { libraryStateHolder.allSongsById.value },
             onFolderChanged = { folderPath ->
                 folderNavigationStateHolder.hydrateCurrentFolderSongsIfNeeded(
                     scope = viewModelScope,
@@ -4085,6 +4086,7 @@ class PlayerViewModel @Inject constructor(
         folderNavigationStateHolder.navigateBackFolder(
             getUiState = { _playerUiState.value },
             updateUiState = { mutation -> _playerUiState.update(mutation) },
+            cachedSongsById = { libraryStateHolder.allSongsById.value },
             onFolderChanged = { folderPath ->
                 folderNavigationStateHolder.hydrateCurrentFolderSongsIfNeeded(
                     scope = viewModelScope,
