@@ -115,27 +115,39 @@ class DragToSelectGeometryTest {
         val itemAt = { index: Int -> "song-$index" }
 
         // The finger is over row 6 now, but row 5 was long-pressed.
-        assertEquals(5, anchorIndexOf("song-5", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
-        assertEquals(4, anchorIndexOf("song-4", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertEquals(5, anchorIndexOf("song-5", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
+        assertEquals(4, anchorIndexOf("song-4", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
     }
 
     @Test
     fun `a long-pressed item shown twice anchors on the copy nearest the finger`() {
         val itemAt = { index: Int -> if (index == 4 || index == 6) "twice" else "song-$index" }
 
-        assertEquals(4, anchorIndexOf("twice", y = 60f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
-        assertEquals(6, anchorIndexOf("twice", y = 200f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertEquals(4, anchorIndexOf("twice", y = 60f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
+        assertEquals(6, anchorIndexOf("twice", y = 200f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
         // With 120px of top padding, y = 200 is 80px into the content: on row 5, nearer row 4.
-        assertEquals(4, anchorIndexOf("twice", y = 200f, viewportStartOffset = -120, visibleItems = visibleItems, itemAt = itemAt))
+        assertEquals(4, anchorIndexOf("twice", y = 200f, viewportStartOffset = -120, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
+    }
+
+    @Test
+    fun `a long-pressed item replaced by an updated copy still anchors on its row`() {
+        // The song's details loaded after the long press: same id, new item.
+        val itemAt = { index: Int -> "song-$index#loaded" }
+        val itemKey = { item: String -> item.substringBefore('#') }
+
+        assertEquals(
+            5,
+            anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = itemKey),
+        )
     }
 
     @Test
     fun `no anchor when the long-pressed item is not on screen or not selectable`() {
         val itemAt = { index: Int -> if (index == 5) null else "song-$index" }
 
-        assertNull(anchorIndexOf("song-9", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
-        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
-        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = emptyList(), itemAt = itemAt))
+        assertNull(anchorIndexOf("song-9", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
+        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt, itemKey = { it }))
+        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = emptyList(), itemAt = itemAt, itemKey = { it }))
     }
 
     @Test

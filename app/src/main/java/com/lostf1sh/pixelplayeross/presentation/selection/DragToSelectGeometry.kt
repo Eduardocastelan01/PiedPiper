@@ -30,8 +30,10 @@ internal fun itemIndexAtY(
  *
  * The row is found by its item rather than by the finger's position: entering selection mode can
  * move the list under a finger that has not moved (a header changing height), leaving the finger
- * over another row. If [item] shows more than once, the copy nearest [y] (relative to the top of
- * the list's bounds, see [itemIndexAtY]) wins. Returns null when no visible row shows [item].
+ * over another row. Items are matched by [itemKey], so a row whose item has since been replaced by
+ * an updated copy (a song whose details have loaded) is still found. If [item] shows more than
+ * once, the copy nearest [y] (relative to the top of the list's bounds, see [itemIndexAtY]) wins.
+ * Returns null when no visible row shows [item].
  */
 internal fun <T : Any> anchorIndexOf(
     item: T,
@@ -39,10 +41,12 @@ internal fun <T : Any> anchorIndexOf(
     viewportStartOffset: Int,
     visibleItems: List<LazyListItemInfo>,
     itemAt: (index: Int) -> T?,
+    itemKey: (T) -> Any,
 ): Int? {
     val contentY = y + viewportStartOffset
+    val key = itemKey(item)
     return visibleItems
-        .filter { itemAt(it.index) == item }
+        .filter { row -> itemAt(row.index)?.let(itemKey) == key }
         .minByOrNull { row ->
             when {
                 contentY < row.offset -> row.offset - contentY

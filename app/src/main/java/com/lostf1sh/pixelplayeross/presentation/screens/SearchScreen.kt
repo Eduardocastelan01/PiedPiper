@@ -1261,6 +1261,7 @@ fun SearchResultsList(
                 state = dragSelectState,
                 listState = listState,
                 itemAt = dragSelectSongAt,
+                itemKey = Song::id,
                 isSelected = isDragSelectSongSelected,
                 onSelectionChange = onSongDragSelectionChange,
                 bottomInset = dragSelectBottomInset

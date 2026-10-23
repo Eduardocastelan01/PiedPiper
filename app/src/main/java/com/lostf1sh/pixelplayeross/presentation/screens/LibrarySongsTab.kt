@@ -281,6 +281,7 @@ fun LibrarySongsTab(
                                     state = dragSelectState,
                                     listState = activeListState,
                                     itemAt = dragSelectSongAt,
+                                    itemKey = Song::id,
                                     isSelected = isDragSelectSongSelected,
                                     onSelectionChange = onSongDragSelectionChange,
                                     bottomInset = if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight

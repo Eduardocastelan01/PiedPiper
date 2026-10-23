@@ -23,12 +23,20 @@ internal data class DragSelectionChange<T>(
  * page has been dropped from memory. Rows without an item yet (paging placeholders) are retried on
  * every later step while they stay in the range; rows that never resolve to an item (headers,
  * folders) are simply skipped.
+ *
+ * The range is kept by row index, so it only holds while the rows stay where the drag found them;
+ * check [isInPlace] before every [moveTo].
+ *
+ * @param anchorKey [itemKey] of the long-pressed item shown at [anchorIndex].
+ * @param itemKey A stable identity for an item, one that an updated copy of it keeps.
  */
 internal class DragSelectionTracker<T>(
     val anchorIndex: Int,
+    private val anchorKey: Any,
     val selecting: Boolean,
+    private val itemKey: (T) -> Any,
 ) {
-    private class Entry<T>(val item: T, val wasSelected: Boolean)
+    private class Entry<T>(val item: T, val key: Any, val wasSelected: Boolean)
 
     /** The row the finger is on; the range covers [anchorIndex] up to and including it. */
     var currentIndex: Int = anchorIndex
@@ -67,7 +75,7 @@ internal class DragSelectionTracker<T>(
         while (pending.hasNext()) {
             val row = pending.next()
             val entry = entered[row] ?: itemAt(row)?.let { item ->
-                Entry<T>(item, isSelected(item)).also { entered[row] = it }
+                Entry<T>(item, itemKey(item), isSelected(item)).also { entered[row] = it }
             } ?: continue
             pending.remove()
             if (entry.wasSelected != selecting) {
@@ -76,6 +84,24 @@ internal class DragSelectionTracker<T>(
         }
 
         return DragSelectionChange(select, deselect)
+    }
+
+    /**
+     * Whether the anchor and every row the drag has reached still show the items the drag found
+     * there. Rows that change order or shift under the drag (a folder's songs re-sorting as their
+     * details load, a rescan adding a song above) would leave the range covering, restoring and
+     * skipping the wrong items, so the drag cannot go on once this is false.
+     *
+     * Rows are matched by [itemKey], so an item replaced by an updated copy of itself is still in
+     * place. A row that shows no item now (a dropped page) cannot tell and counts as in place.
+     */
+    fun isInPlace(itemAt: (Int) -> T?): Boolean =
+        rowShows(anchorIndex, anchorKey, itemAt) &&
+            entered.all { (row, entry) -> rowShows(row, entry.key, itemAt) }
+
+    private fun rowShows(row: Int, key: Any, itemAt: (Int) -> T?): Boolean {
+        val item = itemAt(row) ?: return true
+        return itemKey(item) == key
     }
 
     /**

@@ -81,11 +81,17 @@ internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remem
  * so a collapsing top bar collapses with it; it never passes on what the list cannot scroll, so
  * it cannot pull a parent's pull-to-refresh.
  *
+ * If the rows the drag has reached change order or shift while the finger is down (a list
+ * re-sorting as its items load), the drag ends there and keeps what it has selected; the finger
+ * still holds the list until it lifts.
+ *
  * Append it last to the list's modifier chain so pointer positions line up with the list's items.
  * The list must not use `reverseLayout`.
  *
  * @param itemAt The selectable item at a list index, or null for rows that cannot be selected
  *   (headers, folders) or are not loaded yet.
+ * @param itemKey A stable identity for an item, such as a song's id, that an updated copy of the
+ *   item keeps. It tells whether a row still shows the item the drag found there.
  * @param isSelected The item's current selection state. Read it from the selection holder
  *   itself, not from composed state, which lags a frame behind the long press.
  * @param onSelectionChange Applies one drag step; songs in `select` are in drag order.
@@ -98,6 +104,7 @@ internal fun <T : Any> Modifier.dragToSelect(
     state: DragToSelectState<T>,
     listState: LazyListState,
     itemAt: (index: Int) -> T?,
+    itemKey: (T) -> Any,
     isSelected: (T) -> Boolean,
     onSelectionChange: (select: List<T>, deselect: List<T>) -> Unit,
     topInset: Dp = 0.dp,
@@ -106,6 +113,7 @@ internal fun <T : Any> Modifier.dragToSelect(
     state = state,
     listState = listState,
     itemAt = itemAt,
+    itemKey = itemKey,
     isSelected = isSelected,
     onSelectionChange = onSelectionChange,
     topInset = topInset,
@@ -116,6 +124,7 @@ private data class DragToSelectElement<T : Any>(
     val state: DragToSelectState<T>,
     val listState: LazyListState,
     val itemAt: (Int) -> T?,
+    val itemKey: (T) -> Any,
     val isSelected: (T) -> Boolean,
     val onSelectionChange: (List<T>, List<T>) -> Unit,
     val topInset: Dp,
@@ -125,6 +134,7 @@ private data class DragToSelectElement<T : Any>(
         state = state,
         listState = listState,
         itemAt = itemAt,
+        itemKey = itemKey,
         isSelected = isSelected,
         onSelectionChange = onSelectionChange,
         topInset = topInset,
@@ -132,7 +142,7 @@ private data class DragToSelectElement<T : Any>(
     )
 
     override fun update(node: DragToSelectNode<T>) {
-        node.update(state, listState, itemAt, isSelected, onSelectionChange, topInset, bottomInset)
+        node.update(state, listState, itemAt, itemKey, isSelected, onSelectionChange, topInset, bottomInset)
     }
 
     override fun InspectorInfo.inspectableProperties() {
@@ -149,6 +159,7 @@ private class DragToSelectNode<T : Any>(
     private var state: DragToSelectState<T>,
     private var listState: LazyListState,
     private var itemAt: (Int) -> T?,
+    private var itemKey: (T) -> Any,
     private var isSelected: (T) -> Boolean,
     private var onSelectionChange: (List<T>, List<T>) -> Unit,
     private var topInset: Dp,
@@ -191,12 +202,15 @@ private class DragToSelectNode<T : Any>(
         state: DragToSelectState<T>,
         listState: LazyListState,
         itemAt: (Int) -> T?,
+        itemKey: (T) -> Any,
         isSelected: (T) -> Boolean,
         onSelectionChange: (List<T>, List<T>) -> Unit,
         topInset: Dp,
         bottomInset: Dp,
     ) {
+        // New rows are checked against the active drag on its next step (see selectUnderPointer).
         this.itemAt = itemAt
+        this.itemKey = itemKey
         this.isSelected = isSelected
         this.onSelectionChange = onSelectionChange
         this.topInset = topInset
@@ -220,22 +234,26 @@ private class DragToSelectNode<T : Any>(
             gestureState.isPointerDown = true
             gestureState.longPressedItem = null
             pointerInWindow = toWindow(down.position)
+            // Once a drag starts, the finger holds the list until it lifts, even if the drag ends
+            // early because the rows moved under it.
+            var holdsList = false
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull { it.id == down.id }
                     if (change == null || !change.pressed) break
-                    if (tracker == null) {
+                    if (!holdsList) {
                         // The long press fired between events, with the finger still at its last
                         // position; this event may already have moved it off the row.
                         gestureState.longPressedItem?.let { item ->
                             gestureState.longPressedItem = null
-                            startSelection(item, touchSlop)
+                            holdsList = startSelection(item, touchSlop)
                         }
                     }
                     pointerInWindow = toWindow(change.position)
-                    if (tracker == null) continue
+                    if (!holdsList) continue
                     event.changes.forEach { it.consume() }
+                    if (tracker == null) continue
                     rangeGate?.onPointerMoved(pointerInWindow.y)
                     updateGeometry()
                     selectUnderPointer()
@@ -261,7 +279,8 @@ private class DragToSelectNode<T : Any>(
 
     private fun toWindow(position: Offset): Offset = requireLayoutCoordinates().localToWindow(position)
 
-    private fun startSelection(item: T, touchSlop: Float) {
+    /** Starts a drag from the row showing [item]; returns whether it started. */
+    private fun startSelection(item: T, touchSlop: Float): Boolean {
         updateGeometry()
         val layoutInfo = listState.layoutInfo
         val anchor = anchorIndexOf(
@@ -270,17 +289,31 @@ private class DragToSelectNode<T : Any>(
             viewportStartOffset = layoutInfo.viewportStartOffset,
             visibleItems = layoutInfo.visibleItemsInfo,
             itemAt = itemAt,
+            itemKey = itemKey,
         )
         if (anchor == null) {
             Timber.tag(LogTag).w("Drag-select not started: the long-pressed row is not on screen")
-            return
+            return false
         }
         // The long press has already toggled the anchor, so its state now is the drag's target.
         val selecting = isSelected(item)
-        tracker = DragSelectionTracker(anchor, selecting)
+        tracker = DragSelectionTracker(anchor, itemKey(item), selecting, itemKey)
         rangeGate = DragRangeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
         edgeGate = AutoScrollEdgeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
         Timber.tag(LogTag).d("Drag-select started on row %d, selecting=%b", anchor, selecting)
+        return true
+    }
+
+    /**
+     * Ends the drag before the finger lifts, keeping what it has selected. The finger goes on
+     * holding the list, and with no edge gate left auto-scroll winds down on its next step.
+     */
+    private fun endDragEarly(tracker: DragSelectionTracker<T>, reason: String) {
+        Timber.tag(LogTag).d("Drag-select ended on row %d: %s", tracker.currentIndex, reason)
+        this.tracker = null
+        rangeGate = null
+        edgeGate = null
+        autoScrollVelocity = 0f
     }
 
     /**
@@ -290,6 +323,12 @@ private class DragToSelectNode<T : Any>(
     private fun selectUnderPointer() {
         val tracker = tracker ?: return
         if (rangeGate?.isOpen != true) return
+        // The range is kept by row index: once its rows have moved (a list re-sorting as its
+        // items load), going on would select and restore songs the finger never passed over.
+        if (!tracker.isInPlace(itemAt)) {
+            endDragEarly(tracker, "its rows moved")
+            return
+        }
         val y = if (bandBottom > bandTop) pointerY.coerceIn(bandTop, bandBottom - 1f) else pointerY
         val layoutInfo = listState.layoutInfo
         val index = itemIndexAtY(y, layoutInfo.viewportStartOffset, layoutInfo.visibleItemsInfo)

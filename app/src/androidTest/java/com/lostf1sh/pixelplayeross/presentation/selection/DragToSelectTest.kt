@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -57,6 +58,8 @@ class DragToSelectTest {
     private val songs = List(40) { index ->
         Song.emptySong().copy(id = "song-$index", title = "Song $index", artist = "Artist", album = "Album")
     }
+    /** The songs as the list shows them; tests reorder or update them mid-drag. */
+    private var rows by mutableStateOf(songs)
     private lateinit var listState: LazyListState
 
     /**
@@ -86,14 +89,15 @@ class DragToSelectTest {
                                 .dragToSelect(
                                     state = dragSelectState,
                                     listState = listState,
-                                    itemAt = { index -> songs.getOrNull(index) },
+                                    itemAt = { index -> rows.getOrNull(index) },
+                                    itemKey = Song::id,
                                     isSelected = { song -> holder.isSelected(song.id) },
                                     onSelectionChange = holder::applyDragSelection,
                                 ),
                             state = listState,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            items(songs, key = { it.id }) { song ->
+                            items(rows, key = { it.id }) { song ->
                                 EnhancedSongListItem(
                                     modifier = Modifier.testTag(song.id),
                                     song = song,
@@ -348,6 +352,68 @@ class DragToSelectTest {
                 .containsExactly("song-5", "song-4", "song-3", "song-2", "song-1", "song-0").inOrder()
             assertThat(maxPullFraction).isEqualTo(0f)
             assertThat(refreshes).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun rowsThatReorderUnderTheDragEndItAndKeepWhatItSelected() {
+        setList()
+        val x = boundsInRoot(LIST_TAG).center.x
+        val rowsBefore = (0..3).map { boundsInRoot(songs[it].id).center.y }
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            down(Offset(x, rowsBefore[0]))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, rowsBefore[1]))
+            moveTo(Offset(x, rowsBefore[3]))
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).containsExactly("song-0", "song-1", "song-2", "song-3").inOrder()
+            // Like a folder song whose details load and sort it to the top, under the drag.
+            rows = listOf(songs[5]) + songs.filterNot { it.id == "song-5" }
+        }
+        val firstVisibleAfterReorder = composeRule.runOnIdle { listState.firstVisibleItemIndex }
+        val song7 = boundsInRoot("song-7").center.y
+        val song1 = boundsInRoot("song-1").center.y
+
+        // Without the rows the drag found, going on would select and restore the wrong songs.
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            moveTo(Offset(x, song7))
+            moveTo(Offset(x, song1))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).containsExactly("song-0", "song-1", "song-2", "song-3").inOrder()
+            // The finger held the list until it lifted.
+            assertThat(listState.firstVisibleItemIndex).isEqualTo(firstVisibleAfterReorder)
+        }
+    }
+
+    @Test
+    fun rowsUpdatedInPlaceUnderTheDragKeepItGoing() {
+        setList()
+        val x = boundsInRoot(LIST_TAG).center.x
+        val rowsBefore = (0..6).map(::rowCenterY)
+
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            down(Offset(x, rowsBefore[0]))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, rowsBefore[1]))
+            moveTo(Offset(x, rowsBefore[3]))
+        }
+        // Like folder songs whose details load without changing their order.
+        composeRule.runOnIdle { rows = songs.map { it.copy(title = "${it.title} (loaded)") } }
+
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            moveTo(Offset(x, rowsBefore[6]))
+            moveTo(Offset(x, rowsBefore[5]))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertThat(selectedIds())
+                .containsExactly("song-0", "song-1", "song-2", "song-3", "song-4", "song-5").inOrder()
         }
     }
 

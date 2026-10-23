@@ -243,6 +243,7 @@ fun LibraryFavoritesTab(
                                 state = dragSelectState,
                                 listState = listState,
                                 itemAt = dragSelectSongAt,
+                                itemKey = Song::id,
                                 isSelected = isDragSelectSongSelected,
                                 onSelectionChange = onSongDragSelectionChange,
                                 bottomInset = if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight

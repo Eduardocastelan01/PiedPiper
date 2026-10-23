@@ -368,6 +368,7 @@ fun GenreDetailScreen(
                         state = dragSelectState,
                         listState = lazyListState,
                         itemAt = dragSelectSongAt,
+                        itemKey = Song::id,
                         isSelected = isDragSelectSongSelected,
                         onSelectionChange = onSongDragSelectionChange,
                         // The collapsed top bar always covers this much of the list's top.
