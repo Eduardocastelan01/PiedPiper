@@ -5,7 +5,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import kotlin.math.min
 
 /** The part of a calendar year a recap covers. */
 internal data class RecapBounds(
@@ -56,13 +55,22 @@ internal fun recapYearBounds(year: Int, zoneId: ZoneId, nowMillis: Long): RecapB
 /** Listened time per local hour of the day (index 0 is midnight), splitting spans at hour edges. */
 internal fun hourlyDurations(spans: List<PlaybackSpan>, zoneId: ZoneId): LongArray {
     val totals = LongArray(24)
+    val rules = zoneId.rules
     spans.forEach { span ->
         var cursor = span.startMillis
         while (cursor < span.endMillis) {
-            val zoned = Instant.ofEpochMilli(cursor).atZone(zoneId)
-            // ZonedDateTime.plusHours works on the instant timeline, so DST changes split cleanly.
-            val nextHour = zoned.truncatedTo(ChronoUnit.HOURS).plusHours(1).toInstant().toEpochMilli()
-            val sliceEnd = min(span.endMillis, nextHour)
+            val instant = Instant.ofEpochMilli(cursor)
+            val zoned = instant.atZone(zoneId)
+            // The local hour changes at the next whole hour at the current offset, or earlier when
+            // the offset itself changes. Both lie after the cursor, so every slice moves forward,
+            // even across offset changes that are not whole hours (Lord Howe shifts by 30 minutes).
+            val nextHour = zoned.toLocalDateTime()
+                .truncatedTo(ChronoUnit.HOURS)
+                .plusHours(1)
+                .toInstant(zoned.offset)
+                .toEpochMilli()
+            val nextOffsetChange = rules.nextTransition(instant)?.instant?.toEpochMilli() ?: Long.MAX_VALUE
+            val sliceEnd = minOf(span.endMillis, nextHour, nextOffsetChange)
             totals[zoned.hour] += sliceEnd - cursor
             cursor = sliceEnd
         }

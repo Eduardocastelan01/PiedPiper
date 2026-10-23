@@ -2,17 +2,24 @@ package com.lostf1sh.pixelplayeross.data.stats
 
 import com.google.common.truth.Truth.assertThat
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackSpan
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertTimeoutPreemptively
 
 class ListeningRecapMathTest {
 
     private val zone = ZoneId.of("Europe/Istanbul")
 
     private fun millis(dateTime: LocalDateTime): Long = dateTime.atZone(zone).toInstant().toEpochMilli()
+
+    private fun offsetMillis(year: Int, month: Int, day: Int, hour: Int, minute: Int, offset: ZoneOffset): Long =
+        OffsetDateTime.of(year, month, day, hour, minute, 0, 0, offset).toInstant().toEpochMilli()
 
     @Test
     fun `recapYearBounds covers the whole year once it is over`() {
@@ -56,6 +63,55 @@ class ListeningRecapMathTest {
         assertThat(hourly[22]).isEqualTo(TimeUnit.MINUTES.toMillis(20))
         assertThat(hourly[23]).isEqualTo(TimeUnit.MINUTES.toMillis(60))
         assertThat(hourly[0]).isEqualTo(TimeUnit.MINUTES.toMillis(10))
+        assertThat(hourly.sum()).isEqualTo(end - start)
+    }
+
+    @Test
+    fun `hourlyDurations counts both repeated hours when daylight saving time ends`() {
+        val newYork = ZoneId.of("America/New_York")
+        // 2025-11-02: 02:00 EDT falls back to 01:00 EST, so 01:00-02:00 happens twice.
+        val start = offsetMillis(2025, 11, 2, 0, 30, ZoneOffset.ofHours(-4))
+        val end = offsetMillis(2025, 11, 2, 2, 30, ZoneOffset.ofHours(-5))
+
+        val hourly = hourlyDurations(listOf(PlaybackSpan(start, end)), newYork)
+
+        assertThat(hourly[0]).isEqualTo(TimeUnit.MINUTES.toMillis(30))
+        assertThat(hourly[1]).isEqualTo(TimeUnit.MINUTES.toMillis(120))
+        assertThat(hourly[2]).isEqualTo(TimeUnit.MINUTES.toMillis(30))
+        assertThat(hourly.sum()).isEqualTo(end - start)
+    }
+
+    @Test
+    fun `hourlyDurations moves past a half-hour fall back without looping`() {
+        val lordHowe = ZoneId.of("Australia/Lord_Howe")
+        // 2025-04-06: 02:00 at +11:00 falls back to 01:30 at +10:30.
+        val start = offsetMillis(2025, 4, 6, 1, 20, ZoneOffset.ofHours(11))
+        val end = offsetMillis(2025, 4, 6, 2, 20, ZoneOffset.ofHoursMinutes(10, 30))
+
+        val hourly = assertTimeoutPreemptively(Duration.ofSeconds(5)) {
+            hourlyDurations(listOf(PlaybackSpan(start, end)), lordHowe)
+        }
+
+        // 01:20-02:00 at +11:00, then 01:30-02:00 again at +10:30.
+        assertThat(hourly[1]).isEqualTo(TimeUnit.MINUTES.toMillis(70))
+        assertThat(hourly[2]).isEqualTo(TimeUnit.MINUTES.toMillis(20))
+        assertThat(hourly.sum()).isEqualTo(end - start)
+    }
+
+    @Test
+    fun `hourlyDurations splits at a half-hour spring forward`() {
+        val lordHowe = ZoneId.of("Australia/Lord_Howe")
+        // 2025-10-05: 02:00 at +10:30 jumps to 02:30 at +11:00.
+        val start = offsetMillis(2025, 10, 5, 1, 40, ZoneOffset.ofHoursMinutes(10, 30))
+        val end = offsetMillis(2025, 10, 5, 3, 10, ZoneOffset.ofHours(11))
+
+        val hourly = assertTimeoutPreemptively(Duration.ofSeconds(5)) {
+            hourlyDurations(listOf(PlaybackSpan(start, end)), lordHowe)
+        }
+
+        assertThat(hourly[1]).isEqualTo(TimeUnit.MINUTES.toMillis(20))
+        assertThat(hourly[2]).isEqualTo(TimeUnit.MINUTES.toMillis(30))
+        assertThat(hourly[3]).isEqualTo(TimeUnit.MINUTES.toMillis(10))
         assertThat(hourly.sum()).isEqualTo(end - start)
     }
 
