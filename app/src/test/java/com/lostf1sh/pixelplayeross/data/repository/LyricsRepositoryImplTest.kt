@@ -4,11 +4,15 @@ import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.lostf1sh.pixelplayeross.data.database.LyricsEntity
 import com.lostf1sh.pixelplayeross.data.database.LyricsDao
+import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import com.lostf1sh.pixelplayeross.data.model.LyricsSourcePreference
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.data.model.SyncedLine
+import com.lostf1sh.pixelplayeross.data.model.SyncedWord
 import com.lostf1sh.pixelplayeross.data.network.lyrics.LrcLibApiService
 import com.lostf1sh.pixelplayeross.data.network.lyrics.LrcLibResponse
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
+import com.lostf1sh.pixelplayeross.utils.LyricsUtils
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -463,6 +467,70 @@ class LyricsRepositoryImplTest {
         assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh v�n nh� em")
         coVerify(exactly = 0) { apiService.searchLyrics(any(), any(), any(), any()) }
         coVerify(exactly = 0) { lyricsDao.insert(any()) }
+    }
+
+    @Test
+    fun containsReplacementCharacter_findsDamageInBackingVocalsUnderACleanLine() {
+        val timedBacking = LyricsUtils.parseLyrics(
+            "[00:01.00]<00:01.00>Anh <00:01.40>vẫn <00:01.80>nhớ\n[bg:<00:02.20>(v�n <00:02.60>nh�)]"
+        )
+        val untimedBacking = LyricsUtils.parseLyrics("[00:01.00]Anh vẫn nhớ\n[bg:(v�n nh�)]")
+
+        assertThat(timedBacking.plain!!.single()).doesNotContain("�")
+        assertThat(timedBacking.containsReplacementCharacter()).isTrue()
+        assertThat(untimedBacking.containsReplacementCharacter()).isTrue()
+    }
+
+    @Test
+    fun containsReplacementCharacter_findsDamageInTimedWordsAndTranslations() {
+        val damagedWord = Lyrics(
+            synced = listOf(
+                SyncedLine(
+                    time = 1_000,
+                    line = "Anh vẫn nhớ",
+                    words = listOf(SyncedWord(1_000, "Anh "), SyncedWord(1_400, "v�n"))
+                )
+            )
+        )
+        val damagedTranslation = LyricsUtils.parseLyrics("[00:01.00]Anh vẫn nhớ\n[00:01.00]I still rem�mber")
+
+        assertThat(damagedWord.containsReplacementCharacter()).isTrue()
+        assertThat(damagedTranslation.containsReplacementCharacter()).isTrue()
+    }
+
+    @Test
+    fun containsReplacementCharacter_acceptsCleanLyricsWithBackingVocals() {
+        val lyrics = LyricsUtils.parseLyrics(
+            "[00:01.00]v1:<00:01.00>Anh <00:01.40>vẫn <00:01.80>nhớ\n[bg:<00:02.20>(vẫn <00:02.60>nhớ)]"
+        )
+
+        assertThat(lyrics.containsReplacementCharacter()).isFalse()
+    }
+
+    @Test
+    fun getLyrics_doesNotTakeALrcFileWithDamagedBackingVocalsAsTheCleanCopy() = runTest {
+        val musicDir = Files.createTempDirectory("pixelplayer-music").toFile()
+        File(musicDir, "Mua Thu.lrc").writeText("[00:01.00]Anh vẫn nhớ thân em\n[bg:(th�n em)]")
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        coEvery { lyricsDao.getLyrics(134L) } returns null
+        val repository = LyricsRepositoryImpl(
+            context = testContext(),
+            lrcLibApiService = mockk<LrcLibApiService>(relaxed = true),
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository(externalLyricsEnabled = false)
+        )
+        val song = testSong(
+            id = "134",
+            title = "Mùa Thu",
+            artist = "Sài Gòn Echo",
+            path = File(musicDir, "Mua Thu.flac").path,
+            duration = 180_000L
+        ).copy(lyrics = "[00:01.00]Anh v�n nh� th�n em")
+
+        val lyrics = repository.getLyrics(song, LyricsSourcePreference.LOCAL_FIRST)
+
+        assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh v�n nh� th�n em")
     }
 
     @Test

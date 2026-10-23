@@ -60,6 +60,25 @@ private val EMBEDDED_LYRICS_KEYS = listOf("LYRICS", "SYNCEDLYRICS", "TTML", "UNS
 
 private fun Lyrics.isValid(): Boolean = !synced.isNullOrEmpty() || !plain.isNullOrEmpty()
 
+private const val REPLACEMENT_CHARACTER = '\uFFFD'
+
+/**
+ * Whether any text these lyrics show was damaged into U+FFFD: a line, its timed words, its
+ * translation or its backing vocals, which [Lyrics.plain] leaves out when the main line is sung.
+ */
+internal fun Lyrics.containsReplacementCharacter(): Boolean =
+    plain.orEmpty().any { REPLACEMENT_CHARACTER in it } ||
+        synced.orEmpty().any { it.containsReplacementCharacter() }
+
+private fun SyncedLine.containsReplacementCharacter(): Boolean =
+    REPLACEMENT_CHARACTER in line ||
+        translation.orEmpty().contains(REPLACEMENT_CHARACTER) ||
+        words.orEmpty().any { REPLACEMENT_CHARACTER in it.word } ||
+        background?.let { backing ->
+            REPLACEMENT_CHARACTER in backing.text ||
+                backing.words.orEmpty().any { REPLACEMENT_CHARACTER in it.word }
+        } == true
+
 internal fun parseBestEmbeddedLyricsField(propertyMap: Map<String, Array<String>>?): Lyrics? {
     var firstPlainLyrics: Lyrics? = null
 
@@ -132,7 +151,6 @@ class LyricsRepositoryImpl @Inject constructor(
         private const val MAX_CALLS_PER_MINUTE = 30
         private const val NETWORK_RETRY_ATTEMPTS = 3
         private const val NETWORK_RETRY_INITIAL_DELAY_MS = 500L
-        private const val REPLACEMENT_CHARACTER = '\uFFFD'
 
         private val BRACKETED_QUALIFIER_REGEX = Regex("""[\(\[\{\uFF08\uFF3B\uFF5B\u3010\u300E\u300C\u3014\u3008\u300A]([^)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]*)[\)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]""")
         private val FEATURE_QUALIFIER_REGEX = Regex("""\b(feat(?:uring)?|ft)\.?\b""", RegexOption.IGNORE_CASE)
@@ -1108,10 +1126,6 @@ class LyricsRepositoryImpl @Inject constructor(
         }
         return null
     }
-
-    private fun Lyrics.containsReplacementCharacter(): Boolean =
-        synced.orEmpty().any { it.line.contains(REPLACEMENT_CHARACTER) } ||
-            plain.orEmpty().any { it.contains(REPLACEMENT_CHARACTER) }
 
     private fun parseStoredLyrics(rawLyrics: String): Lyrics? {
         val parsedLyrics = LyricsUtils.parseLyrics(rawLyrics)
