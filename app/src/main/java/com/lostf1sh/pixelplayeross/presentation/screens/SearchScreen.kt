@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
@@ -1158,6 +1159,11 @@ fun SearchResultsList(
             }
         }
     }
+    // Results with another set of sections answer another filter or query, so they get a fresh
+    // scroll state and open at the top. The old state would keep the previous first visible item
+    // in place: going from Albums back to All opened at the Albums header, songs hidden above it.
+    val sectionTypes = remember(groupedResults) { groupedResults.keys }
+    val listState = rememberSaveable(sectionTypes, saver = LazyListState.Saver) { LazyListState() }
     val songResultsQueue = remember(groupedResults) {
         buildList {
             groupedResults[SearchFilterType.SONGS]
@@ -1204,6 +1210,7 @@ fun SearchResultsList(
                     topEnd = 28.dp
                 )
             ),
+        state = listState,
         contentPadding = PaddingValues(
             top = 8.dp,
             bottom = if (imePadding <= 8.dp) (MiniPlayerHeight + systemBarPaddingBottom) else imePadding
