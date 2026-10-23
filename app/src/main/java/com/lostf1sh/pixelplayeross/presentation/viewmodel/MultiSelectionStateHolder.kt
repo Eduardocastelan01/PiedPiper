@@ -50,6 +50,13 @@ class MultiSelectionStateHolder @Inject constructor() {
     val selectedCount: StateFlow<Int> = _selectedCount.asStateFlow()
 
     /**
+     * The selection as it was before the current drag-to-select gesture changed it, so songs the
+     * drag deselects and then gives back keep their place in the order. Every drag starts with the
+     * long press that toggles its first song, and any change other than a drag step resets this.
+     */
+    private var dragSelectionOrigin: List<Song>? = null
+
+    /**
      * Toggles the selection state of a song.
      * If already selected, removes it. If not selected, adds it to the end.
      *
@@ -102,27 +109,36 @@ class MultiSelectionStateHolder @Inject constructor() {
 
     /**
      * Applies one step of a drag-to-select gesture as a single state update.
-     * Songs in [deselect] are removed first; songs in [select] that are not selected yet are then
-     * appended in the given order, so selection badges follow the finger.
+     * Songs in [deselect] are removed first. Songs in [select] that were selected before the drag
+     * started (a deselecting drag that is dragged back) return to their old place in the order;
+     * the others are appended in the given order, so selection badges follow the finger.
      *
      * @param select Songs the drag has just selected
      * @param deselect Songs the drag has just deselected
      */
     fun applyDragSelection(select: List<Song>, deselect: List<Song>) {
         if (select.isEmpty() && deselect.isEmpty()) return
+        val currentList = _selectedSongs.value
+        val origin = dragSelectionOrigin ?: currentList
+        val originIds = origin.mapTo(hashSetOf()) { it.id }
         val removedIds = deselect.mapTo(hashSetOf()) { it.id }
-        val currentList = _selectedSongs.value.filterNot { it.id in removedIds }.toMutableList()
-        val currentIds = currentList.mapTo(linkedSetOf()) { it.id }
+        val keptIds = currentList.mapNotNullTo(hashSetOf()) { song -> song.id.takeUnless { it in removedIds } }
+        val restoredIds = select.mapNotNullTo(hashSetOf()) { song -> song.id.takeIf { it in originIds } }
 
+        // Songs selected before the drag keep their relative order; songs the drag added follow.
+        val songs = origin.filterTo(ArrayList()) { it.id in keptIds || it.id in restoredIds }
+        currentList.filterTo(songs) { it.id in keptIds && it.id !in originIds }
+        val ids = songs.mapTo(linkedSetOf()) { it.id }
         select.forEach { song ->
-            if (currentIds.add(song.id)) {
-                currentList.add(song)
+            if (ids.add(song.id)) {
+                songs.add(song)
             }
         }
 
-        if (currentIds != _selectedSongIds.value) {
-            updateState(currentList, currentIds)
+        if (ids != _selectedSongIds.value) {
+            updateState(songs, ids)
         }
+        dragSelectionOrigin = origin
     }
 
     /**
@@ -158,6 +174,7 @@ class MultiSelectionStateHolder @Inject constructor() {
      * Updates all state flows atomically.
      */
     private fun updateState(songs: List<Song>, ids: Set<String>) {
+        dragSelectionOrigin = null
         _selectedSongs.value = songs.toImmutableList()
         _selectedSongIds.value = ids
         _selectedCount.value = songs.size
