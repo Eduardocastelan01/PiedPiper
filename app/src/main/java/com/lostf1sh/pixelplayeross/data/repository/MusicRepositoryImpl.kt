@@ -451,8 +451,10 @@ class MusicRepositoryImpl @Inject constructor(
     }
 
     override fun getSongsForAlbum(albumId: Long): Flow<List<Song>> {
+        // MusicDao.getSongsByAlbumId already orders by disc, then track; re-sorting by track
+        // alone would interleave the discs of a multi-disc album.
         return musicDao.getSongsByAlbumId(albumId).map { entities ->
-            entities.map { it.toSong() }.sortedBy { it.trackNumber }
+            entities.map { it.toSong() }
         }.flowOn(Dispatchers.IO)
     }
 

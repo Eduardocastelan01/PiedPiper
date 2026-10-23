@@ -853,6 +853,7 @@ class NavidromeRepository @Inject constructor(
                     isFavorite = false,
                     lyrics = null,
                     trackNumber = navidromeSong.trackNumber,
+                    discNumber = CloudMusicUtils.normalizeDiscNumber(navidromeSong.discNumber),
                     year = navidromeSong.year,
                     dateAdded = navidromeSong.dateAdded.takeIf { it > 0 }
                         ?: System.currentTimeMillis(),
@@ -1052,6 +1053,7 @@ fun NavidromeSong.toSong(): Song {
         sampleRate = null,
         year = year,
         trackNumber = trackNumber,
+        discNumber = CloudMusicUtils.normalizeDiscNumber(discNumber),
         dateAdded = dateAddedOr(System.currentTimeMillis()),
         isFavorite = false,
         navidromeId = id

@@ -239,6 +239,28 @@ class MusicRepositoryImplTest {
     }
 
     @Test
+    fun `getSongsForAlbum keeps every disc together in DAO order`() = runTest(testDispatcher) {
+        fun albumTrack(id: Long, disc: Int, track: Int) =
+            createSongEntity(id, "Disc $disc Track $track", "A1", "G", "/cloud/$id", "/cloud")
+                .copy(discNumber = disc, trackNumber = track)
+        every { mockMusicDao.getSongsByAlbumId(201L) } returns flowOf(
+            listOf(
+                albumTrack(1L, disc = 1, track = 1),
+                albumTrack(2L, disc = 1, track = 2),
+                albumTrack(3L, disc = 2, track = 1),
+                albumTrack(4L, disc = 2, track = 2)
+            )
+        )
+
+        val result = musicRepository.getSongsForAlbum(201L).first()
+
+        assertEquals(
+            listOf("Disc 1 Track 1", "Disc 1 Track 2", "Disc 2 Track 1", "Disc 2 Track 2"),
+            result.map { it.title }
+        )
+    }
+
+    @Test
     fun `getArtists returns artists from DAO, filtered by songs in allowed directories`() = runTest(testDispatcher) {
         val songEntities = listOf(
             createSongEntity(1L, "S1", "Artist1Name", "G", "/allowed/s1.mp3", "/allowed"),
