@@ -6,6 +6,7 @@ import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.request.Options
 import com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository
+import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
@@ -78,6 +79,8 @@ class NavidromeCoilFetcher(
             val request = Request.Builder().url(coverArtUrl).get().build()
             RemoteArtworkCache.download(okHttpClient, request, cachedFile)
         } catch (e: Exception) {
+            // A cancelled fetch (its list item scrolled away) is not a failed download.
+            if (e is CancellationException) throw e
             if (shouldLogFailure("download_$coverArtId")) {
                 Timber.w(e, "$TAG: Failed to download cover art for $coverArtId")
             }
