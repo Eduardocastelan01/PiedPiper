@@ -76,9 +76,10 @@ internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remem
  * row's new state, and the list auto-scrolls while the finger rests near its top or bottom edge.
  *
  * The drag starts from the long-pressed row even if the list has moved under the finger since,
- * and only follows the finger once it has moved by more than the touch slop. Auto-scroll reaches
- * parents through nested scrolling like a finger dragging the list would, so a collapsing top bar
- * collapses with it.
+ * and only follows the finger once it has moved by more than the touch slop. Auto-scroll offers
+ * each step to nested-scroll parents before the list scrolls, like a finger dragging the list,
+ * so a collapsing top bar collapses with it; it never passes on what the list cannot scroll, so
+ * it cannot pull a parent's pull-to-refresh.
  *
  * Append it last to the list's modifier chain so pointer positions line up with the list's items.
  * The list must not use `reverseLayout`.
@@ -353,32 +354,31 @@ private class DragToSelectNode<T : Any>(
     }
 
     /**
-     * Scrolls by [delta] pixels, positive towards the end of the list, the way a finger dragging
-     * the list would: nested-scroll parents see the scroll before and after the list takes its
-     * part, so a collapsing top bar collapses first. Returns the distance the list and its
+     * Scrolls by [delta] pixels, positive towards the end of the list. Nested-scroll parents are
+     * offered the scroll before the list, as for a finger dragging it, so a collapsing top bar
+     * collapses (or, at the top of the list, expands) first. Returns the distance the list and its
      * parents consumed.
+     *
+     * What the list cannot use at either end is dropped rather than passed on as post-scroll:
+     * auto-scroll pressing against the top of the list is not a finger pulling it down, and a
+     * pull-to-refresh parent would take it for one and refresh when the finger lifts.
      */
     private fun ScrollScope.dispatchScroll(delta: Float): Float {
         hasDispatchedNestedScroll = true
         // Nested-scroll deltas follow the finger, which moves up to scroll a list towards its end.
         val available = Offset(0f, -delta)
-        val consumedBefore = nestedScrollDispatcher.dispatchPreScroll(available, NestedScrollSource.UserInput)
-        val left = available - consumedBefore
-        val consumedByList = Offset(0f, -scrollBy(-left.y))
-        val consumedAfter = nestedScrollDispatcher.dispatchPostScroll(
-            consumed = consumedByList,
-            available = left - consumedByList,
-            source = NestedScrollSource.UserInput,
-        )
-        return -(consumedBefore + consumedByList + consumedAfter).y
+        val consumedByParents = nestedScrollDispatcher.dispatchPreScroll(available, NestedScrollSource.UserInput)
+        val consumedByList = scrollBy(-(available - consumedByParents).y)
+        return -consumedByParents.y + consumedByList
     }
 
     /**
      * Ends an auto-scroll for nested-scroll parents the way a finger that lifts without flinging
-     * ends a drag, so a top bar left half collapsed settles.
+     * ends a drag, so a top bar left half collapsed settles. Only the post-fling is sent: the
+     * pre-fling is where pull-to-refresh decides whether a pull was let go past its threshold,
+     * and auto-scroll never pulls.
      */
     private suspend fun settleNestedScroll() {
-        val left = Velocity.Zero - nestedScrollDispatcher.dispatchPreFling(Velocity.Zero)
-        nestedScrollDispatcher.dispatchPostFling(consumed = Velocity.Zero, available = left)
+        nestedScrollDispatcher.dispatchPostFling(consumed = Velocity.Zero, available = Velocity.Zero)
     }
 }

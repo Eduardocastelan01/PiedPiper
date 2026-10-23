@@ -10,12 +10,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -25,6 +30,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -54,12 +60,13 @@ class DragToSelectTest {
     private lateinit var listState: LazyListState
 
     /**
-     * Shows the songs in a list under [header], which gets whether selection mode is on. The
-     * whole screen is tagged [ROOT_TAG], so touches injected through it stay put on screen when
-     * the list moves.
+     * Shows the songs in a list under [header], which gets whether selection mode is on, inside
+     * [wrapper]. The whole screen is tagged [ROOT_TAG], so touches injected through it stay put
+     * on screen when the list moves.
      */
     private fun setList(
         rootModifier: Modifier = Modifier,
+        wrapper: @Composable (content: @Composable () -> Unit) -> Unit = { content -> content() },
         header: @Composable (isSelectionMode: Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -68,38 +75,40 @@ class DragToSelectTest {
                 val isSelectionMode by holder.isSelectionMode.collectAsState()
                 val dragSelectState = rememberDragToSelectState<Song>()
                 listState = rememberLazyListState()
-                Column(modifier = rootModifier.fillMaxSize().testTag(ROOT_TAG)) {
-                    header(isSelectionMode)
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .testTag(LIST_TAG)
-                            .dragToSelect(
-                                state = dragSelectState,
-                                listState = listState,
-                                itemAt = { index -> songs.getOrNull(index) },
-                                isSelected = { song -> holder.isSelected(song.id) },
-                                onSelectionChange = holder::applyDragSelection,
-                            ),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        items(songs, key = { it.id }) { song ->
-                            EnhancedSongListItem(
-                                modifier = Modifier.testTag(song.id),
-                                song = song,
-                                isPlaying = false,
-                                isSelected = song.id in selectedIds,
-                                selectionIndex = holder.getSelectionIndex(song.id),
-                                isSelectionMode = isSelectionMode,
-                                onLongPress = {
-                                    holder.toggleSelection(song)
-                                    dragSelectState.onItemLongPressed(song)
-                                },
-                                onMoreOptionsClick = {},
-                                onClick = {},
-                            )
+                wrapper {
+                    Column(modifier = rootModifier.fillMaxSize().testTag(ROOT_TAG)) {
+                        header(isSelectionMode)
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .testTag(LIST_TAG)
+                                .dragToSelect(
+                                    state = dragSelectState,
+                                    listState = listState,
+                                    itemAt = { index -> songs.getOrNull(index) },
+                                    isSelected = { song -> holder.isSelected(song.id) },
+                                    onSelectionChange = holder::applyDragSelection,
+                                ),
+                            state = listState,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            items(songs, key = { it.id }) { song ->
+                                EnhancedSongListItem(
+                                    modifier = Modifier.testTag(song.id),
+                                    song = song,
+                                    isPlaying = false,
+                                    isSelected = song.id in selectedIds,
+                                    selectionIndex = holder.getSelectionIndex(song.id),
+                                    isSelectionMode = isSelectionMode,
+                                    onLongPress = {
+                                        holder.toggleSelection(song)
+                                        dragSelectState.onItemLongPressed(song)
+                                    },
+                                    onMoreOptionsClick = {},
+                                    onClick = {},
+                                )
+                            }
                         }
                     }
                 }
@@ -288,6 +297,57 @@ class DragToSelectTest {
             assertThat(selected.size).isGreaterThan(listState.firstVisibleItemIndex)
             // Lifting settles the top bar like a drag that ends without a fling.
             assertThat(postFlings).isEqualTo(1)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun autoScrollIntoTheTopOfTheListNeitherPullsNorTriggersPullToRefresh() {
+        var refreshes = 0
+        var maxPullFraction = 0f
+        // Like the Library tabs, whose lists sit in a PullToRefreshBox.
+        setList(
+            wrapper = { content ->
+                val pullState = rememberPullToRefreshState()
+                LaunchedEffect(pullState) {
+                    snapshotFlow { pullState.distanceFraction }.collect { maxPullFraction = maxOf(maxPullFraction, it) }
+                }
+                PullToRefreshBox(
+                    isRefreshing = false,
+                    onRefresh = { refreshes++ },
+                    state = pullState,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    content()
+                }
+            },
+        )
+        composeRule.onNodeWithTag(LIST_TAG).performScrollToIndex(3)
+        val x = boundsInRoot(LIST_TAG).center.x
+        val row5 = boundsInRoot(songs[5].id).center.y
+        // Deep in the top edge zone, over the first visible row.
+        val topEdge = boundsInRoot(LIST_TAG).top + 8f
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            down(Offset(x, row5))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, topEdge))
+            // Rest in the top edge zone while the list auto-scrolls to its top, and well past the
+            // time a pull of that speed would take to cross the refresh threshold.
+            repeat(20) { step ->
+                advanceEventTime(100)
+                moveBy(Offset(0f, if (step % 2 == 0) 1f else -1f))
+            }
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertThat(listState.firstVisibleItemIndex).isEqualTo(0)
+            assertThat(listState.firstVisibleItemScrollOffset).isEqualTo(0)
+            assertThat(selectedIds())
+                .containsExactly("song-5", "song-4", "song-3", "song-2", "song-1", "song-0").inOrder()
+            assertThat(maxPullFraction).isEqualTo(0f)
+            assertThat(refreshes).isEqualTo(0)
         }
     }
 
