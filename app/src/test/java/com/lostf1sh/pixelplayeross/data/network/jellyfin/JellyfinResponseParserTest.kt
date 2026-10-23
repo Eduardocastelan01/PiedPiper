@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.data.network.jellyfin
 
 import org.json.JSONObject
+import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -53,5 +54,27 @@ class JellyfinResponseParserTest {
         assertFalse(JellyfinResponseParser.isAudioItem(item("Movie", "Video")))
         assertFalse(JellyfinResponseParser.isAudioItem(item("Photo", "Photo")))
         assertFalse(JellyfinResponseParser.isAudioItem(item(null, null)))
+    }
+
+    @Test
+    fun `parseSong maps ParentIndexNumber to the disc and IndexNumber to the track`() {
+        val song = JellyfinResponseParser.parseSong(
+            JSONObject(
+                """{"Id": "song-1", "Name": "What'd I Miss", "Album": "Hamilton", "IndexNumber": 1, "ParentIndexNumber": 2}"""
+            )
+        )
+
+        assertThat(song.discNumber).isEqualTo(2)
+        assertThat(song.trackNumber).isEqualTo(1)
+    }
+
+    @Test
+    fun `parseSong reports disc zero when ParentIndexNumber is missing`() {
+        val song = JellyfinResponseParser.parseSong(
+            JSONObject("""{"Id": "song-1", "Name": "Single", "IndexNumber": 4}""")
+        )
+
+        assertThat(song.discNumber).isEqualTo(0)
+        assertThat(song.trackNumber).isEqualTo(4)
     }
 }

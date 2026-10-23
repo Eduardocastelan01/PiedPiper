@@ -34,4 +34,17 @@ class NavidromeResponseParserTest {
         assertThat(NavidromeResponseParser.parseSong(song(null)).created).isEqualTo(0L)
         assertThat(NavidromeResponseParser.parseSong(song("not-a-date")).created).isEqualTo(0L)
     }
+
+    @Test
+    fun `song disc and track numbers are parsed`() {
+        val parsed = NavidromeResponseParser.parseSong(
+            song(null).apply {
+                put("track", 1)
+                put("discNumber", 2)
+            }
+        )
+
+        assertThat(parsed.discNumber).isEqualTo(2)
+        assertThat(parsed.trackNumber).isEqualTo(1)
+    }
 }

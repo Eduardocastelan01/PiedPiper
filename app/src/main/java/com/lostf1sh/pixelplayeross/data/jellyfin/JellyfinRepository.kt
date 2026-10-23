@@ -632,6 +632,7 @@ class JellyfinRepository @Inject constructor(
                     isFavorite = false,
                     lyrics = null,
                     trackNumber = jellyfinSong.trackNumber,
+                    discNumber = CloudMusicUtils.normalizeDiscNumber(jellyfinSong.discNumber),
                     year = jellyfinSong.year,
                     dateAdded = jellyfinSong.dateAdded.takeIf { it > 0 }
                         ?: System.currentTimeMillis(),
@@ -736,6 +737,7 @@ class JellyfinRepository @Inject constructor(
             sampleRate = null,
             year = year,
             trackNumber = trackNumber,
+            discNumber = CloudMusicUtils.normalizeDiscNumber(discNumber),
             dateAdded = 0,
             isFavorite = false
         )
