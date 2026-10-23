@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import com.lostf1sh.pixelplayeross.data.model.BackgroundVocals
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import com.lostf1sh.pixelplayeross.data.model.SyncedLine
 import com.lostf1sh.pixelplayeross.data.model.SyncedWord
@@ -67,21 +68,122 @@ class LyricsClipboardTextTest {
     }
 
     @Test
-    fun fullLyrics_enhancedLrc_dropsWordTagsVoiceTagsAndBackgroundVocals() {
+    fun fullLyrics_enhancedLrc_putsBackgroundVocalsOnTheirOwnRowAfterTheirLine() {
+        val lyrics = LyricsUtils.parseLyrics(BONES_LRC)
+
+        assertEquals(
+            """
+            There's a whisper in my bones
+            (bones, bones)
+            Keeping me restless and whole
+            Crawling through the vastness of space
+            Tangle me, tangle me in your web
+            (in your web)
+            If there's a will, there's a way
+            Take me away
+            Oh, oh, woah-oh-oh-oh
+            """.trimIndent(),
+            LyricsClipboardText.fullLyrics(lyrics, includeBackground = true)
+        )
+    }
+
+    @Test
+    fun fullLyrics_hiddenBackgroundVocals_copiesOnlyTheSungLines() {
+        val lyrics = LyricsUtils.parseLyrics(BONES_LRC)
+
+        assertEquals(
+            """
+            There's a whisper in my bones
+            Keeping me restless and whole
+            Crawling through the vastness of space
+            Tangle me, tangle me in your web
+            If there's a will, there's a way
+            Take me away
+            Oh, oh, woah-oh-oh-oh
+            """.trimIndent(),
+            LyricsClipboardText.fullLyrics(lyrics, includeBackground = false)
+        )
+    }
+
+    @Test
+    fun syncedLine_lineWithBackgroundVocals_copiesBothRows() {
+        val line = requireNotNull(LyricsUtils.parseLyrics(BONES_LRC).synced).first()
+
+        assertEquals(
+            "There's a whisper in my bones\n(bones, bones)",
+            LyricsClipboardText.syncedLine(line, includeBackground = true)
+        )
+        assertEquals(
+            "There's a whisper in my bones",
+            LyricsClipboardText.syncedLine(line, includeBackground = false)
+        )
+    }
+
+    @Test
+    fun syncedLine_backgroundSyllables_joinIntoWholeWords() {
+        val line = requireNotNull(
+            LyricsUtils.parseLyrics(
+                """
+                [00:10.00]v2: <00:10.00>Whis<00:10.40>per <00:10.90>now<00:11.50>
+                [bg: <00:11.50>(whis<00:11.90>per <00:12.30>back)<00:13.00>]
+                """.trimIndent()
+            ).synced
+        ).single()
+
+        assertEquals("Whisper now\n(whisper back)", LyricsClipboardText.syncedLine(line))
+    }
+
+    @Test
+    fun syncedLine_untimedBackgroundVocals_dropSingerPrefixAndTimestamps() {
+        val line = SyncedLine(
+            time = 0,
+            line = "v1: Main line",
+            voice = 1,
+            background = BackgroundVocals(text = "v2: [00:01.00](oh yeah)")
+        )
+
+        assertEquals("Main line\n(oh yeah)", LyricsClipboardText.syncedLine(line))
+    }
+
+    @Test
+    fun backingOnlyLine_isCopiedWhenShownAndIsAStanzaBreakWhenHidden() {
         val lyrics = LyricsUtils.parseLyrics(
             """
-            [ti:Bones]
-            [00:02.00]v1: <00:02.00>There's <00:02.60>a <00:03.00>whis<00:03.40>per <00:03.90>in <00:04.20>my <00:04.60>bones<00:05.40>
-            [bg: <00:05.40>(bones, <00:06.00>bones)<00:06.80>]
-            [00:07.00]v2: <00:07.00>Kee<00:07.40>ping <00:07.90>me <00:08.30>rest<00:08.80>less<00:09.30>
-            [00:29.00]<00:29.00>Oh, <00:29.50>oh, <00:30.00>woah<00:30.60>-oh<00:31.10>-oh<00:32.40>
+            [00:01.00]Lead line
+            [00:05.00]
+            [bg: <00:05.00>(Ooh <00:05.50>ooh)<00:06.20>]
+            [00:07.00]Next line
+            """.trimIndent()
+        )
+        val backingLine = requireNotNull(lyrics.synced)[1]
+
+        assertEquals("(Ooh ooh)", LyricsClipboardText.syncedLine(backingLine, includeBackground = true))
+        assertEquals("", LyricsClipboardText.syncedLine(backingLine, includeBackground = false))
+        assertEquals(
+            "Lead line\n(Ooh ooh)\nNext line",
+            LyricsClipboardText.fullLyrics(lyrics, includeBackground = true)
+        )
+        assertEquals(
+            "Lead line\n\nNext line",
+            LyricsClipboardText.fullLyrics(lyrics, includeBackground = false)
+        )
+    }
+
+    @Test
+    fun fullLyrics_ttmlBackgroundSpans_followTheirParagraph() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+              <body><div>
+                <p begin="2.000" end="6.000" ttm:agent="v2"><span begin="2.000" end="2.400">Whis</span><span begin="2.400" end="3.000">per</span> <span begin="3.000" end="3.500">now</span><span ttm:role="x-bg"><span begin="4.000" end="4.500">(whis</span><span begin="4.500" end="5.000">per)</span></span></p>
+                <p begin="7.000" ttm:agent="v1">Lead line</p>
+              </div></body>
+            </tt>
             """.trimIndent()
         )
 
-        assertEquals(
-            "There's a whisper in my bones\nKeeping me restless\nOh, oh, woah-oh-oh",
-            LyricsClipboardText.fullLyrics(lyrics)
-        )
+        assertEquals("Whisper now\n(whisper)\nLead line", LyricsClipboardText.fullLyrics(lyrics))
     }
 
     @Test
@@ -194,5 +296,32 @@ class LyricsClipboardTextTest {
     fun hasCopyableText_isTrueForPlainOrSyncedText() {
         assertTrue(LyricsClipboardText.hasCopyableText(Lyrics(plain = listOf("Only plain"))))
         assertTrue(LyricsClipboardText.hasCopyableText(LyricsUtils.parseLyrics("[00:01.00]Synced")))
+    }
+
+    @Test
+    fun hasCopyableText_backingVocalsOnly_dependsOnWhetherTheyAreShown() {
+        val lyrics = Lyrics(
+            synced = listOf(SyncedLine(time = 0, line = "", background = BackgroundVocals(text = "(ooh)")))
+        )
+
+        assertTrue(LyricsClipboardText.hasCopyableText(lyrics, includeBackground = true))
+        assertFalse(LyricsClipboardText.hasCopyableText(lyrics, includeBackground = false))
+    }
+
+    private companion object {
+        /** The duet from the QA test library: two singers, word timings and two `[bg:]` lines. */
+        val BONES_LRC = """
+            [ti:Bones]
+            [ar:Neon Duo]
+            [00:02.00]v1: <00:02.00>There's <00:02.60>a <00:03.00>whis<00:03.40>per <00:03.90>in <00:04.20>my <00:04.60>bones<00:05.40>
+            [bg: <00:05.40>(bones, <00:06.00>bones)<00:06.80>]
+            [00:07.00]v2: <00:07.00>Kee<00:07.40>ping <00:07.90>me <00:08.30>rest<00:08.80>less <00:09.30>and <00:09.70>whole<00:10.80>
+            [00:11.00]v1: <00:11.00>Craw<00:11.40>ling <00:11.90>through <00:12.40>the <00:12.70>vast<00:13.20>ness <00:13.70>of <00:14.00>space<00:15.00>
+            [00:15.50]v2: <00:15.50>Tan<00:15.90>gle <00:16.30>me, <00:16.80>tan<00:17.20>gle <00:17.60>me <00:18.00>in <00:18.30>your <00:18.70>web<00:19.80>
+            [bg: <00:19.80>(in <00:20.30>your <00:20.80>web)<00:21.60>]
+            [00:22.00]v1: <00:22.00>If <00:22.40>there's <00:22.90>a <00:23.20>will, <00:23.70>there's <00:24.20>a <00:24.50>way<00:25.50>
+            [00:26.00]v2: <00:26.00>Take <00:26.50>me <00:26.90>a<00:27.20>way<00:28.00>
+            [00:29.00]<00:29.00>Oh, <00:29.50>oh, <00:30.00>woah<00:30.60>-oh<00:31.10>-oh<00:31.60>-oh<00:32.40>
+        """.trimIndent()
     }
 }

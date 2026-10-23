@@ -330,8 +330,6 @@ fun LyricsSheet(
         lyrics?.synced?.any { !it.translation.isNullOrBlank() } == true
     }
 
-    val canCopyLyrics = remember(lyrics) { LyricsClipboardText.hasCopyableText(lyrics) }
-
     val hasRomanizedLyrics = remember(lyrics) {
         val hasSynced = lyrics?.synced?.any { !it.romanization.isNullOrBlank() } == true
         val hasPlain = lyrics?.plain?.any { line ->
@@ -397,6 +395,10 @@ fun LyricsSheet(
     val showLyricsBackgroundVocals by showLyricsBackgroundVocalsFlow.collectAsStateWithLifecycle(
         initialValue = DEFAULT_SHOW_LYRICS_BACKGROUND_VOCALS
     )
+    // Copying follows what the synced view shows, backing vocals included only while they're shown.
+    val canCopyLyrics = remember(lyrics, showLyricsBackgroundVocals) {
+        LyricsClipboardText.hasCopyableText(lyrics, includeBackground = showLyricsBackgroundVocals)
+    }
 
     val lyricsFontSizeFlow = remember(context) {
         context.dataStore.data.map {
@@ -850,7 +852,10 @@ fun LyricsSheet(
                                 onLineLongClick = { syncedLine ->
                                     resetImmersiveTimer()
                                     copyLyricsToClipboard(
-                                        LyricsClipboardText.syncedLine(syncedLine),
+                                        LyricsClipboardText.syncedLine(
+                                            syncedLine,
+                                            includeBackground = showLyricsBackgroundVocals
+                                        ),
                                         lineCopiedMessage
                                     )
                                 },
@@ -1088,7 +1093,10 @@ fun LyricsSheet(
                     canCopyLyrics = canCopyLyrics,
                     onCopyLyrics = {
                         copyLyricsToClipboard(
-                            LyricsClipboardText.fullLyrics(lyrics),
+                            LyricsClipboardText.fullLyrics(
+                                lyrics,
+                                includeBackground = showLyricsBackgroundVocals
+                            ),
                             lyricsCopiedMessage
                         )
                     },
