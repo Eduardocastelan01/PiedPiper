@@ -10,6 +10,7 @@ import com.lostf1sh.pixelplayeross.data.stats.ListeningRecap
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.di.DispatcherProvider
 import com.lostf1sh.pixelplayeross.presentation.recap.RecapSchedule
+import com.lostf1sh.pixelplayeross.presentation.recap.RecapSlide
 import com.lostf1sh.pixelplayeross.presentation.recap.RecapUiModel
 import com.lostf1sh.pixelplayeross.presentation.recap.RecapUiState
 import com.lostf1sh.pixelplayeross.presentation.recap.buildRecapSlides
@@ -52,40 +53,69 @@ class RecapViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _uiState.value = try {
-                loadState()
+            try {
+                load()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (throwable: Exception) {
                 Timber.e(throwable, "Failed to build the %d recap", year)
-                RecapUiState.NotEnoughData(year)
+                _uiState.value = RecapUiState.NotEnoughData(year)
             }
         }
     }
 
-    private suspend fun loadState(): RecapUiState {
+    /**
+     * Shows the story as soon as the listening data is in, with each artist's most played cover
+     * standing in for their picture, then swaps the pictures in: those can wait on the network.
+     */
+    private suspend fun load() {
         val songs = withContext(dispatchers.io) { musicRepository.getAllSongsOnce() }
         val recap = playbackStatsRepository.loadRecap(year, songs)
         if (recap == null || recap.summary.totalDurationMs < RecapSchedule.MIN_RECAP_LISTENING_MS) {
-            return RecapUiState.NotEnoughData(year)
+            _uiState.value = RecapUiState.NotEnoughData(year)
+            return
         }
 
         val songsById = songs.associateBy { it.id }
         topSongsQueue = recap.summary.songs.mapNotNull { songsById[it.songId] }
 
-        val artistNames = recap.summary.topArtists.map { it.artist }
-        val artistPictures = withContext(dispatchers.io) {
-            resolveStatsArtistImages(artistNames, musicRepository, artistImageRepository)
-        }
-        val artistImages = artistNames
-            .mapNotNull { name ->
-                (artistPictures[name] ?: recap.mostPlayedCoverOf(name, songsById))?.let { name to it }
-            }
-            .toMap()
-
         // The recap ends today while the year is still running.
         val lastDay = LocalDate.ofYearDay(year, recap.daysInRange)
         val isSoFar = RecapSchedule.isSoFar(year, lastDay)
+        val covers = recap.summary.topArtists
+            .mapNotNull { artist -> recap.mostPlayedCoverOf(artist.artist, songsById)?.let { artist.artist to it } }
+            .toMap()
+        val model = buildModel(recap, isSoFar, covers)
+        _uiState.value = RecapUiState.Ready(model)
+
+        val shownArtists = model.slides
+            .filterIsInstance<RecapSlide.TopArtists>()
+            .singleOrNull()
+            ?.artists
+            ?.map { it.name }
+            .orEmpty()
+        if (shownArtists.isEmpty()) return
+        val pictures = try {
+            withContext(dispatchers.io) {
+                resolveStatsArtistImages(shownArtists, musicRepository, artistImageRepository)
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Exception) {
+            // The story is already up with cover stand-ins; keep it rather than failing it.
+            Timber.w(throwable, "Failed to load artist pictures for the %d recap", year)
+            return
+        }
+        if (pictures.isNotEmpty()) {
+            _uiState.value = RecapUiState.Ready(buildModel(recap, isSoFar, covers + pictures))
+        }
+    }
+
+    private suspend fun buildModel(
+        recap: ListeningRecap,
+        isSoFar: Boolean,
+        artistImages: Map<String, String>
+    ): RecapUiModel {
         val slides = withContext(dispatchers.default) {
             buildRecapSlides(
                 recap = recap,
@@ -94,9 +124,7 @@ class RecapViewModel @Inject constructor(
                 canPlayTopSongs = topSongsQueue.isNotEmpty()
             )
         }
-        return RecapUiState.Ready(
-            RecapUiModel(year = year, isSoFar = isSoFar, slides = slides.toImmutableList())
-        )
+        return RecapUiModel(year = year, isSoFar = isSoFar, slides = slides.toImmutableList())
     }
 
     companion object {

@@ -13,6 +13,7 @@ import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository
 import com.lostf1sh.pixelplayeross.data.stats.PlaybackStatsRepository.PlaybackEvent
 import com.lostf1sh.pixelplayeross.di.DispatcherProvider
 import com.lostf1sh.pixelplayeross.presentation.recap.RecapSlide
+import com.lostf1sh.pixelplayeross.presentation.recap.RecapUiModel
 import com.lostf1sh.pixelplayeross.presentation.recap.RecapUiState
 import io.mockk.coEvery
 import io.mockk.every
@@ -21,6 +22,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempDirectory
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -150,6 +152,51 @@ class RecapViewModelTest {
     }
 
     @Test
+    fun `the story shows with cover stand-ins before slow artist pictures arrive`() = runTest {
+        events = yearOfListening()
+        val slowPicture = CompletableDeferred<String?>()
+        coEvery { artistImageRepository.getEffectiveArtistImageUrl(any(), "Aurora Fields") } coAnswers {
+            slowPicture.await()
+        }
+
+        createViewModel(year = 2025).uiState.test {
+            // Ready while the picture request is still out: the listening data alone is enough.
+            val first = (awaitResult() as RecapUiState.Ready).model
+            assertThat(first.artistImages()).containsExactly(
+                "Aurora Fields", "content://art/a",
+                "Blue Quartet", "content://art/c"
+            )
+
+            slowPicture.complete("https://img/aurora")
+
+            val updated = (awaitItem() as RecapUiState.Ready).model
+            assertThat(updated.artistImages()).containsExactly(
+                "Aurora Fields", "https://img/aurora",
+                "Blue Quartet", "content://art/c"
+            )
+            assertThat(updated.slides.filterIsInstance<RecapSlide.Summary>().single().topArtist?.imageUri)
+                .isEqualTo("https://img/aurora")
+            // Only the pictures change; the story itself stays the same snapshot.
+            assertThat(updated.slides.map { it.key }).isEqualTo(first.slides.map { it.key })
+        }
+    }
+
+    @Test
+    fun `a failed artist picture lookup keeps the story with cover stand-ins`() = runTest {
+        events = yearOfListening()
+        coEvery { musicRepository.getArtistIdByName(any()) } throws IllegalStateException("database closed")
+
+        createViewModel(year = 2025).uiState.test {
+            val model = (awaitResult() as RecapUiState.Ready).model
+
+            assertThat(model.artistImages()).containsExactly(
+                "Aurora Fields", "content://art/a",
+                "Blue Quartet", "content://art/c"
+            )
+        }
+    }
+
+    @Test
     fun `a failed load ends in NotEnoughData instead of loading forever`() = runTest {
         coEvery { musicRepository.getAllSongsOnce() } throws IllegalStateException("library unavailable")
 
@@ -165,6 +212,9 @@ class RecapViewModelTest {
         artistImageRepository = artistImageRepository,
         dispatchers = dispatchers
     )
+
+    private fun RecapUiModel.artistImages(): Map<String, String?> =
+        slides.filterIsInstance<RecapSlide.TopArtists>().single().artists.associate { it.name to it.imageUri }
 
     private suspend fun ReceiveTurbine<RecapUiState>.awaitResult(): RecapUiState {
         val first = awaitItem()
