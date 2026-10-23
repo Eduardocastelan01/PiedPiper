@@ -2,6 +2,10 @@
 
 package com.lostf1sh.pixelplayeross.presentation.recap
 
+import android.content.ContentResolver
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -33,12 +37,15 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,6 +81,8 @@ import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import java.text.NumberFormat
@@ -174,14 +183,37 @@ internal fun Modifier.recapReveal(progress: () -> Float, order: Int, distance: D
         translationY = (1f - fraction) * distance.toPx()
     }
 
-/** False when the user turned animations off (animator duration scale 0). */
+/**
+ * False when the user turned animations off (animator duration scale 0). Follows the setting
+ * while shown, since changing it does not recreate the activity: an open recap must stop moving
+ * on by itself as soon as animations are switched off.
+ */
 @Composable
 internal fun rememberRecapMotionEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember(context) {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+    val resolver = LocalContext.current.contentResolver
+    var enabled by remember(resolver) { mutableStateOf(resolver.isRecapMotionEnabled()) }
+    DisposableEffect(resolver) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                enabled = resolver.isRecapMotionEnabled()
+            }
+        }
+        resolver.registerContentObserver(
+            Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE),
+            false,
+            observer
+        )
+        onDispose { resolver.unregisterContentObserver(observer) }
     }
+    // A change made while the app sat in the background may not have been delivered.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        enabled = resolver.isRecapMotionEnabled()
+    }
+    return enabled
 }
+
+private fun ContentResolver.isRecapMotionEnabled(): Boolean =
+    Settings.Global.getFloat(this, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 
 /**
  * A slowly growing angle in degrees while [active]; it holds still otherwise. Callers pass
