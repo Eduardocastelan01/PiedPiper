@@ -95,7 +95,7 @@ class RemoteArtworkCacheTest {
     }
 
     @Test
-    fun `cancelling a cover download cancels the HTTP call and caches nothing`() = runTest {
+    fun `cancelling a cover download before the server answers cancels the HTTP call and caches nothing`() = runTest {
         val server = GatedCoverServer(pngBytes)
         val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
 
@@ -108,6 +108,30 @@ class RemoteArtworkCacheTest {
         assertThat(server.firstCallCancelled.await(5, TimeUnit.SECONDS)).isTrue()
         assertThat(download.isCancelled).isTrue()
         assertThat(cacheDir.listFiles()).isEmpty()
+    }
+
+    @Test
+    fun `cancelling while the cover body is streaming stops the read and caches nothing`() = runTest {
+        val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
+
+        StalledBodyCoverServer(image = pngBytes + ByteArray(8 * 1024), sentBytes = 1024).use { server ->
+            val download = launch(Dispatchers.Default) {
+                RemoteArtworkCache.download(server.client, server.request, target)
+            }
+            // The server has sent part of the cover and is holding back the rest, so the fetch
+            // is now reading a body it cannot finish.
+            assertThat(server.bodyBytesRead.await(5, TimeUnit.SECONDS)).isTrue()
+
+            download.cancel()
+            download.join()
+
+            // The client drops the connection instead of waiting for the rest of the body, and
+            // the callback that was reading it returns without writing anything.
+            assertThat(server.clientHungUp.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(server.callsFinished.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(download.isCancelled).isTrue()
+            assertThat(cacheDir.listFiles()).isEmpty()
+        }
     }
 
     @Test
