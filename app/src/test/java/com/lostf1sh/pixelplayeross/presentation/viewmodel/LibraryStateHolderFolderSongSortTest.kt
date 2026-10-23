@@ -29,6 +29,7 @@ class LibraryStateHolderFolderSongSortTest {
         every { foldersSortOptionFlow } returns flowOf(SortOption.FolderNameZA.storageKey)
         every { folderSongsSortOptionFlow } returns flowOf(SortOption.FolderSongDateAdded.storageKey)
         every { likedSongsSortOptionFlow } returns flowOf(SortOption.LikedSongDateLiked.storageKey)
+        every { genresSortOptionFlow } returns flowOf(SortOption.GenreNameAZ.storageKey)
         every { lastStorageFilterFlow } returns flowOf(StorageFilter.ALL)
     }
 
