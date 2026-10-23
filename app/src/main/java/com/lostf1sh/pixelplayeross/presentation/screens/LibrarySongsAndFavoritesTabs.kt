@@ -61,6 +61,8 @@ import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveScrollBar
 import com.lostf1sh.pixelplayeross.presentation.components.animatedScrollbarInset
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.selection.dragToSelect
+import com.lostf1sh.pixelplayeross.presentation.selection.rememberDragToSelectState
 import com.lostf1sh.pixelplayeross.presentation.components.songFastScrollLabel
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.EnhancedSongListItem
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
@@ -86,6 +88,8 @@ fun LibraryFavoritesTab(
     onSongLongPress: (Song) -> Unit = {},
     onSongSelectionToggle: (Song) -> Unit = {},
     getSelectionIndex: (String) -> Int? = { null },
+    isSongSelected: (String) -> Boolean = { false },
+    onSongDragSelectionChange: (select: List<Song>, deselect: List<Song>) -> Unit = { _, _ -> },
     sortOption: SortOption,
     onLocateCurrentSongVisibilityChanged: (Boolean) -> Unit = {},
     onRegisterLocateCurrentSongAction: ((() -> Unit)?) -> Unit = {},
@@ -96,6 +100,13 @@ fun LibraryFavoritesTab(
     val coroutineScope = rememberCoroutineScope()
     val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
     val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)
+    val dragSelectState = rememberDragToSelectState()
+    val dragSelectSongAt: (Int) -> Song? = remember(favoriteSongs) {
+        { index -> if (index in 0 until favoriteSongs.itemCount) favoriteSongs.peek(index) else null }
+    }
+    val isDragSelectSongSelected: (Song) -> Boolean = remember(isSongSelected) {
+        { song -> isSongSelected(song.id) }
+    }
     val favoriteFastScrollLabelProvider = remember(favoriteSongs, sortOption) {
         { index: Int ->
             songFastScrollLabel(
@@ -227,7 +238,15 @@ fun LibraryFavoritesTab(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(start = 12.dp, end = animatedScrollbarInset(LocalShowScrollbar.current && (listState.canScrollForward || listState.canScrollBackward), 22.dp, 12.dp), bottom = 6.dp)
-                            .clip(SegmentedItemShapeDefaults.LibraryContainerShape),
+                            .clip(SegmentedItemShapeDefaults.LibraryContainerShape)
+                            .dragToSelect(
+                                state = dragSelectState,
+                                listState = listState,
+                                itemAt = dragSelectSongAt,
+                                isSelected = isDragSelectSongSelected,
+                                onSelectionChange = onSongDragSelectionChange,
+                                bottomInset = if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight
+                            ),
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + 30.dp)
@@ -248,7 +267,10 @@ fun LibraryFavoritesTab(
                                     isSelected = selectedSongIds.contains(song.id),
                                     selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
                                     isSelectionMode = isSelectionMode,
-                                    onLongPress = { onSongLongPress(song) },
+                                    onLongPress = {
+                                        onSongLongPress(song)
+                                        dragSelectState.onItemLongPressed()
+                                    },
                                     onClick = {
                                         if (isSelectionMode) {
                                             onSongSelectionToggle(song)
