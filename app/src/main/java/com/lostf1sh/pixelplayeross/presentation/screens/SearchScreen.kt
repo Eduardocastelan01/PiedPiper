@@ -600,6 +600,7 @@ fun SearchScreen(
                                     SearchResultsList(
                                         results = searchResults,
                                         searchQuery = searchQuery,
+                                        selectedFilter = currentFilter,
                                         playerViewModel = playerViewModel,
                                         onItemSelected = {
                                             if (searchQuery.isNotBlank()) {
@@ -1113,6 +1114,7 @@ fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme) {
 fun SearchResultsList(
     results: ImmutableList<SearchResultItem>,
     searchQuery: String,
+    selectedFilter: SearchFilterType,
     playerViewModel: PlayerViewModel,
     onItemSelected: () -> Unit,
     currentPlayingSongId: String?,
@@ -1159,11 +1161,16 @@ fun SearchResultsList(
             }
         }
     }
-    // Results with another set of sections answer another filter or query, so they get a fresh
-    // scroll state and open at the top. The old state would keep the previous first visible item
-    // in place: going from Albums back to All opened at the Albums header, songs hidden above it.
+    // Another filter, or results with another set of sections, get a fresh scroll state and open
+    // at the top. The old state would keep the previous first visible item in place: going from
+    // Albums back to All opened at the Albums header, songs hidden above it. The filter is keyed
+    // on its own because both filters can return the same sections, such as Songs and All for a
+    // query that only matches song titles. The sections stay keyed too: the filter changes before
+    // the query re-run with it delivers its results, and those can add sections above the old ones.
     val sectionTypes = remember(groupedResults) { groupedResults.keys }
-    val listState = rememberSaveable(sectionTypes, saver = LazyListState.Saver) { LazyListState() }
+    val listState = rememberSaveable(selectedFilter, sectionTypes, saver = LazyListState.Saver) {
+        LazyListState()
+    }
     val songResultsQueue = remember(groupedResults) {
         buildList {
             groupedResults[SearchFilterType.SONGS]

@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.model.Album
+import com.lostf1sh.pixelplayeross.data.model.SearchFilterType
 import com.lostf1sh.pixelplayeross.data.model.SearchResultItem
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
@@ -30,9 +31,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Search results open at the top when a filter change swaps their sections, and keep their scroll
- * position when the same sections come back: after a library update, or when returning from an
- * album or artist opened from the results.
+ * Search results open at the top when another filter is picked or their sections change, and keep
+ * their scroll position when the same sections come back under the same filter: after a library
+ * update, or when returning from an album or artist opened from the results.
  */
 @RunWith(AndroidJUnit4::class)
 class SearchResultsListScrollTest {
@@ -50,7 +51,7 @@ class SearchResultsListScrollTest {
 
     private val songItems: List<SearchResultItem> = (1..SONG_COUNT).map { index ->
         SearchResultItem.SongItem(
-            Song.emptySong().copy(id = "song-$index", title = "Track $index", artist = ARTIST)
+            Song.emptySong().copy(id = "song-$index", title = songTitle(index), artist = ARTIST)
         )
     }
     private val albumItems: List<SearchResultItem> = (1..ALBUM_COUNT).map(::albumItem)
@@ -61,6 +62,7 @@ class SearchResultsListScrollTest {
     /** The Albums filter: the same albums with nothing above them. */
     private val albumResults: ImmutableList<SearchResultItem> = albumItems.toImmutableList()
 
+    private var filter by mutableStateOf(SearchFilterType.ALL)
     private var results by mutableStateOf(allResults)
     private var showResults by mutableStateOf(true)
 
@@ -76,6 +78,7 @@ class SearchResultsListScrollTest {
                         SearchResultsList(
                             results = results,
                             searchQuery = QUERY,
+                            selectedFilter = filter,
                             playerViewModel = playerViewModel,
                             onItemSelected = {},
                             currentPlayingSongId = null,
@@ -97,16 +100,33 @@ class SearchResultsListScrollTest {
         composeRule.onNodeWithText(albumsHeader).assertIsNotDisplayed()
     }
 
+    /** Scrolls the list until the song with [index] is the first visible row. */
+    private fun scrollToSong(index: Int) {
+        composeRule.onNode(hasScrollToKeyAction()).performScrollToKey("song_song-$index")
+        composeRule.onNodeWithText(songTitle(index)).assertIsDisplayed()
+        composeRule.onNodeWithText(songsHeader).assertIsNotDisplayed()
+    }
+
+    /**
+     * Picks the [newFilter] chip the way the screen sees it: the selected filter changes first,
+     * and the query re-run with it delivers [newResults] afterwards.
+     */
+    private fun selectFilter(newFilter: SearchFilterType, newResults: ImmutableList<SearchResultItem>) {
+        composeRule.runOnIdle { filter = newFilter }
+        composeRule.runOnIdle { results = newResults }
+    }
+
     @Test
     fun switchingFromAlbumsBackToAllOpensAtTheSongsHeader() {
+        filter = SearchFilterType.ALBUMS
         results = albumResults
         setResultsList()
         composeRule.onNodeWithText(albumsHeader).assertIsDisplayed()
 
-        composeRule.runOnIdle { results = allResults }
+        selectFilter(SearchFilterType.ALL, allResults)
 
         composeRule.onNodeWithText(songsHeader).assertIsDisplayed()
-        composeRule.onNodeWithText("Track 1").assertIsDisplayed()
+        composeRule.onNodeWithText(songTitle(1)).assertIsDisplayed()
         composeRule.onNodeWithText(albumsHeader).assertIsNotDisplayed()
     }
 
@@ -115,10 +135,24 @@ class SearchResultsListScrollTest {
         setResultsList()
         scrollToAlbum(5)
 
-        composeRule.runOnIdle { results = albumResults }
+        selectFilter(SearchFilterType.ALBUMS, albumResults)
 
         composeRule.onNodeWithText(albumsHeader).assertIsDisplayed()
         composeRule.onNodeWithText(albumTitle(1)).assertIsDisplayed()
+    }
+
+    @Test
+    fun switchingFiltersWithTheSameSectionsOpensAtTheTop() {
+        // A query that only matches song titles returns just the Songs section under Songs and All.
+        filter = SearchFilterType.SONGS
+        results = songItems.toImmutableList()
+        setResultsList()
+        scrollToSong(SONG_COUNT / 2)
+
+        selectFilter(SearchFilterType.ALL, songItems.toImmutableList())
+
+        composeRule.onNodeWithText(songsHeader).assertIsDisplayed()
+        composeRule.onNodeWithText(songTitle(1)).assertIsDisplayed()
     }
 
     @Test
@@ -158,6 +192,8 @@ class SearchResultsListScrollTest {
     )
 
     private fun albumTitle(index: Int) = "Record $index"
+
+    private fun songTitle(index: Int) = "Track $index"
 
     private companion object {
         const val QUERY = "test"
