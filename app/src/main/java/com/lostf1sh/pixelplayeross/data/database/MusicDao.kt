@@ -15,19 +15,6 @@ import kotlinx.coroutines.flow.combine
 private val SONG_SEARCH_QUERY_TOKEN_REGEX = Regex("""[\p{L}\p{N}]+""")
 private const val EMPTY_SONG_SEARCH_MATCH_QUERY = "pixelplayeremptyquery*"
 
-private fun buildSongTitleSearchMatchQuery(query: String): String {
-    val tokens = SONG_SEARCH_QUERY_TOKEN_REGEX
-        .findAll(query)
-        .map { it.value.trim() }
-        .filter { it.isNotEmpty() }
-        .take(6)
-        .toList()
-
-    if (tokens.isEmpty()) return EMPTY_SONG_SEARCH_MATCH_QUERY
-
-    return tokens.joinToString(separator = " AND ") { "title:${it}*" }
-}
-
 private fun buildSongSearchMatchQuery(query: String): String {
     val tokens = SONG_SEARCH_QUERY_TOKEN_REGEX
         .findAll(query)
@@ -993,23 +980,6 @@ interface MusicDao {
     ): Flow<List<SongEntity>>
 
     /**
-     * LIKE-based search focusing only on titles.
-     */
-    @Query("""
-        SELECT * FROM songs
-        WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
-        AND title LIKE '%' || :query || '%'
-        ORDER BY title ASC
-        LIMIT :limit
-    """)
-    fun searchSongsLimitedByTitleLike(
-        query: String,
-        allowedParentDirs: List<String>,
-        applyDirectoryFilter: Boolean,
-        limit: Int
-    ): Flow<List<SongEntity>>
-
-    /**
      * LIKE-based fallback search for songs that FTS tokenization may miss.
      */
     @Query("""
@@ -1030,30 +1000,20 @@ interface MusicDao {
         query: String,
         allowedParentDirs: List<String>,
         applyDirectoryFilter: Boolean,
-        limit: Int,
-        titleOnly: Boolean = false
+        limit: Int
     ): Flow<List<SongEntity>> {
         val ftsFlow = searchSongsLimitedMatch(
-            matchQuery = if (titleOnly) buildSongTitleSearchMatchQuery(query) else buildSongSearchMatchQuery(query),
+            matchQuery = buildSongSearchMatchQuery(query),
             allowedParentDirs = allowedParentDirs,
             applyDirectoryFilter = applyDirectoryFilter,
             limit = limit
         )
-        val likeFlow = if (titleOnly) {
-            searchSongsLimitedByTitleLike(
-                query = query.trim(),
-                allowedParentDirs = allowedParentDirs,
-                applyDirectoryFilter = applyDirectoryFilter,
-                limit = limit
-            )
-        } else {
-            searchSongsLimitedLike(
-                query = query.trim(),
-                allowedParentDirs = allowedParentDirs,
-                applyDirectoryFilter = applyDirectoryFilter,
-                limit = limit
-            )
-        }
+        val likeFlow = searchSongsLimitedLike(
+            query = query.trim(),
+            allowedParentDirs = allowedParentDirs,
+            applyDirectoryFilter = applyDirectoryFilter,
+            limit = limit
+        )
         return ftsFlow.combine(likeFlow) { ftsResults, likeResults ->
             val seen = LinkedHashMap<Long, SongEntity>(ftsResults.size + likeResults.size)
             ftsResults.forEach { seen.putIfAbsent(it.id, it) }

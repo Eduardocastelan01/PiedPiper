@@ -178,7 +178,7 @@ class PlayerViewModelTest {
         every { mockMusicRepository.getHomeMixPreviewSongs(any()) } returns flowOf(emptyList())
         every { mockMusicRepository.getSongCountFlow() } returns flowOf(0)
         every { mockMusicRepository.getCloudSongCountFlow() } returns flowOf(0)
-        every { mockMusicRepository.searchSongs(any(), any()) } returns flowOf(emptyList())
+        every { mockMusicRepository.searchSongs(any()) } returns flowOf(emptyList())
         every { mockMusicRepository.getMusicByGenre(any()) } returns flowOf(emptyList())
         coEvery { mockMusicRepository.getFavoriteSongIdsOnce() } returns emptySet()
         every { mockMusicRepository.getFavoriteSongIdsFlow() } returns _favoriteIdsFlow
