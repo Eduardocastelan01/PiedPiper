@@ -1,7 +1,11 @@
 package com.lostf1sh.pixelplayeross.data.image
 
 import coil.decode.DataSource
+import coil.fetch.SourceResult
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -141,13 +145,13 @@ class RemoteArtworkCacheTest {
 
         val first = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
         assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
-        val second = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
-        Thread.sleep(200) // let the second fetch reach the cover while the first is downloading it
+        val second = startFetchWaitingForLock(server, target)
         server.releaseFirstResponse()
 
         assertThat(first.await().dataSource).isEqualTo(DataSource.NETWORK)
         assertThat(second.await().dataSource).isEqualTo(DataSource.DISK)
         assertThat(server.requestCount.get()).isEqualTo(1)
+        assertThat(RemoteArtworkCache.fetchesQueuedFor(target)).isEqualTo(0)
     }
 
     @Test
@@ -157,14 +161,15 @@ class RemoteArtworkCacheTest {
 
         val first = launch(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
         assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
-        val second = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
-        Thread.sleep(200)
+        val second = startFetchWaitingForLock(server, target)
         first.cancel()
 
         assertThat(second.await().dataSource).isEqualTo(DataSource.NETWORK)
+        first.join()
         assertThat(server.firstCallCancelled.await(5, TimeUnit.SECONDS)).isTrue()
         assertThat(server.requestCount.get()).isEqualTo(2)
         assertThat(target.readBytes()).isEqualTo(pngBytes)
+        assertThat(RemoteArtworkCache.fetchesQueuedFor(target)).isEqualTo(0)
     }
 
     @Test
@@ -179,6 +184,25 @@ class RemoteArtworkCacheTest {
         assertThat(RemoteArtworkCache.hasImageSignature("<?xml version".toByteArray())).isFalse()
         assertThat(RemoteArtworkCache.hasImageSignature("RIFF\u0000\u0000\u0000\u0000WAVE".toByteArray())).isFalse()
         assertThat(RemoteArtworkCache.hasImageSignature(ByteArray(0))).isFalse()
+    }
+
+    /**
+     * Starts another fetch of [target] while the first one holds its download lock, and returns
+     * only once that fetch is parked on the lock.
+     *
+     * UNDISPATCHED runs the fetch on this thread until it first suspends, so `async` returns
+     * when the fetch blocks rather than whenever Default gets around to starting it. The
+     * checks then pin down where it blocked: it shares the first fetch's lock, has not finished,
+     * and has not sent a request of its own.
+     */
+    private fun CoroutineScope.startFetchWaitingForLock(server: GatedCoverServer, target: File): Deferred<SourceResult> {
+        val fetch = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+            RemoteArtworkCache.download(server.client, request(), target)
+        }
+        assertThat(RemoteArtworkCache.fetchesQueuedFor(target)).isEqualTo(2)
+        assertThat(fetch.isCompleted).isFalse()
+        assertThat(server.requestCount.get()).isEqualTo(1)
+        return fetch
     }
 
     private fun request() = Request.Builder().url("https://music.example/rest/getCoverArt.view?id=al-1").build()

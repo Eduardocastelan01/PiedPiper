@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.data.image
 
+import androidx.annotation.VisibleForTesting
 import coil.decode.DataSource
 import coil.decode.ImageSource
 import coil.fetch.SourceResult
@@ -70,6 +71,11 @@ internal object RemoteArtworkCache {
         val mutex = Mutex()
         var holders = 0
     }
+
+    /** Number of fetches that hold or are waiting for [file]'s download lock. */
+    @VisibleForTesting
+    internal fun fetchesQueuedFor(file: File): Int =
+        synchronized(downloadLocks) { downloadLocks[file.path]?.holders ?: 0 }
 
     private suspend fun <T> withDownloadLock(file: File, block: suspend () -> T): T {
         val key = file.path
