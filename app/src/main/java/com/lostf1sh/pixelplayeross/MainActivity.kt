@@ -572,7 +572,7 @@ class MainActivity : ComponentActivity() {
                 CircularWavyProgressIndicator()
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Preparing setup…",
+                    text = stringResource(R.string.setup_gate_preparing),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )

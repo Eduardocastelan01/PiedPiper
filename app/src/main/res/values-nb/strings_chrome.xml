@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">Forbereder oppsett…</string>
+    <string name="song_info_label_provider">Leverandør</string>
+    <string name="song_info_label_path">Filbane</string>
+    <string name="cd_playlist_artwork">Spilleliste</string>
+    <string name="home_your_mix_subtitle">Dagens miks for deg</string>
+    <string name="home_your_mix_queue_name">Din miks</string>
+</resources>

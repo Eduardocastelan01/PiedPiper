@@ -224,7 +224,9 @@ fun HomeScreen(
         yourMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
     }
 
-    val yourMixSong: String = "Today's Mix for you"
+    val yourMixSubtitle = stringResource(R.string.home_your_mix_subtitle)
+    val yourMixQueueName = stringResource(R.string.home_your_mix_queue_name)
+    val recentlyPlayedQueueName = stringResource(R.string.presentation_batch_b_queue_recently_played)
 
     // Seed with the live value: starting from null made the bottom padding grow one frame
     // after returning to Home, once the scroll position was already restored, which left the
@@ -383,15 +385,15 @@ fun HomeScreen(
                         contentType = "your_mix_header"
                     ) {
                         YourMixHeader(
-                            song = yourMixSong,
+                            song = yourMixSubtitle,
                             isShuffleEnabled = isShuffleEnabled,
                             onPlayShuffled = {
                                 if (usesFallbackHomeMix) {
-                                    playerViewModel.shuffleAllSongs(queueName = "Your Mix")
+                                    playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
                                 } else {
                                     playerViewModel.playSongsShuffled(
                                         songsToPlay = yourMixSongs,
-                                        queueName = "Your Mix",
+                                        queueName = yourMixQueueName,
                                         startAtZero = true,
                                     )
                                 }
@@ -427,9 +429,9 @@ fun HomeScreen(
                             pattern = activePattern,
                             onSongClick = { song ->
                                 if (usesFallbackHomeMix) {
-                                    playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
+                                    playerViewModel.showAndPlaySongFromLibrary(song, queueName = yourMixQueueName)
                                 } else {
-                                    playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
+                                    playerViewModel.showAndPlaySong(song, yourMixSongs, yourMixQueueName)
                                 }
                             }
                         )
@@ -480,7 +482,7 @@ fun HomeScreen(
                                     playerViewModel.playSongs(
                                         songsToPlay = recentlyPlayedQueue,
                                         startSong = song,
-                                        queueName = "Recently Played"
+                                        queueName = recentlyPlayedQueueName
                                     )
                                 }
                             },

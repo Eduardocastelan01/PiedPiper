@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">جاري تحضير الإعداد…</string>
+    <string name="song_info_label_provider">المزود</string>
+    <string name="song_info_label_path">المسار</string>
+    <string name="cd_playlist_artwork">قائمة التشغيل</string>
+    <string name="home_your_mix_subtitle">مزيج اليوم المختار لك</string>
+    <string name="home_your_mix_queue_name">المزيج الخاص بك</string>
+</resources>

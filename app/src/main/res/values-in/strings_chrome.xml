@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">Menyiapkan pengaturan awal…</string>
+    <string name="song_info_label_provider">Penyedia</string>
+    <string name="song_info_label_path">Jalur</string>
+    <string name="cd_playlist_artwork">Daftar Putar</string>
+    <string name="home_your_mix_subtitle">Mix hari ini untuk Anda</string>
+    <string name="home_your_mix_queue_name">Mix Anda</string>
+</resources>

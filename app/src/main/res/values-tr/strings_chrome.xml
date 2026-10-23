@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">Kurulum hazırlanıyor…</string>
+    <string name="song_info_label_provider">Sağlayıcı</string>
+    <string name="song_info_label_path">Dosya yolu</string>
+    <string name="cd_playlist_artwork">Çalma Listesi</string>
+    <string name="home_your_mix_subtitle">Bugün sizin için hazırlanan miks</string>
+    <string name="home_your_mix_queue_name">Size Özel Miks</string>
+</resources>

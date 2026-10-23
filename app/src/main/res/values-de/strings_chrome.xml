@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">Einrichtung wird vorbereitet…</string>
+    <string name="song_info_label_provider">Anbieter</string>
+    <string name="song_info_label_path">Pfad</string>
+    <string name="cd_playlist_artwork">Playlist</string>
+    <string name="home_your_mix_subtitle">Der Mix des Tages für dich</string>
+    <string name="home_your_mix_queue_name">Mein Mix</string>
+</resources>

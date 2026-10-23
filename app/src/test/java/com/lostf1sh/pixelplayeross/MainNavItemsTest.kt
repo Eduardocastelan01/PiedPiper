@@ -43,6 +43,20 @@ class MainNavItemsTest {
         }
     }
 
+    @Test
+    fun `strings shown around the navigation are translated in every locale`() {
+        assertTranslatedEverywhere(
+            listOf(
+                R.string.setup_gate_preparing,
+                R.string.home_your_mix_subtitle,
+                R.string.home_your_mix_queue_name,
+                R.string.song_info_label_provider,
+                R.string.song_info_label_path,
+                R.string.cd_playlist_artwork,
+            ).map(::stringResourceName)
+        )
+    }
+
     private fun assertTranslatedEverywhere(names: List<String>) {
         val localeDirs = resDirectory().listFiles { file ->
             file.isDirectory && (file.name == "values" || LOCALE_DIR.matches(file.name))
