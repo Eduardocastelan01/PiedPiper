@@ -1,7 +1,9 @@
 package com.lostf1sh.pixelplayeross.data.image
 
+import coil.decode.DataSource
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -14,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class RemoteArtworkCacheTest {
@@ -53,9 +54,9 @@ class RemoteArtworkCacheTest {
     }
 
     @Test
-    fun `downloaded image replaces the cached file without leaving temp files`() = runTest {
+    fun `downloaded image replaces an unusable cached file without leaving temp files`() = runTest {
         val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
-        target.writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 1))
+        target.writeBytes(byteArrayOf(0, 1, 2))
 
         val result = RemoteArtworkCache.download(clientReturning(jpegBytes, "image/jpeg"), request(), target)
 
@@ -95,18 +96,51 @@ class RemoteArtworkCacheTest {
 
     @Test
     fun `cancelling a cover download cancels the HTTP call and caches nothing`() = runTest {
-        val server = StalledServer()
+        val server = GatedCoverServer(pngBytes)
         val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
 
         val download = launch(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
-        assertThat(server.requestStarted.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
 
         download.cancel()
         download.join()
 
-        assertThat(server.callCancelled.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(server.firstCallCancelled.await(5, TimeUnit.SECONDS)).isTrue()
         assertThat(download.isCancelled).isTrue()
         assertThat(cacheDir.listFiles()).isEmpty()
+    }
+
+    @Test
+    fun `concurrent fetches of one cover download it once`() = runTest {
+        val server = GatedCoverServer(pngBytes)
+        val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
+
+        val first = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
+        assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
+        val second = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
+        Thread.sleep(200) // let the second fetch reach the cover while the first is downloading it
+        server.releaseFirstResponse()
+
+        assertThat(first.await().dataSource).isEqualTo(DataSource.NETWORK)
+        assertThat(second.await().dataSource).isEqualTo(DataSource.DISK)
+        assertThat(server.requestCount.get()).isEqualTo(1)
+    }
+
+    @Test
+    fun `fetch waiting on a cancelled download downloads the cover itself`() = runTest {
+        val server = GatedCoverServer(pngBytes)
+        val target = File(cacheDir, "navidrome_cover_al-1_500.jpg")
+
+        val first = launch(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
+        assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
+        val second = async(Dispatchers.Default) { RemoteArtworkCache.download(server.client, request(), target) }
+        Thread.sleep(200)
+        first.cancel()
+
+        assertThat(second.await().dataSource).isEqualTo(DataSource.NETWORK)
+        assertThat(server.firstCallCancelled.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(server.requestCount.get()).isEqualTo(2)
+        assertThat(target.readBytes()).isEqualTo(pngBytes)
     }
 
     @Test
@@ -135,24 +169,6 @@ class RemoteArtworkCacheTest {
                 .header("Content-Type", contentType)
                 .body(body.toResponseBody(contentType.toMediaType()))
                 .build()
-        }
-        .build()
-}
-
-/** A server that never answers: the request stays in flight until its call is cancelled. */
-internal class StalledServer {
-    val requestStarted = CountDownLatch(1)
-    val callCancelled = CountDownLatch(1)
-
-    val client: OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            requestStarted.countDown()
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-            while (!chain.call().isCanceled() && System.nanoTime() < deadline) {
-                Thread.sleep(10)
-            }
-            if (chain.call().isCanceled()) callCancelled.countDown()
-            throw IOException("Canceled")
         }
         .build()
 }

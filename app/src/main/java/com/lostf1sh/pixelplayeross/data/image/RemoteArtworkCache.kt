@@ -5,6 +5,8 @@ import coil.decode.ImageSource
 import coil.fetch.SourceResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
@@ -35,6 +37,8 @@ internal object RemoteArtworkCache {
 
     private const val SIGNATURE_BYTES = 12
 
+    private val downloadLocks = HashMap<String, DownloadLock>()
+
     suspend fun cachedResult(file: File): SourceResult? = withContext(Dispatchers.IO) {
         if (!file.isFile || file.length() == 0L) return@withContext null
         // A body cached before this check existed is skipped, not deleted: the next successful
@@ -48,8 +52,40 @@ internal object RemoteArtworkCache {
         )
     }
 
+    /**
+     * Downloads [file] unless another fetch finishes downloading it first.
+     *
+     * A cover often shows in several places at once (a song row per track of an album, the
+     * album grid), and each one fetches it. Only one fetch downloads a given cover at a time;
+     * the others wait and then read the file it cached. If the downloading fetch is cancelled,
+     * the next one in line downloads the cover itself.
+     */
     @Throws(IOException::class)
     suspend fun download(client: OkHttpClient, request: Request, file: File): SourceResult =
+        withDownloadLock(file) {
+            cachedResult(file) ?: fetchAndCache(client, request, file)
+        }
+
+    private class DownloadLock {
+        val mutex = Mutex()
+        var holders = 0
+    }
+
+    private suspend fun <T> withDownloadLock(file: File, block: suspend () -> T): T {
+        val key = file.path
+        val lock = synchronized(downloadLocks) {
+            downloadLocks.getOrPut(key, ::DownloadLock).apply { holders++ }
+        }
+        try {
+            return lock.mutex.withLock { block() }
+        } finally {
+            synchronized(downloadLocks) {
+                if (--lock.holders == 0) downloadLocks.remove(key)
+            }
+        }
+    }
+
+    private suspend fun fetchAndCache(client: OkHttpClient, request: Request, file: File): SourceResult =
         suspendCancellableCoroutine { continuation ->
             val call = client.newCall(request)
             continuation.invokeOnCancellation { call.cancel() }

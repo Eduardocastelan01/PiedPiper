@@ -33,7 +33,7 @@ class NavidromeCoilFetcherTest {
 
     @Test
     fun `cancelled fetch propagates the cancellation and aborts the cover download`() = runTest {
-        val server = StalledServer()
+        val server = GatedCoverServer(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47))
         var completedNormally = false
 
         // Coil runs fetchers on the ImageLoader's Default dispatcher.
@@ -41,12 +41,12 @@ class NavidromeCoilFetcherTest {
             NavidromeCoilFetcher(coverUri, repository, server.client, cacheDir).fetch()
             completedNormally = true
         }
-        assertThat(server.requestStarted.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(server.firstRequestStarted.await(5, TimeUnit.SECONDS)).isTrue()
 
         fetch.cancel()
         fetch.join()
 
-        assertThat(server.callCancelled.await(5, TimeUnit.SECONDS)).isTrue()
+        assertThat(server.firstCallCancelled.await(5, TimeUnit.SECONDS)).isTrue()
         assertThat(completedNormally).isFalse()
         assertThat(cacheDir.listFiles()).isEmpty()
     }
