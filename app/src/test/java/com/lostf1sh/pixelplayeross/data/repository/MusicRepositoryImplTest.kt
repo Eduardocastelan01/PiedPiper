@@ -6,6 +6,9 @@ import com.lostf1sh.pixelplayeross.data.database.SearchHistoryDao
 import com.lostf1sh.pixelplayeross.data.database.SongEntity
 import com.lostf1sh.pixelplayeross.data.database.AlbumEntity
 import com.lostf1sh.pixelplayeross.data.database.ArtistEntity
+import com.lostf1sh.pixelplayeross.data.model.Playlist
+import com.lostf1sh.pixelplayeross.data.model.SearchFilterType
+import com.lostf1sh.pixelplayeross.data.model.SearchResultItem
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
@@ -331,6 +334,57 @@ class MusicRepositoryImplTest {
         assertEquals(2, result.size)
         assertTrue(result.any { it.id == "rock" })
         assertEquals(1, result.count { it.id == "unknown" })
+    }
+
+    @Nested
+    @DisplayName("Search filters")
+    inner class SearchFilters {
+        private val auroraSongs = listOf(
+            createSongEntity(1L, "Afterglow", "Aurora Fields", "Indie Rock", "/music/a/afterglow.mp3", "/music/a"),
+            createSongEntity(2L, "Aurora Borealis", "Neon Duo", "Electronic", "/music/n/aurora.mp3", "/music/n")
+        )
+
+        @BeforeEach
+        fun stubSearchSources() {
+            every { mockUserPreferencesRepository.minTracksPerAlbumFlow } returns flowOf(1)
+            every { mockMusicDao.searchSongsLimited("aurora", any(), any(), any()) } returns flowOf(auroraSongs)
+            every { mockMusicDao.searchAlbums("aurora", any<List<String>>(), any<Boolean>(), any<Int>()) } returns
+                flowOf(listOf(AlbumEntity(201L, "Low Tide", "Aurora Fields", 101L, null, 3, 0L, 2021)))
+            every { mockMusicDao.searchArtists("aurora", any(), any()) } returns
+                flowOf(listOf(ArtistEntity(101L, "Aurora Fields", 8, null)))
+            every { mockPlaylistPreferencesRepository.userPlaylistsFlow } returns flowOf(
+                listOf(
+                    Playlist(id = "p1", name = "Aurora mornings", songIds = listOf("1")),
+                    Playlist(id = "p2", name = "Gym", songIds = listOf("2"))
+                )
+            )
+        }
+
+        @Test
+        fun `songs filter keeps the songs All lists for an artist match`() = runTest(testDispatcher) {
+            val all = musicRepository.searchAll("aurora", SearchFilterType.ALL).first()
+
+            val songs = musicRepository.searchAll("aurora", SearchFilterType.SONGS).first()
+
+            assertEquals(all.filterIsInstance<SearchResultItem.SongItem>(), songs)
+            assertEquals(listOf("1", "2"), songs.map { (it as SearchResultItem.SongItem).song.id })
+        }
+
+        @Test
+        fun `each type filter returns exactly its section of the All results`() = runTest(testDispatcher) {
+            val all = musicRepository.searchAll("aurora", SearchFilterType.ALL).first()
+
+            val albums = musicRepository.searchAll("aurora", SearchFilterType.ALBUMS).first()
+            val artists = musicRepository.searchAll("aurora", SearchFilterType.ARTISTS).first()
+            val playlists = musicRepository.searchAll("aurora", SearchFilterType.PLAYLISTS).first()
+
+            assertEquals(listOf(201L), albums.map { (it as SearchResultItem.AlbumItem).album.id })
+            assertEquals(all.filterIsInstance<SearchResultItem.AlbumItem>(), albums)
+            assertEquals(listOf(101L), artists.map { (it as SearchResultItem.ArtistItem).artist.id })
+            assertEquals(all.filterIsInstance<SearchResultItem.ArtistItem>(), artists)
+            assertEquals(listOf("p1"), playlists.map { (it as SearchResultItem.PlaylistItem).playlist.id })
+            assertEquals(all.filterIsInstance<SearchResultItem.PlaylistItem>(), playlists)
+        }
     }
 
     @Nested
