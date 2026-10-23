@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">Плейлист</string>
     <string name="home_your_mix_subtitle">Микс дня для вас</string>
     <string name="home_your_mix_queue_name">Ваш микс</string>
+    <string name="queue_name_liked_songs">Избранные треки</string>
+    <string name="queue_name_all_songs_shuffled">Все треки (вперемешку)</string>
+    <string name="queue_name_liked_songs_shuffled">Избранные треки (вперемешку)</string>
+    <string name="queue_name_selected_songs">Выбранные треки</string>
 </resources>

@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">قائمة التشغيل</string>
     <string name="home_your_mix_subtitle">مزيج اليوم المختار لك</string>
     <string name="home_your_mix_queue_name">المزيج الخاص بك</string>
+    <string name="queue_name_liked_songs">الأغاني المفضلة</string>
+    <string name="queue_name_all_songs_shuffled">جميع الأغاني (عشوائي)</string>
+    <string name="queue_name_liked_songs_shuffled">الأغاني المفضلة (عشوائي)</string>
+    <string name="queue_name_selected_songs">الأغاني المحددة</string>
 </resources>

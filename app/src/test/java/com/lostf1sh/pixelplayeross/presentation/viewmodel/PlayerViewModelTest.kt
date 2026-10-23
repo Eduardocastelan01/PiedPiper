@@ -55,6 +55,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import com.lostf1sh.pixelplayeross.MainCoroutineExtension
+import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
 import com.lostf1sh.pixelplayeross.utils.AppShortcutManager
@@ -626,6 +627,78 @@ class PlayerViewModelTest {
                     true
                 )
             }
+        }
+
+        @Test
+        fun `shuffling all songs names the queue in the app language`() = runTest {
+            val randomSongs = listOf(song2, song3, song1)
+            coEvery { mockMusicRepository.getRandomSongs(10_000) } returns randomSongs
+            stubShuffledPlayback(randomSongs, startSong = song2)
+            every { mockContext.getString(R.string.queue_name_all_songs_shuffled) } returns "全部歌曲（随机）"
+            advanceUntilIdle()
+
+            playerViewModel.shuffleAllSongs()
+            advanceUntilIdle()
+
+            assertEquals("全部歌曲（随机）", playerViewModel.playerUiState.value.currentQueueSourceName)
+        }
+
+        @Test
+        fun `shuffle all tile names the queue in the app language`() = runTest {
+            val songs = listOf(song1, song2, song3)
+            coEvery { mockMusicRepository.getRandomSongs(10_000) } returns songs
+            stubShuffledPlayback(songs, startSong = song1)
+            every { mockContext.getString(R.string.queue_name_all_songs_shuffled) } returns "全部歌曲（随机）"
+            advanceUntilIdle()
+
+            playerViewModel.triggerShuffleAllFromTile()
+            advanceUntilIdle()
+
+            assertEquals("全部歌曲（随机）", playerViewModel.playerUiState.value.currentQueueSourceName)
+        }
+
+        @Test
+        fun `shuffling liked songs names the queue in the app language`() = runTest {
+            val favoriteSongs = listOf(song1, song3)
+            coEvery { mockMusicRepository.getFavoriteSongsOnce(StorageFilter.ALL) } returns favoriteSongs
+            stubShuffledPlayback(favoriteSongs, startSong = song1)
+            every { mockContext.getString(R.string.queue_name_liked_songs_shuffled) } returns "我喜欢的歌曲（随机）"
+            advanceUntilIdle()
+
+            playerViewModel.shuffleFavoriteSongs()
+            advanceUntilIdle()
+
+            assertEquals("我喜欢的歌曲（随机）", playerViewModel.playerUiState.value.currentQueueSourceName)
+        }
+
+        @Test
+        fun `playing selected songs names the queue in the app language`() = runTest {
+            val selectedSongs = listOf(song3, song1)
+            stubShuffledPlayback(selectedSongs)
+            every { mockContext.getString(R.string.queue_name_selected_songs) } returns "选中的歌曲"
+            advanceUntilIdle()
+
+            playerViewModel.playSelectedSongs(selectedSongs)
+            advanceUntilIdle()
+
+            assertEquals("选中的歌曲", playerViewModel.playerUiState.value.currentQueueSourceName)
+        }
+
+        @Test
+        fun `playing a song from the library tab names the queue in the app language`() = runTest {
+            val librarySongs = listOf(song1, song2, song3)
+            every { mockLibraryStateHolder.allSongsById } returns MutableStateFlow(librarySongs.associateBy { it.id })
+            coEvery { mockMusicRepository.getSongIdsSorted(any(), any()) } returns listOf(1L, 2L, 3L)
+            stubShuffledPlayback(librarySongs)
+            every { mockContext.getString(R.string.tab_library) } returns "音乐库"
+            advanceUntilIdle()
+
+            playerViewModel.showAndPlaySongFromLibrary(song2)
+            // The full library queue is resolved on Dispatchers.Default, outside the test scheduler.
+            val state = playerViewModel.playerUiState.first { it.currentPlaybackQueue.isNotEmpty() }
+
+            assertEquals("音乐库", state.currentQueueSourceName)
+            assertEquals(librarySongs.map { it.id }, state.currentPlaybackQueue.map { it.id })
         }
     }
 

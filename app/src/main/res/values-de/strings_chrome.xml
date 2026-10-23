@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">Playlist</string>
     <string name="home_your_mix_subtitle">Der Mix des Tages für dich</string>
     <string name="home_your_mix_queue_name">Mein Mix</string>
+    <string name="queue_name_liked_songs">Lieblingssongs</string>
+    <string name="queue_name_all_songs_shuffled">Alle Songs (gemischt)</string>
+    <string name="queue_name_liked_songs_shuffled">Lieblingssongs (gemischt)</string>
+    <string name="queue_name_selected_songs">Ausgewählte Songs</string>
 </resources>

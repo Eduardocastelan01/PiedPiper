@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">플레이리스트</string>
     <string name="home_your_mix_subtitle">오늘의 맞춤 믹스</string>
     <string name="home_your_mix_queue_name">나의 믹스</string>
+    <string name="queue_name_liked_songs">좋아요 표시한 곡</string>
+    <string name="queue_name_all_songs_shuffled">전체 곡 (셔플)</string>
+    <string name="queue_name_liked_songs_shuffled">좋아요 표시한 곡 (셔플)</string>
+    <string name="queue_name_selected_songs">선택한 곡</string>
 </resources>

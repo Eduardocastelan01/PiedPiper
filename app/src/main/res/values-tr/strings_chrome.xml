@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">Çalma Listesi</string>
     <string name="home_your_mix_subtitle">Bugün sizin için hazırlanan miks</string>
     <string name="home_your_mix_queue_name">Size Özel Miks</string>
+    <string name="queue_name_liked_songs">Beğenilen Şarkılar</string>
+    <string name="queue_name_all_songs_shuffled">Tüm Şarkılar (Karışık)</string>
+    <string name="queue_name_liked_songs_shuffled">Beğenilen Şarkılar (Karışık)</string>
+    <string name="queue_name_selected_songs">Seçilen Şarkılar</string>
 </resources>

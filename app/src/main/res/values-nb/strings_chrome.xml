@@ -6,4 +6,8 @@
     <string name="cd_playlist_artwork">Spilleliste</string>
     <string name="home_your_mix_subtitle">Dagens miks for deg</string>
     <string name="home_your_mix_queue_name">Din miks</string>
+    <string name="queue_name_liked_songs">Likte sanger</string>
+    <string name="queue_name_all_songs_shuffled">Alle sanger (blandet)</string>
+    <string name="queue_name_liked_songs_shuffled">Likte sanger (blandet)</string>
+    <string name="queue_name_selected_songs">Valgte sanger</string>
 </resources>

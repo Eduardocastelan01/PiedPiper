@@ -57,6 +57,19 @@ class MainNavItemsTest {
         )
     }
 
+    @Test
+    fun `queue names set from the library tab are translated in every locale`() {
+        assertTranslatedEverywhere(
+            listOf(
+                R.string.tab_library,
+                R.string.queue_name_liked_songs,
+                R.string.queue_name_all_songs_shuffled,
+                R.string.queue_name_liked_songs_shuffled,
+                R.string.queue_name_selected_songs,
+            ).map(::stringResourceName)
+        )
+    }
+
     private fun assertTranslatedEverywhere(names: List<String>) {
         val localeDirs = resDirectory().listFiles { file ->
             file.isDirectory && (file.name == "values" || LOCALE_DIR.matches(file.name))
