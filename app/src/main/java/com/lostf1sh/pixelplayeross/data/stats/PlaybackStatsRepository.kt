@@ -223,7 +223,8 @@ class PlaybackStatsRepository @Inject constructor(
         songs: List<Song>,
         nowMillis: Long,
         allEvents: List<PlaybackEvent>,
-        zoneId: ZoneId = ZoneId.systemDefault()
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        rankingLimit: Int = TOP_RANKING_LIMIT
     ): PlaybackStatsSummary {
         val (startBound, endBound) = range.resolveBounds(allEvents, nowMillis, zoneId)
         val filteredEvents = clipEvents(allEvents, lowerBound = startBound, upperBound = endBound)
@@ -267,7 +268,7 @@ class PlaybackStatsRepository @Inject constructor(
                     .thenByDescending { it.playCount }
             )
             .take(MAX_SONG_STATS_COUNT)
-        val topSongs = allSongs.take(5)
+        val topSongs = allSongs.take(rankingLimit)
 
         // A song tagged "House; Electronic" counts towards both genres.
         val topGenres = segmentsBySong.entries
@@ -299,7 +300,7 @@ class PlaybackStatsRepository @Inject constructor(
                 compareByDescending<GenrePlaybackSummary> { it.totalDurationMs }
                     .thenByDescending { it.playCount }
             )
-            .take(5)
+            .take(rankingLimit)
 
         var daySpan = 1L
         val averageDailyDuration = if (effectiveStart != null) {
@@ -376,7 +377,7 @@ class PlaybackStatsRepository @Inject constructor(
                 compareByDescending<ArtistPlaybackSummary> { it.totalDurationMs }
                     .thenByDescending { it.playCount }
             )
-            .take(5)
+            .take(rankingLimit)
 
         val topAlbums = segmentsBySong.entries
             .groupBy { (songId, _) ->
@@ -402,7 +403,7 @@ class PlaybackStatsRepository @Inject constructor(
                 compareByDescending<AlbumPlaybackSummary> { it.totalDurationMs }
                     .thenByDescending { it.playCount }
             )
-            .take(5)
+            .take(rankingLimit)
 
         val peakTimeline = timelineEntries
             .filter { it.totalDurationMs > 0L }
@@ -497,7 +498,8 @@ class PlaybackStatsRepository @Inject constructor(
             songs = songs,
             nowMillis = bounds.endMillis,
             allEvents = allEvents,
-            zoneId = zoneId
+            zoneId = zoneId,
+            rankingLimit = RECAP_RANKING_LIMIT
         )
 
         val songMap = songs.associateBy { it.id }
@@ -1280,6 +1282,16 @@ class PlaybackStatsRepository @Inject constructor(
         internal const val UNKNOWN_ARTIST = "Unknown Artist"
         internal const val UNKNOWN_ALBUM = "Unknown Album"
         internal const val UNKNOWN_GENRE = "Unknown Genre"
+
+        /** Entries in each top list of a summary. */
+        private const val TOP_RANKING_LIMIT = 5
+
+        /**
+         * Entries in each top list of a recap: one more than the recap shows, so its top five
+         * stay full once a list's unknown bucket is left out.
+         */
+        private const val RECAP_RANKING_LIMIT = TOP_RANKING_LIMIT + 1
+
         private val MAX_HISTORY_AGE_MS = TimeUnit.DAYS.toMillis(730)
         private const val SEGMENT_JOIN_TOLERANCE_MS = 0L
         private const val MAX_SONG_STATS_COUNT = 100

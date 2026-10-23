@@ -182,6 +182,26 @@ class PlaybackStatsRepositoryRecapTest {
     }
 
     @Test
+    fun `recap top lists keep five named entries when the unknown bucket ranks among them`() {
+        val songs = (1..5).map { song("tagged-$it", genre = "Genre $it") }
+        val events = songs.mapIndexed { index, song ->
+            play(song.id, LocalDateTime.of(2025, 2, 1 + index, 10, 0), minutes(10L - index))
+        } +
+            // No longer in the library: the unknown artist, album and genre all lead their lists.
+            play("deleted", LocalDateTime.of(2025, 2, 10, 10, 0), minutes(60))
+
+        val summary = recap(2025, events, songs = songs)!!.summary
+
+        assertThat(summary.topArtists.map { it.artist }.filter { it != PlaybackStatsRepository.UNKNOWN_ARTIST })
+            .containsExactly("Artist tagged-1", "Artist tagged-2", "Artist tagged-3", "Artist tagged-4", "Artist tagged-5")
+            .inOrder()
+        assertThat(summary.topAlbums.map { it.album }.filter { it != PlaybackStatsRepository.UNKNOWN_ALBUM })
+            .hasSize(5)
+        assertThat(summary.topGenres.map { it.genre }.filter { it != PlaybackStatsRepository.UNKNOWN_GENRE })
+            .hasSize(5)
+    }
+
+    @Test
     fun `recapYearTotals splits listening by local calendar year and merges overlapping events`() {
         val events = listOf(
             play("song-1", LocalDateTime.of(2024, 6, 1, 10, 0), minutes(30)),
@@ -204,7 +224,8 @@ class PlaybackStatsRepositoryRecapTest {
         songId: String,
         artist: String = "Artist $songId",
         artists: List<ArtistRef> = emptyList(),
-        year: Int = 0
+        year: Int = 0,
+        genre: String? = null
     ): Song = Song(
         id = songId,
         title = "Song $songId",
@@ -218,6 +239,7 @@ class PlaybackStatsRepositoryRecapTest {
         albumArtUriString = null,
         duration = TimeUnit.MINUTES.toMillis(4),
         year = year,
+        genre = genre,
         mimeType = "audio/mpeg",
         bitrate = 320_000,
         sampleRate = 44_100
