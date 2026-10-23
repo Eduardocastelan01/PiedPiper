@@ -289,29 +289,17 @@ private fun GenreCard(
                     .padding(start = titleStartPadding, top = 14.dp, end = titleEndPadding),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
+                // Shrinks within bounds and wraps between words to fit the tile; ellipsizes
+                // only when the name still does not fit at the smallest size.
                 Text(
-                    text = titlePresentation.firstLine,
+                    text = titlePresentation.text,
                     style = titlePresentation.style,
                     color = onBackgroundColor,
-                    softWrap = false,
-                    minLines = 1,
-                    maxLines = 1,
+                    autoSize = titlePresentation.autoSize,
+                    maxLines = titlePresentation.maxLines,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                titlePresentation.secondLine?.let { secondLine ->
-                    Text(
-                        text = secondLine,
-                        style = titlePresentation.style,
-                        color = onBackgroundColor,
-                        softWrap = false,
-                        minLines = 1,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(titlePresentation.secondLineWidthFraction)
-                    )
-                }
 
                 if (showSongCount && genre.songCount > 0) {
                     Text(
