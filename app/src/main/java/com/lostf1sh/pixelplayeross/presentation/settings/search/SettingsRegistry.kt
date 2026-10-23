@@ -76,6 +76,16 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("album artist", "group albums", "collaborations", "compilation", "organize")
             ),
+            SettingSpec(
+                id = "artist_albums_collapsed_by_default",
+                itemKey = "item_artist_albums_collapsed_by_default",
+                titleRes = R.string.artist_page_albums_collapsed_by_default,
+                subtitleRes = R.string.artist_page_albums_collapsed_by_default_sub,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.ArtistSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("collapse", "collapsed", "expand", "fold", "artist page", "album list")
+            ),
             // An action because the stats route declares no highlightKey argument to append.
             SettingSpec(
                 id = "listening_stats",

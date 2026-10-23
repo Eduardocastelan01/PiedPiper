@@ -284,6 +284,50 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `artist albums collapsed by default is off by default and persists`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            assertEquals(false, repository.artistAlbumsCollapsedByDefaultFlow.first())
+
+            repository.setArtistAlbumsCollapsedByDefault(true)
+            assertTrue(repository.artistAlbumsCollapsedByDefaultFlow.first())
+
+            repository.setArtistAlbumsCollapsedByDefault(false)
+            assertEquals(false, repository.artistAlbumsCollapsedByDefaultFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `collapsing artist albums by default does not ask for a library rescan`() = runTest {
+        val tempDir = Files.createTempDirectory("user-preferences-repository-test")
+        try {
+            val repository = UserPreferencesRepository(
+                dataStore = PreferenceDataStoreFactory.create(
+                    scope = backgroundScope,
+                    produceFile = { tempDir.resolve("settings.preferences_pb").toFile() }
+                ),
+                json = Json
+            )
+
+            repository.setArtistAlbumsCollapsedByDefault(true)
+
+            assertEquals(false, repository.artistSettingsRescanRequiredFlow.first())
+        } finally {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `migrateTabOrder backfills Folders right after Liked for a legacy order`() = runTest {
         val tempDir = Files.createTempDirectory("user-preferences-repository-test")
         try {

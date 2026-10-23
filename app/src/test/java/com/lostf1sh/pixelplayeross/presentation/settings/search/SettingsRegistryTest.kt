@@ -94,6 +94,8 @@ class SettingsRegistryTest {
             "artist_word_delimiters" to "artist_settings?highlightKey=item_artist_word_delimiters",
             "artist_extract_from_title" to "artist_settings?highlightKey=item_artist_extract_from_title",
             "artist_group_by_album_artist" to "artist_settings?highlightKey=item_artist_group_by_album_artist",
+            "artist_albums_collapsed_by_default" to
+                "artist_settings?highlightKey=item_artist_albums_collapsed_by_default",
         )
 
         expected.forEach { (id, route) ->

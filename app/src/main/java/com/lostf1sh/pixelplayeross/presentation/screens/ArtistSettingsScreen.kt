@@ -48,6 +48,8 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.UnfoldLess
+import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -308,6 +310,37 @@ fun ArtistSettingsScreen(
                                 )
                             },
                             modifier = Modifier.settingHighlight("item_artist_group_by_album_artist", highlightKey)
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSection(
+                    title = stringResource(R.string.artist_page_settings_section),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.ViewAgenda,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                ) {
+                    Column(modifier = Modifier.clip(shape = RoundedCornerShape(24.dp))) {
+                        // Display only: unlike the switches above, it does not ask for a rescan.
+                        SwitchSettingItem(
+                            title = stringResource(R.string.artist_page_albums_collapsed_by_default),
+                            subtitle = stringResource(R.string.artist_page_albums_collapsed_by_default_sub),
+                            checked = uiState.albumsCollapsedByDefault,
+                            onCheckedChange = { viewModel.setAlbumsCollapsedByDefault(it) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.UnfoldLess,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                            },
+                            modifier = Modifier.settingHighlight("item_artist_albums_collapsed_by_default", highlightKey)
                         )
                     }
                 }
