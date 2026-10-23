@@ -455,6 +455,38 @@ sealed class SortOption(
         methodKey = "folder_song_duration",
         direction = SortDirection.Ascending
     )
+    object GenreNameAZ : SortOption(
+        storageKey = "genre_name_az",
+        displayName = "Name (A-Z)",
+        methodLabel = "Name",
+        methodLabelRes = R.string.sort_method_name,
+        methodKey = "genre_name",
+        direction = SortDirection.Ascending
+    )
+    object GenreNameZA : SortOption(
+        storageKey = "genre_name_za",
+        displayName = "Name (Z-A)",
+        methodLabel = "Name",
+        methodLabelRes = R.string.sort_method_name,
+        methodKey = "genre_name",
+        direction = SortDirection.Descending
+    )
+    object GenreSongCountDesc : SortOption(
+        storageKey = "genre_song_count_desc",
+        displayName = "Most Songs",
+        methodLabel = "Song Count",
+        methodLabelRes = R.string.sort_method_song_count,
+        methodKey = "genre_song_count",
+        direction = SortDirection.Descending
+    )
+    object GenreSongCountAsc : SortOption(
+        storageKey = "genre_song_count_asc",
+        displayName = "Fewest Songs",
+        methodLabel = "Song Count",
+        methodLabelRes = R.string.sort_method_song_count,
+        methodKey = "genre_song_count",
+        direction = SortDirection.Ascending
+    )
 
     val canFlipDirection: Boolean
         get() = direction != null && flipDirection().storageKey != storageKey
@@ -568,8 +600,17 @@ sealed class SortOption(
             )
         }
 
+        val GENRES: List<SortOption> by lazy {
+            listOf(
+                GenreNameAZ,
+                GenreNameZA,
+                GenreSongCountDesc,
+                GenreSongCountAsc
+            )
+        }
+
         private val ALL: List<SortOption> by lazy {
-            SONGS + ALBUMS + ARTISTS + PLAYLISTS + FOLDERS + FOLDER_SONGS + LIKED
+            SONGS + ALBUMS + ARTISTS + PLAYLISTS + FOLDERS + FOLDER_SONGS + LIKED + GENRES
         }
 
         private val defaultOptionByMethodKey: Map<String, SortOption> by lazy {

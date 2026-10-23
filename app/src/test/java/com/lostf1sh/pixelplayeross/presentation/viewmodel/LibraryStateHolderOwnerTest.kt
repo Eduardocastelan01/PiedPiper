@@ -139,6 +139,7 @@ class LibraryStateHolderOwnerTest {
             every { foldersSortOptionFlow } returns flowOf(SortOption.FolderNameAZ.storageKey)
             every { folderSongsSortOptionFlow } returns flowOf(SortOption.FolderSongTitleAZ.storageKey)
             every { likedSongsSortOptionFlow } returns flowOf(SortOption.LikedSongDateLiked.storageKey)
+            every { genresSortOptionFlow } returns flowOf(SortOption.GenreNameAZ.storageKey)
             every { lastStorageFilterFlow } returns flowOf(StorageFilter.ALL)
         }
         return LibraryStateHolder(musicRepository, preferences)
