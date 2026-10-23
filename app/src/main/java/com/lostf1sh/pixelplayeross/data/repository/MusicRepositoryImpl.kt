@@ -658,6 +658,7 @@ class MusicRepositoryImpl @Inject constructor(
                 emit(
                     if (genreName.equals(UNKNOWN_GENRE_ID, ignoreCase = true)) {
                         musicDao.getUnknownGenreSongCandidates(
+                            noGenreCharacters = GenreParser.noGenreCharacters,
                             allowedParentDirs = allowedParentDirs,
                             applyDirectoryFilter = applyDirectoryFilter
                         ).map { candidates ->

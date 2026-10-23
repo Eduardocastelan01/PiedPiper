@@ -33,6 +33,23 @@ object GenreParser {
     private val SOURCE_PLACEHOLDER_KEYS = setOf(key(JELLYFIN_PLACEHOLDER), key(NAVIDROME_PLACEHOLDER))
 
     /**
+     * Every character that [split] drops when it stands alone: the separators, '&' and all
+     * whitespace, including tabs and Unicode spaces. The Unknown query uses SQL TRIM with this
+     * list to find values that may hold no genre, so a character missing here would hide those
+     * songs from it. NUL is left out because SQLite reads a TRIM character list only up to its
+     * first NUL.
+     */
+    val noGenreCharacters: String by lazy {
+        buildString {
+            append(";,|\\&")
+            for (code in 1..Char.MAX_VALUE.code) {
+                val char = code.toChar()
+                if (char.isWhitespace()) append(char)
+            }
+        }
+    }
+
+    /**
      * The distinct genres in [raw], in tag order. Blank values and "unknown" placeholders are
      * dropped, so an empty result means the song has no genre.
      */

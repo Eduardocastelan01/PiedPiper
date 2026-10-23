@@ -1546,11 +1546,14 @@ interface MusicDao {
      * Songs whose genre value matches the LIKE [pattern]. This is only a prefilter for one genre:
      * a value can list several genres, so callers keep the rows whose split genres really contain
      * it (see GenreParser.likePattern and GenreParser.matches).
+     *
+     * Values holding a NUL, such as an ID3v2.4 "Rock<NUL>Pop" list, are always returned: SQLite's
+     * LIKE stops reading at the first NUL, so "%Pop%" alone would miss that song.
      */
     @Query("""
         SELECT * FROM songs
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
-        AND genre LIKE :pattern
+        AND (genre LIKE :pattern OR instr(genre, char(0)) > 0)
         ORDER BY title ASC
     """)
     fun getSongsWithGenreLike(
@@ -1560,16 +1563,24 @@ interface MusicDao {
     ): Flow<List<SongEntity>>
 
     /**
-     * Songs that may have no genre: no value, only separators, or an "unknown" placeholder.
-     * Callers keep the rows whose value splits into no genre at all.
+     * Songs that may have no genre: no value, one made only of [noGenreCharacters] (pass
+     * GenreParser.noGenreCharacters: separators, '&' and whitespace), an "unknown" placeholder,
+     * or any value holding a NUL, which SQLite can neither trim nor LIKE-match past. Callers keep
+     * the rows whose value splits into no genre at all.
      */
     @Query("""
         SELECT * FROM songs
         WHERE (:applyDirectoryFilter = 0 OR id < 0 OR parent_directory_path IN (:allowedParentDirs))
-        AND (genre IS NULL OR TRIM(genre, ' ;,|\&') = '' OR genre LIKE '%unknown%')
+        AND (
+            genre IS NULL
+            OR TRIM(genre, :noGenreCharacters) = ''
+            OR genre LIKE '%unknown%'
+            OR instr(genre, char(0)) > 0
+        )
         ORDER BY title ASC
     """)
     fun getUnknownGenreSongCandidates(
+        noGenreCharacters: String,
         allowedParentDirs: List<String>,
         applyDirectoryFilter: Boolean
     ): Flow<List<SongEntity>>

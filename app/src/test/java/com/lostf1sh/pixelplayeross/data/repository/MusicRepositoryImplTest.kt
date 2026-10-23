@@ -14,6 +14,7 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.database.FavoritesDao
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -373,19 +374,44 @@ class MusicRepositoryImplTest {
     }
 
     @Test
+    fun `getMusicByGenre keeps NUL separated lists only when they name the genre`() = runTest(testDispatcher) {
+        every { mockUserPreferencesRepository.mockGenresEnabledFlow } returns flowOf(false)
+        // The DAO returns every value holding a NUL, since SQLite LIKE cannot read past one.
+        every { mockMusicDao.getSongsWithGenreLike(any(), any(), any()) } returns flowOf(
+            listOf(
+                createSongEntity(1L, "Listed second", "Artist", "Rock\u0000Pop", "/m/1.mp3", "/m"),
+                createSongEntity(2L, "Other list", "Artist", "Rock\u0000Jazz", "/m/2.mp3", "/m"),
+                createSongEntity(3L, "Plain", "Artist", "Pop", "/m/3.mp3", "/m")
+            )
+        )
+
+        val result = musicRepository.getMusicByGenre("Pop").first()
+
+        assertEquals(listOf("1", "3"), result.map { it.id })
+    }
+
+    @Test
     fun `getMusicByGenre for Unknown keeps only songs without any genre`() = runTest(testDispatcher) {
         every { mockUserPreferencesRepository.mockGenresEnabledFlow } returns flowOf(false)
-        every { mockMusicDao.getUnknownGenreSongCandidates(any(), any()) } returns flowOf(
+        val noGenreCharactersSlot = slot<String>()
+        every {
+            mockMusicDao.getUnknownGenreSongCandidates(capture(noGenreCharactersSlot), any(), any())
+        } returns flowOf(
             listOf(
                 createSongEntity(1L, "Untagged", "Artist", null, "/m/1.mp3", "/m"),
                 createSongEntity(2L, "Placeholder", "Artist", "<unknown>", "/m/2.mp3", "/m"),
-                createSongEntity(3L, "Tagged", "Artist", "Unknown Pleasures; Post-Punk", "/m/3.mp3", "/m")
+                createSongEntity(3L, "Tagged", "Artist", "Unknown Pleasures; Post-Punk", "/m/3.mp3", "/m"),
+                createSongEntity(4L, "Tab and separators", "Artist", ";\t|", "/m/4.mp3", "/m"),
+                createSongEntity(5L, "Ideographic space", "Artist", "\u3000", "/m/5.mp3", "/m"),
+                createSongEntity(6L, "NUL placeholder", "Artist", "\u0000Unknown", "/m/6.mp3", "/m"),
+                createSongEntity(7L, "NUL list", "Artist", "Rock\u0000Pop", "/m/7.mp3", "/m")
             )
         )
 
         val result = musicRepository.getMusicByGenre("unknown").first()
 
-        assertEquals(listOf("1", "2"), result.map { it.id })
+        assertEquals(listOf("1", "2", "4", "5", "6"), result.map { it.id })
+        assertEquals(GenreParser.noGenreCharacters, noGenreCharactersSlot.captured)
     }
 
     private fun stubGenreCounts(vararg rows: Pair<String?, Int>) {

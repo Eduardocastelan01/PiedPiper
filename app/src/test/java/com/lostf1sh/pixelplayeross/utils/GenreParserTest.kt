@@ -40,6 +40,29 @@ class GenreParserTest {
     }
 
     @Test
+    fun `split returns nothing for values made of tabs, Unicode spaces and NUL`() {
+        assertTrue(GenreParser.split(";\t|").isEmpty())
+        assertTrue(GenreParser.split("　").isEmpty())
+        assertTrue(GenreParser.split(" ; ").isEmpty())
+        assertTrue(GenreParser.split("\u0000Unknown").isEmpty())
+    }
+
+    @Test
+    fun `noGenreCharacters lists every character split drops on its own except NUL`() {
+        // The Unknown query trims values with this list, so a character missing from it would
+        // count a song under Unknown without listing it there.
+        val dropped = (1..Char.MAX_VALUE.code)
+            .map(Int::toChar)
+            .filter { GenreParser.split(it.toString()).isEmpty() }
+            .toSet()
+
+        assertEquals(dropped, GenreParser.noGenreCharacters.toSet())
+        assertTrue('\t' in dropped)
+        assertTrue('　' in dropped)
+        assertFalse('\u0000' in GenreParser.noGenreCharacters)
+    }
+
+    @Test
     fun `split removes case and spacing duplicates keeping the first spelling`() {
         assertEquals(listOf("Rock"), GenreParser.split("Rock; rock;ROCK"))
         assertEquals(listOf("Indie Rock"), GenreParser.split("Indie Rock, Indie   rock"))

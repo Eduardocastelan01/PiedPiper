@@ -5,6 +5,7 @@ import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -337,5 +338,36 @@ class MusicDaoTest {
             ascending.take(8),
             musicDao.getSongsByAlbumId(201L).first().map(SongEntity::id)
         )
+    }
+
+    @Test
+    fun genreQueries_findGenresListedAfterNulAndValuesBlankWithAnyWhitespace() = runTest {
+        val taggedGenres = mapOf(
+            1L to "Rock\u0000Pop",
+            2L to "Pop",
+            3L to "Rock",
+            4L to "Unknown Pleasures; Post-Punk"
+        )
+        // Every character the Unknown query trims, alone, plus values SQLite cannot read past a NUL in.
+        val blankValues = listOf(";\t|", "\u0000", "\u0000Unknown", "<unknown>") +
+            GenreParser.noGenreCharacters.map(Char::toString)
+        val blankGenres = blankValues.mapIndexed { index, genre -> 100L + index to genre }.toMap()
+        insertSongsWithParents(
+            (taggedGenres + blankGenres).map { (id, genre) ->
+                createSongEntity(id, "Song $id", "Artist", "Album", "/music/$id.mp3", genre = genre)
+            }
+        )
+
+        val popIds = musicDao.getSongsWithGenreLike(GenreParser.likePattern("Pop"), emptyList(), false)
+            .first()
+            .filter { song -> GenreParser.matches(song.genre, "Pop") }
+            .map(SongEntity::id)
+        val unknownIds = musicDao.getUnknownGenreSongCandidates(GenreParser.noGenreCharacters, emptyList(), false)
+            .first()
+            .filter { song -> GenreParser.split(song.genre).isEmpty() }
+            .map(SongEntity::id)
+
+        assertEquals(listOf(1L, 2L), popIds.sorted())
+        assertEquals(blankGenres.keys.sorted(), unknownIds.sorted())
     }
 }
