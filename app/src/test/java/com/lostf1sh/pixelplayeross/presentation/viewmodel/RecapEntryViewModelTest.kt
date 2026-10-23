@@ -12,7 +12,9 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,7 +26,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -102,7 +105,7 @@ class RecapEntryViewModelTest {
         assertThat(currentValue(december.homeCard)).isNotNull()
 
         december.dismissHomeCard(2026)
-        advanceUntilIdle()
+        runCurrent()
 
         assertThat(december.homeCard.value).isNull()
         // Still dismissed in January, which offers the same year.
@@ -128,23 +131,97 @@ class RecapEntryViewModelTest {
 
         totals = listOf(RecapYearTotal(2026, enough))
         refreshVersion.update { it + 1 }
-        advanceUntilIdle()
+        runCurrent()
 
         assertThat(viewModel.statsEntries.value).containsExactly(RecapEntry(year = 2026, isSoFar = true))
     }
 
-    private fun createViewModel(today: LocalDate) = RecapEntryViewModel(
+    @Test
+    fun `home card appears when december starts while home stays open`() = runTest {
+        totals = listOf(RecapYearTotal(2026, enough))
+        val viewModel = createViewModel(clock = virtualClock(LocalDateTime.of(2026, 11, 30, 23, 58)))
+        assertThat(currentValue(viewModel.homeCard)).isNull()
+
+        // No play completes and the preference stays put: only the date moves on.
+        advanceTimeBy(TimeUnit.MINUTES.toMillis(5))
+        runCurrent()
+
+        assertThat(viewModel.homeCard.value).isEqualTo(RecapEntry(year = 2026, isSoFar = false))
+    }
+
+    @Test
+    fun `home card leaves after january 15 while home stays open`() = runTest {
+        totals = listOf(RecapYearTotal(2026, enough))
+        val viewModel = createViewModel(clock = virtualClock(LocalDateTime.of(2027, 1, 15, 23, 30)))
+        assertThat(currentValue(viewModel.homeCard)).isEqualTo(RecapEntry(year = 2026, isSoFar = false))
+
+        advanceTimeBy(TimeUnit.HOURS.toMillis(1))
+        runCurrent()
+
+        assertThat(viewModel.homeCard.value).isNull()
+    }
+
+    @Test
+    fun `stats entries move on at new year while stats stays open`() = runTest {
+        totals = listOf(RecapYearTotal(2025, enough), RecapYearTotal(2026, enough))
+        val viewModel = createViewModel(clock = virtualClock(LocalDateTime.of(2026, 12, 31, 23, 59)))
+        assertThat(currentValue(viewModel.statsEntries)).containsExactly(
+            RecapEntry(year = 2026, isSoFar = false),
+            RecapEntry(year = 2025, isSoFar = false)
+        ).inOrder()
+
+        advanceTimeBy(TimeUnit.MINUTES.toMillis(2))
+        runCurrent()
+
+        // 2025 is no longer the running or the previous year.
+        assertThat(viewModel.statsEntries.value).containsExactly(RecapEntry(year = 2026, isSoFar = false))
+    }
+
+    @Test
+    fun `home card follows a time zone change that crosses into december`() = runTest {
+        totals = listOf(RecapYearTotal(2026, enough))
+        // One instant: still November 30 in UTC, already December 1 in Seoul.
+        val instant = LocalDateTime.of(2026, 12, 1, 1, 0).atZone(zone).toInstant()
+        val viewModel = createViewModel(clock = Clock.fixed(instant, ZoneId.of("UTC")))
+        assertThat(currentValue(viewModel.homeCard)).isNull()
+
+        viewModel.clock = Clock.fixed(instant, zone)
+        advanceTimeBy(TimeUnit.MINUTES.toMillis(2))
+        runCurrent()
+
+        assertThat(viewModel.homeCard.value).isEqualTo(RecapEntry(year = 2026, isSoFar = false))
+    }
+
+    private fun createViewModel(today: LocalDate) =
+        createViewModel(clock = Clock.fixed(today.atTime(12, 0).atZone(zone).toInstant(), zone))
+
+    private fun createViewModel(clock: Clock) = RecapEntryViewModel(
         playbackStatsRepository = playbackStatsRepository,
         userPreferencesRepository = userPreferencesRepository,
         dispatchers = dispatchers
     ).apply {
-        clock = Clock.fixed(today.atTime(12, 0).atZone(zone).toInstant(), zone)
+        this.clock = clock
     }
 
-    /** Subscribes like a screen would (the flows only compute while collected) and settles. */
+    /** A clock that starts at [start] and runs with the test's virtual time. */
+    private fun TestScope.virtualClock(start: LocalDateTime): Clock {
+        val clockZone = zone
+        val startInstant = start.atZone(clockZone).toInstant()
+        val scheduler = testScheduler
+        return object : Clock() {
+            override fun getZone(): ZoneId = clockZone
+            override fun withZone(zone: ZoneId): Clock = throw UnsupportedOperationException()
+            override fun instant(): Instant = startInstant.plusMillis(scheduler.currentTime)
+        }
+    }
+
+    /**
+     * Subscribes like a screen would (the flows only compute while collected) and settles. Runs
+     * only what is due now: the date check repeats while collected, so it never goes idle.
+     */
     private fun <T> TestScope.currentValue(flow: StateFlow<T>): T {
         backgroundScope.launch { flow.collect { } }
-        advanceUntilIdle()
+        runCurrent()
         return flow.value
     }
 }
