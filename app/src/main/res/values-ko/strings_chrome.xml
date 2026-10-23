@@ -4,6 +4,6 @@
     <string name="song_info_label_provider">제공업체</string>
     <string name="song_info_label_path">경로</string>
     <string name="cd_playlist_artwork">플레이리스트</string>
-    <string name="home_your_mix_subtitle">오늘 당신을 위한 믹스</string>
+    <string name="home_your_mix_subtitle">오늘의 맞춤 믹스</string>
     <string name="home_your_mix_queue_name">나의 믹스</string>
 </resources>
