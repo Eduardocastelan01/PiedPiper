@@ -449,8 +449,8 @@ fun LibraryScreen(
 
     // Drag-to-select reads the holder directly: the collected selectedSongIds lag a frame behind
     // the long press that starts the drag.
-    val isSongSelected: (String) -> Boolean = remember(multiSelectionState) {
-        { songId -> multiSelectionState.isSelected(songId) }
+    val currentSelectedSongIds: () -> Set<String> = remember(multiSelectionState) {
+        { multiSelectionState.selectedSongIds.value }
     }
 
     val onSongDragSelectionChange: (List<Song>, List<Song>) -> Unit = remember(multiSelectionState) {
@@ -1431,7 +1431,7 @@ fun LibraryScreen(
                                             onSongLongPress = onSongLongPress,
                                             onSongSelectionToggle = onSongSelectionToggle,
                                             getSelectionIndex = playerViewModel.multiSelectionStateHolder::getSelectionIndex,
-                                            isSongSelected = isSongSelected,
+                                            currentSelectedSongIds = currentSelectedSongIds,
                                             onSongDragSelectionChange = onSongDragSelectionChange,
                                             onLocateCurrentSongVisibilityChanged = { songsShowLocateButton = it },
                                             onRegisterLocateCurrentSongAction = { songsLocateAction = it },
@@ -1533,7 +1533,7 @@ fun LibraryScreen(
                                             onSongLongPress = onSongLongPress,
                                             onSongSelectionToggle = onSongSelectionToggle,
                                             getSelectionIndex = playerViewModel.multiSelectionStateHolder::getSelectionIndex,
-                                            isSongSelected = isSongSelected,
+                                            currentSelectedSongIds = currentSelectedSongIds,
                                             onSongDragSelectionChange = onSongDragSelectionChange,
                                             sortOption = playerUiState.currentFavoriteSortOption,
                                             onLocateCurrentSongVisibilityChanged = { likedShowLocateButton = it },
@@ -1585,7 +1585,7 @@ fun LibraryScreen(
                                             onSongLongPress = onSongLongPress,
                                             onSongSelectionToggle = onSongSelectionToggle,
                                             getSelectionIndex = playerViewModel.multiSelectionStateHolder::getSelectionIndex,
-                                            isSongSelected = isSongSelected,
+                                            currentSelectedSongIds = currentSelectedSongIds,
                                             onSongDragSelectionChange = onSongDragSelectionChange,
                                             onLocateCurrentSongVisibilityChanged = { foldersShowLocateButton = it },
                                             onRegisterLocateCurrentSongAction = { foldersLocateAction = it },
@@ -2716,7 +2716,7 @@ fun LibraryFoldersTab(
     onSongLongPress: (Song) -> Unit = {},
     onSongSelectionToggle: (Song) -> Unit = {},
     getSelectionIndex: (String) -> Int? = { null },
-    isSongSelected: (String) -> Boolean = { false },
+    currentSelectedSongIds: () -> Set<String> = { emptySet() },
     onSongDragSelectionChange: (select: List<Song>, deselect: List<Song>) -> Unit = { _, _ -> },
     onLocateCurrentSongVisibilityChanged: (Boolean) -> Unit = {},
     onRegisterLocateCurrentSongAction: ((() -> Unit)?) -> Unit = {},
@@ -2804,9 +2804,6 @@ fun LibraryFoldersTab(
         // Folder rows come first in the list and are not selectable.
         val dragSelectSongAt: (Int) -> Song? = remember(itemsToShow.size, songsToShow) {
             { index -> songsToShow.getOrNull(index - itemsToShow.size) }
-        }
-        val isDragSelectSongSelected: (Song) -> Boolean = remember(isSongSelected) {
-            { song -> isSongSelected(song.id) }
         }
         val currentSongId = currentSong?.id
         val currentSongIndexInSongs = remember(songsToShow, currentSongId) {
@@ -2974,7 +2971,7 @@ fun LibraryFoldersTab(
                                         listState = listState,
                                         itemAt = dragSelectSongAt,
                                         itemKey = Song::id,
-                                        isSelected = isDragSelectSongSelected,
+                                        selectedKeys = currentSelectedSongIds,
                                         onSelectionChange = onSongDragSelectionChange,
                                         bottomInset = if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight
                                     ),

@@ -161,8 +161,8 @@ fun GenreDetailScreen(
     }
     val dragSelectState = rememberDragToSelectState<Song>()
     // Read the holder directly: the collected selectedSongIds lag a frame behind the long press.
-    val isDragSelectSongSelected: (Song) -> Boolean = remember(multiSelectionState) {
-        { song -> multiSelectionState.isSelected(song.id) }
+    val currentSelectedSongIds: () -> Set<String> = remember(multiSelectionState) {
+        { multiSelectionState.selectedSongIds.value }
     }
     val onSongDragSelectionChange: (List<Song>, List<Song>) -> Unit = remember(multiSelectionState) {
         { select, deselect -> multiSelectionState.applyDragSelection(select, deselect) }
@@ -369,7 +369,7 @@ fun GenreDetailScreen(
                         listState = lazyListState,
                         itemAt = dragSelectSongAt,
                         itemKey = Song::id,
-                        isSelected = isDragSelectSongSelected,
+                        selectedKeys = currentSelectedSongIds,
                         onSelectionChange = onSongDragSelectionChange,
                         // The collapsed top bar always covers this much of the list's top.
                         topInset = minTopBarHeight,

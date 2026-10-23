@@ -80,7 +80,7 @@ fun LibrarySongsTab(
     onSongLongPress: (Song) -> Unit = {},
     onSongSelectionToggle: (Song) -> Unit = {},
     getSelectionIndex: (String) -> Int? = { null },
-    isSongSelected: (String) -> Boolean = { false },
+    currentSelectedSongIds: () -> Set<String> = { emptySet() },
     onSongDragSelectionChange: (select: List<Song>, deselect: List<Song>) -> Unit = { _, _ -> },
     onLocateCurrentSongVisibilityChanged: (Boolean) -> Unit = {},
     onRegisterLocateCurrentSongAction: ((() -> Unit)?) -> Unit = {},
@@ -96,9 +96,6 @@ fun LibrarySongsTab(
     val dragSelectState = rememberDragToSelectState<Song>()
     val dragSelectSongAt: (Int) -> Song? = remember(songs) {
         { index -> if (index in 0 until songs.itemCount) songs.peek(index) else null }
-    }
-    val isDragSelectSongSelected: (Song) -> Boolean = remember(isSongSelected) {
-        { song -> isSongSelected(song.id) }
     }
     val songFastScrollLabelProvider = remember(songs, sortOption) {
         { index: Int ->
@@ -282,7 +279,7 @@ fun LibrarySongsTab(
                                     listState = activeListState,
                                     itemAt = dragSelectSongAt,
                                     itemKey = Song::id,
-                                    isSelected = isDragSelectSongSelected,
+                                    selectedKeys = currentSelectedSongIds,
                                     onSelectionChange = onSongDragSelectionChange,
                                     bottomInset = if (hasCurrentSong) bottomBarHeight + MiniPlayerHeight else bottomBarHeight
                                 ),

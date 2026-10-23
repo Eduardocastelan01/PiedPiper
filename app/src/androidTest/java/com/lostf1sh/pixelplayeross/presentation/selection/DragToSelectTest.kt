@@ -91,7 +91,7 @@ class DragToSelectTest {
                                     listState = listState,
                                     itemAt = { index -> rows.getOrNull(index) },
                                     itemKey = Song::id,
-                                    isSelected = { song -> holder.isSelected(song.id) },
+                                    selectedKeys = { holder.selectedSongIds.value },
                                     onSelectionChange = holder::applyDragSelection,
                                 ),
                             state = listState,
@@ -414,6 +414,118 @@ class DragToSelectTest {
         composeRule.runOnIdle {
             assertThat(selectedIds())
                 .containsExactly("song-0", "song-1", "song-2", "song-3", "song-4", "song-5").inOrder()
+        }
+    }
+
+    @Test
+    fun clearingTheSelectionMidDragEndsTheDragInsteadOfSelectingAgain() {
+        setList()
+        val x = boundsInRoot(LIST_TAG).center.x
+        val rowsBefore = (0..6).map(::rowCenterY)
+
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            down(Offset(x, rowsBefore[0]))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, rowsBefore[1]))
+            moveTo(Offset(x, rowsBefore[3]))
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).containsExactly("song-0", "song-1", "song-2", "song-3").inOrder()
+            // What the screens' back handlers do on Back in selection mode.
+            holder.clearSelection()
+        }
+
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            moveTo(Offset(x, rowsBefore[5]))
+            moveTo(Offset(x, rowsBefore[6]))
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).isEmpty()
+            assertThat(holder.isSelectionMode.value).isFalse()
+        }
+
+        // The finger still holds the list: dragging it up does not scroll it.
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            moveTo(Offset(x, rowsBefore[1]))
+            up()
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).isEmpty()
+            assertThat(listState.firstVisibleItemIndex).isEqualTo(0)
+            assertThat(listState.firstVisibleItemScrollOffset).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun clearingTheSelectionMidDragKeepsADeselectingDragFromGivingRowsBack() {
+        setList()
+        val x = boundsInRoot(LIST_TAG).center.x
+        val rows = (0..3).map(::rowCenterY)
+        composeRule.runOnIdle { (0..3).forEach { holder.toggleSelection(songs[it]) } }
+
+        // Holding the selected song 0 deselects it, so the drag deselects too.
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            down(Offset(x, rows[0]))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, rows[1]))
+            moveTo(Offset(x, rows[2]))
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).containsExactly("song-3")
+            holder.clearSelection()
+        }
+
+        // Dragging back would otherwise give songs 1 and 2 back their selection.
+        composeRule.onNodeWithTag(LIST_TAG).performTouchInput {
+            moveTo(Offset(x, rows[1]))
+            moveTo(Offset(x, rows[0]))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).isEmpty()
+            assertThat(holder.isSelectionMode.value).isFalse()
+        }
+    }
+
+    @Test
+    fun clearingTheSelectionMidAutoScrollStopsTheScrollAndItsSelecting() {
+        setList()
+        val x = boundsInRoot(LIST_TAG).center.x
+        val row0 = boundsInRoot(songs[0].id).center.y
+        val bottomEdge = boundsInRoot(LIST_TAG).bottom - 8f
+        // Auto-scroll keeps asking for frames while the finger rests in an edge zone.
+        composeRule.mainClock.autoAdvance = false
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            down(Offset(x, row0))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, bottomEdge))
+            repeat(3) { step ->
+                advanceEventTime(100)
+                moveBy(Offset(0f, if (step % 2 == 0) 1f else -1f))
+            }
+        }
+        val scrollAtClear = composeRule.runOnIdle {
+            assertThat(listState.firstVisibleItemIndex).isGreaterThan(0)
+            assertThat(selectedIds().size).isGreaterThan(1)
+            holder.clearSelection()
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }
+
+        // The finger rests in the bottom edge zone, where auto-scroll would go on selecting rows.
+        composeRule.mainClock.advanceTimeBy(1_000)
+
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).isEmpty()
+            assertThat(listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset)
+                .isEqualTo(scrollAtClear)
+        }
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput { up() }
+        composeRule.mainClock.autoAdvance = true
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).isEmpty()
+            assertThat(holder.isSelectionMode.value).isFalse()
         }
     }
 

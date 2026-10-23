@@ -82,8 +82,9 @@ internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remem
  * it cannot pull a parent's pull-to-refresh.
  *
  * If the rows the drag has reached change order or shift while the finger is down (a list
- * re-sorting as its items load), the drag ends there and keeps what it has selected; the finger
- * still holds the list until it lifts.
+ * re-sorting as its items load), or the selection changes other than through the drag (Back
+ * clearing it), the drag ends there and leaves the selection as it is; the finger still holds the
+ * list until it lifts.
  *
  * Append it last to the list's modifier chain so pointer positions line up with the list's items.
  * The list must not use `reverseLayout`.
@@ -92,8 +93,10 @@ internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remem
  *   (headers, folders) or are not loaded yet.
  * @param itemKey A stable identity for an item, such as a song's id, that an updated copy of the
  *   item keeps. It tells whether a row still shows the item the drag found there.
- * @param isSelected The item's current selection state. Read it from the selection holder
- *   itself, not from composed state, which lags a frame behind the long press.
+ * @param selectedKeys The [itemKey]s of the items selected now, such as the selection holder's
+ *   current set of song ids. Read it from the holder itself, not from composed state, which lags a
+ *   frame behind the long press. Once it no longer equals the set the drag's last step left, the
+ *   drag ends.
  * @param onSelectionChange Applies one drag step; songs in `select` are in drag order.
  * @param topInset Height of what overlays the top of the list's on-screen part, such as a
  *   collapsing top bar.
@@ -105,7 +108,7 @@ internal fun <T : Any> Modifier.dragToSelect(
     listState: LazyListState,
     itemAt: (index: Int) -> T?,
     itemKey: (T) -> Any,
-    isSelected: (T) -> Boolean,
+    selectedKeys: () -> Set<Any>,
     onSelectionChange: (select: List<T>, deselect: List<T>) -> Unit,
     topInset: Dp = 0.dp,
     bottomInset: Dp = 0.dp,
@@ -114,7 +117,7 @@ internal fun <T : Any> Modifier.dragToSelect(
     listState = listState,
     itemAt = itemAt,
     itemKey = itemKey,
-    isSelected = isSelected,
+    selectedKeys = selectedKeys,
     onSelectionChange = onSelectionChange,
     topInset = topInset,
     bottomInset = bottomInset,
@@ -125,7 +128,7 @@ private data class DragToSelectElement<T : Any>(
     val listState: LazyListState,
     val itemAt: (Int) -> T?,
     val itemKey: (T) -> Any,
-    val isSelected: (T) -> Boolean,
+    val selectedKeys: () -> Set<Any>,
     val onSelectionChange: (List<T>, List<T>) -> Unit,
     val topInset: Dp,
     val bottomInset: Dp,
@@ -135,14 +138,14 @@ private data class DragToSelectElement<T : Any>(
         listState = listState,
         itemAt = itemAt,
         itemKey = itemKey,
-        isSelected = isSelected,
+        selectedKeys = selectedKeys,
         onSelectionChange = onSelectionChange,
         topInset = topInset,
         bottomInset = bottomInset,
     )
 
     override fun update(node: DragToSelectNode<T>) {
-        node.update(state, listState, itemAt, itemKey, isSelected, onSelectionChange, topInset, bottomInset)
+        node.update(state, listState, itemAt, itemKey, selectedKeys, onSelectionChange, topInset, bottomInset)
     }
 
     override fun InspectorInfo.inspectableProperties() {
@@ -160,7 +163,7 @@ private class DragToSelectNode<T : Any>(
     private var listState: LazyListState,
     private var itemAt: (Int) -> T?,
     private var itemKey: (T) -> Any,
-    private var isSelected: (T) -> Boolean,
+    private var selectedKeys: () -> Set<Any>,
     private var onSelectionChange: (List<T>, List<T>) -> Unit,
     private var topInset: Dp,
     private var bottomInset: Dp,
@@ -179,9 +182,14 @@ private class DragToSelectNode<T : Any>(
         delegate(nestedScrollModifierNode(PassThroughNestedScrollConnection, nestedScrollDispatcher))
     }
 
+    private val isSelected: (T) -> Boolean = { item -> itemKey(item) in selectedKeys() }
+
     private var tracker: DragSelectionTracker<T>? = null
     private var rangeGate: DragRangeGate? = null
     private var edgeGate: AutoScrollEdgeGate? = null
+
+    /** [selectedKeys] as the active drag last left it, by its long press or its last step. */
+    private var selectionLeftByDrag: Set<Any>? = null
 
     /**
      * The finger in window coordinates. Positions in the list's own coordinates go stale when the
@@ -203,7 +211,7 @@ private class DragToSelectNode<T : Any>(
         listState: LazyListState,
         itemAt: (Int) -> T?,
         itemKey: (T) -> Any,
-        isSelected: (T) -> Boolean,
+        selectedKeys: () -> Set<Any>,
         onSelectionChange: (List<T>, List<T>) -> Unit,
         topInset: Dp,
         bottomInset: Dp,
@@ -211,7 +219,7 @@ private class DragToSelectNode<T : Any>(
         // New rows are checked against the active drag on its next step (see selectUnderPointer).
         this.itemAt = itemAt
         this.itemKey = itemKey
-        this.isSelected = isSelected
+        this.selectedKeys = selectedKeys
         this.onSelectionChange = onSelectionChange
         this.topInset = topInset
         this.bottomInset = bottomInset
@@ -269,6 +277,7 @@ private class DragToSelectNode<T : Any>(
                 }
                 tracker?.let { Timber.tag(LogTag).d("Drag-select ended on row %d", it.currentIndex) }
                 tracker = null
+                selectionLeftByDrag = null
                 rangeGate = null
                 edgeGate = null
                 gestureState.isPointerDown = false
@@ -298,6 +307,7 @@ private class DragToSelectNode<T : Any>(
         // The long press has already toggled the anchor, so its state now is the drag's target.
         val selecting = isSelected(item)
         tracker = DragSelectionTracker(anchor, itemKey(item), selecting, itemKey)
+        selectionLeftByDrag = selectedKeys()
         rangeGate = DragRangeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
         edgeGate = AutoScrollEdgeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
         Timber.tag(LogTag).d("Drag-select started on row %d, selecting=%b", anchor, selecting)
@@ -305,15 +315,28 @@ private class DragToSelectNode<T : Any>(
     }
 
     /**
-     * Ends the drag before the finger lifts, keeping what it has selected. The finger goes on
+     * Ends the drag before the finger lifts, leaving the selection as it is. The finger goes on
      * holding the list, and with no edge gate left auto-scroll winds down on its next step.
      */
     private fun endDragEarly(tracker: DragSelectionTracker<T>, reason: String) {
         Timber.tag(LogTag).d("Drag-select ended on row %d: %s", tracker.currentIndex, reason)
         this.tracker = null
+        selectionLeftByDrag = null
         rangeGate = null
         edgeGate = null
         autoScrollVelocity = 0f
+    }
+
+    /**
+     * Ends the drag if something other than the drag has changed the selection since its last
+     * step, such as Back clearing it, and returns whether it did. The drag gives the rows it leaves
+     * back the state they had before it reached them, which no longer holds then: going on would
+     * select songs again and bring selection mode back.
+     */
+    private fun endDragIfSelectionChangedElsewhere(tracker: DragSelectionTracker<T>): Boolean {
+        if (selectedKeys() == selectionLeftByDrag) return false
+        endDragEarly(tracker, "the selection changed outside it")
+        return true
     }
 
     /**
@@ -322,6 +345,7 @@ private class DragToSelectNode<T : Any>(
      */
     private fun selectUnderPointer() {
         val tracker = tracker ?: return
+        if (endDragIfSelectionChangedElsewhere(tracker)) return
         if (rangeGate?.isOpen != true) return
         // The range is kept by row index: once its rows have moved (a list re-sorting as its
         // items load), going on would select and restore songs the finger never passed over.
@@ -336,6 +360,7 @@ private class DragToSelectNode<T : Any>(
         val change = tracker.moveTo(index, itemAt, isSelected)
         if (change.isEmpty) return
         onSelectionChange(change.select, change.deselect)
+        selectionLeftByDrag = selectedKeys()
         currentValueOf(LocalHapticFeedback).performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
 
@@ -382,6 +407,9 @@ private class DragToSelectNode<T : Any>(
                 val frameNanos = withFrameNanos { it }
                 val seconds = (frameNanos - previousFrameNanos) / 1_000_000_000f
                 previousFrameNanos = frameNanos
+                // Back may have cleared the selection since the last frame; the list stops here.
+                val tracker = tracker ?: break
+                if (endDragIfSelectionChangedElsewhere(tracker)) break
                 if (dispatchScroll(autoScrollVelocity * seconds) != 0f) rangeGate?.open()
                 // A collapsing top bar moves the list on screen, and with it the finger's place
                 // in the list and in its edge zones.

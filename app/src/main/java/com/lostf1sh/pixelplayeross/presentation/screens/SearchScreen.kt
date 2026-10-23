@@ -625,7 +625,7 @@ fun SearchScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             multiSelectionState.toggleSelection(song)
                                         },
-                                        isSongSelected = multiSelectionState::isSelected,
+                                        currentSelectedSongIds = multiSelectionState.selectedSongIds::value,
                                         onSongDragSelectionChange = multiSelectionState::applyDragSelection,
                                         bottomBarHeight = bottomBarHeightDp,
                                         isAlbumSelectionMode = isAlbumSelectionMode,
@@ -1135,7 +1135,7 @@ fun SearchResultsList(
     selectedSongIds: Set<String> = emptySet(),
     getSongSelectionIndex: (String) -> Int? = { null },
     onSongLongPress: (Song) -> Unit = {},
-    isSongSelected: (String) -> Boolean = { false },
+    currentSelectedSongIds: () -> Set<String> = { emptySet() },
     onSongDragSelectionChange: (select: List<Song>, deselect: List<Song>) -> Unit = { _, _ -> },
     bottomBarHeight: Dp = 0.dp,
     isAlbumSelectionMode: Boolean = false,
@@ -1238,9 +1238,6 @@ fun SearchResultsList(
     val dragSelectSongAt: (Int) -> Song? = remember(dragSelectRows) {
         { index -> dragSelectRows.getOrNull(index) }
     }
-    val isDragSelectSongSelected: (Song) -> Boolean = remember(isSongSelected) {
-        { song -> isSongSelected(song.id) }
-    }
     val hasCurrentSong = playerStableState.currentSong.let { it != null && it != Song.emptySong() }
     // The keyboard, when open, covers the navigation bar and the mini player.
     val dragSelectBottomInset = maxOf(
@@ -1262,7 +1259,7 @@ fun SearchResultsList(
                 listState = listState,
                 itemAt = dragSelectSongAt,
                 itemKey = Song::id,
-                isSelected = isDragSelectSongSelected,
+                selectedKeys = currentSelectedSongIds,
                 onSelectionChange = onSongDragSelectionChange,
                 bottomInset = dragSelectBottomInset
             ),
