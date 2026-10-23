@@ -132,7 +132,7 @@ class LyricsRepositoryImpl @Inject constructor(
         private const val MAX_CALLS_PER_MINUTE = 30
         private const val NETWORK_RETRY_ATTEMPTS = 3
         private const val NETWORK_RETRY_INITIAL_DELAY_MS = 500L
-        private const val REPLACEMENT_CHARACTER = '�'
+        private const val REPLACEMENT_CHARACTER = '\uFFFD'
 
         private val BRACKETED_QUALIFIER_REGEX = Regex("""[\(\[\{\uFF08\uFF3B\uFF5B\u3010\u300E\u300C\u3014\u3008\u300A]([^)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]*)[\)\]\}\uFF09\uFF3D\uFF5D\u3011\u300F\u300D\u3015\u3009\u300B]""")
         private val FEATURE_QUALIFIER_REGEX = Regex("""\b(feat(?:uring)?|ft)\.?\b""", RegexOption.IGNORE_CASE)
@@ -351,10 +351,18 @@ class LyricsRepositoryImpl @Inject constructor(
         }
 
         if (!forceRefresh) {
-            loadStoredLyrics(song, cacheKey, includeMemoryCache = false)?.let { stored ->
-                lyricsCache.put(cacheKey, stored.first)
+            loadStoredLyrics(song, cacheKey, includeMemoryCache = false)?.let { (storedLyrics, rawLyrics) ->
+                // A copy damaged by an old build yields to a clean embedded tag or .lrc file, but
+                // is still shown when there is none: it never starts a remote search that could
+                // replace lyrics the user picked.
+                val lyrics = if (rawLyrics.contains(REPLACEMENT_CHARACTER)) {
+                    findCleanLocalLyrics(song, sourcePreference) ?: storedLyrics
+                } else {
+                    storedLyrics
+                }
+                lyricsCache.put(cacheKey, lyrics)
                 Timber.tag(TAG).d("===== RETURNING STORED LYRICS WITHOUT REMOTE FETCH =====")
-                return@withContext stored.first
+                return@withContext lyrics
             }
         }
 
@@ -1027,11 +1035,22 @@ class LyricsRepositoryImpl @Inject constructor(
         cacheKey: String,
         includeMemoryCache: Boolean
     ): Pair<Lyrics, String>? = withContext(Dispatchers.IO) {
+        // Builds before 0.3.0-alpha.19 "repaired" accented text such as Vietnamese into U+FFFD
+        // and could save it back. Such a copy is only used when no clean one is stored.
+        var damagedCopy: Pair<Lyrics, String>? = null
+        fun storedCopy(rawLyrics: String): Pair<Lyrics, String>? {
+            val parsed = parseStoredLyrics(rawLyrics) ?: return null
+            if (!rawLyrics.contains(REPLACEMENT_CHARACTER)) return parsed to rawLyrics
+            Timber.tag(TAG).w("Stored lyrics contain U+FFFD replacement characters; looking for a clean copy")
+            if (damagedCopy == null) damagedCopy = parsed to rawLyrics
+            return null
+        }
+
         song.lyrics
             ?.trim()
             ?.takeIf { it.isNotBlank() }
             ?.let { rawLyrics ->
-                parseStoredLyrics(rawLyrics)?.let { return@withContext it to rawLyrics }
+                storedCopy(rawLyrics)?.let { return@withContext it }
             }
 
         song.id.toLongOrNull()
@@ -1039,7 +1058,7 @@ class LyricsRepositoryImpl @Inject constructor(
             ?.trim()
             ?.takeIf { it.isNotBlank() }
             ?.let { rawLyrics ->
-                parseStoredLyrics(rawLyrics)?.let { return@withContext it to rawLyrics }
+                storedCopy(rawLyrics)?.let { return@withContext it }
             }
 
         readLyricsJsonCache(song)
@@ -1047,7 +1066,7 @@ class LyricsRepositoryImpl @Inject constructor(
             ?.let { data ->
                 val rawLyrics = data.wordByWordLyrics ?: data.syncedLyrics ?: data.plainLyrics
                 if (!rawLyrics.isNullOrBlank()) {
-                    parseStoredLyrics(rawLyrics)?.let { return@withContext it to rawLyrics }
+                    storedCopy(rawLyrics)?.let { return@withContext it }
                 }
             }
 
@@ -1059,16 +1078,42 @@ class LyricsRepositoryImpl @Inject constructor(
             }
         }
 
-        null
+        damagedCopy
     }
 
-    private fun parseStoredLyrics(rawLyrics: String): Lyrics? {
-        // Builds before 0.3.0-alpha.19 "repaired" accented text such as Vietnamese into U+FFFD
-        // and saved it back. Skip such copies so a clean embedded tag or .lrc file is used.
-        if (rawLyrics.contains(REPLACEMENT_CHARACTER)) {
-            Timber.tag(TAG).w("Skipping stored lyrics that contain U+FFFD replacement characters")
-            return null
+    /**
+     * A clean copy of the lyrics from the song's own tag or `.lrc` file, read in the user's
+     * source order, to stand in for a stored copy damaged into U+FFFD.
+     */
+    private suspend fun findCleanLocalLyrics(
+        song: Song,
+        sourcePreference: LyricsSourcePreference
+    ): Lyrics? {
+        val localFetchers: List<suspend () -> Lyrics?> =
+            if (sourcePreference == LyricsSourcePreference.LOCAL_FIRST) {
+                listOf({ findLocalLyricsFile(song) }, { loadEmbeddedLyricsFromMetadata(song) })
+            } else {
+                listOf({ loadEmbeddedLyricsFromMetadata(song) }, { findLocalLyricsFile(song) })
+            }
+        for (fetcher in localFetchers) {
+            val lyrics = try {
+                fetcher()
+            } catch (e: Exception) {
+                Timber.tag(TAG).w("Error reading local lyrics: ${e.message}")
+                null
+            }
+            if (lyrics != null && lyrics.isValid() && !lyrics.containsReplacementCharacter()) {
+                return lyrics
+            }
         }
+        return null
+    }
+
+    private fun Lyrics.containsReplacementCharacter(): Boolean =
+        synced.orEmpty().any { it.line.contains(REPLACEMENT_CHARACTER) } ||
+            plain.orEmpty().any { it.contains(REPLACEMENT_CHARACTER) }
+
+    private fun parseStoredLyrics(rawLyrics: String): Lyrics? {
         val parsedLyrics = LyricsUtils.parseLyrics(rawLyrics)
         return parsedLyrics
             .takeIf { it.isValid() }

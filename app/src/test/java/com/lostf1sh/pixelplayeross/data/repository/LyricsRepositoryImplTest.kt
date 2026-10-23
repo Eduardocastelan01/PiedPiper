@@ -385,7 +385,7 @@ class LyricsRepositoryImplTest {
     }
 
     @Test
-    fun getLyrics_skipsStoredLyricsDamagedIntoReplacementCharacters() = runTest {
+    fun getLyrics_prefersACleanStoredCopyOverOneDamagedIntoReplacementCharacters() = runTest {
         // Builds before 0.3.0-alpha.19 could save Vietnamese lyrics back with U+FFFD in place
         // of letters; a clean copy elsewhere must win over the damaged one.
         val lyricsDao = mockk<LyricsDao>(relaxed = true)
@@ -408,6 +408,61 @@ class LyricsRepositoryImplTest {
         val lyrics = repository.getLyrics(song, LyricsSourcePreference.EMBEDDED_FIRST)
 
         assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh vẫn nhớ thân em")
+    }
+
+    @Test
+    fun getLyrics_replacesDamagedStoredLyricsWithACleanLrcFileNextToTheSong() = runTest {
+        val musicDir = Files.createTempDirectory("pixelplayer-music").toFile()
+        File(musicDir, "Mua Thu.lrc").writeText("[00:01.00]Anh vẫn nhớ thân em")
+        val apiService = mockk<LrcLibApiService>(relaxed = true)
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        coEvery { lyricsDao.getLyrics(132L) } returns null
+        val repository = LyricsRepositoryImpl(
+            context = testContext(),
+            lrcLibApiService = apiService,
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository()
+        )
+        val song = testSong(
+            id = "132",
+            title = "Mùa Thu",
+            artist = "Sài Gòn Echo",
+            path = File(musicDir, "Mua Thu.flac").path,
+            duration = 180_000L
+        ).copy(lyrics = "[00:01.00]Anh v�n nh? th�n em")
+
+        val lyrics = repository.getLyrics(song, LyricsSourcePreference.API_FIRST)
+
+        assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh vẫn nhớ thân em")
+        coVerify(exactly = 0) { apiService.searchLyrics(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun getLyrics_keepsDamagedStoredLyricsWhenNoCleanCopyExists() = runTest {
+        // Lyrics the user imported or picked stay visible, and no automatic search replaces them.
+        val apiService = mockk<LrcLibApiService>(relaxed = true)
+        val lyricsDao = mockk<LyricsDao>(relaxed = true)
+        coEvery { lyricsDao.getLyrics(133L) } returns LyricsEntity(
+            songId = 133L,
+            content = "[00:01.00]Anh v�n nh� em",
+            isSynced = true,
+            source = "manual"
+        )
+        val repository = LyricsRepositoryImpl(
+            context = testContext(),
+            lrcLibApiService = apiService,
+            lyricsDao = lyricsDao,
+            okHttpClient = mockk<OkHttpClient>(relaxed = true),
+            userPreferencesRepository = userPreferencesRepository(externalLyricsEnabled = true)
+        )
+        val song = testSong(id = "133", title = "Mùa Thu", artist = "Sài Gòn Echo", duration = 180_000L)
+
+        val lyrics = repository.getLyrics(song, LyricsSourcePreference.API_FIRST)
+
+        assertThat(lyrics!!.synced!!.single().line).isEqualTo("Anh v�n nh� em")
+        coVerify(exactly = 0) { apiService.searchLyrics(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { lyricsDao.insert(any()) }
     }
 
     @Test
