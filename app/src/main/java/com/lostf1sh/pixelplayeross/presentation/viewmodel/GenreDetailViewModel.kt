@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.lostf1sh.pixelplayeross.data.model.Genre
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
+import com.lostf1sh.pixelplayeross.utils.GenreParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -132,8 +133,7 @@ class GenreDetailViewModel @Inject constructor(
 
             try {
                 val initialGenre = withContext(dispatchers.default) {
-                    val genres = musicRepository.getGenres().first()
-                    genres.find { it.id.equals(genreId, ignoreCase = true) }
+                    findGenre(musicRepository.getGenres().first(), genreId)
                 }
                 
                 if (initialGenre != null) {
@@ -141,14 +141,8 @@ class GenreDetailViewModel @Inject constructor(
                 }
 
                 val result = withContext(dispatchers.default) {
-                    val genres = musicRepository.getGenres().first()
-                    val genre = initialGenre ?: genres.find { it.id.equals(genreId, ignoreCase = true) }
-                        ?: Genre(
-                            id = genreId,
-                            name = genreId.replace("_", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, 
-                            lightColorHex = "#9E9E9E", onLightColorHex = "#000000",
-                            darkColorHex = "#616161", onDarkColorHex = "#FFFFFF"
-                        )
+                    val genre = initialGenre ?: findGenre(musicRepository.getGenres().first(), genreId)
+                        ?: fallbackGenre(genreId)
 
                     val songs = musicRepository.getMusicByGenre(genre.name).first()
                     val artists = musicRepository.getArtists().first()
@@ -183,6 +177,33 @@ class GenreDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Resolves the navigation argument to a library genre. Genre tiles pass an id, while song info
+     * and stats pass a genre name or a song's whole genre value, such as "Alternative; Indie Rock",
+     * which opens its first genre.
+     */
+    private fun findGenre(genres: List<Genre>, genreId: String): Genre? {
+        val requestedKey = GenreParser.key(GenreParser.split(genreId).firstOrNull() ?: genreId)
+        return genres.find { it.id.equals(genreId, ignoreCase = true) }
+            ?: genres.find { it.id == requestedKey }
+    }
+
+    private fun fallbackGenre(genreId: String): Genre {
+        val requestedName = GenreParser.split(genreId).firstOrNull() ?: genreId
+        // A bare id such as "hip_hop" reads better with its spaces back.
+        val name = if (requestedName.none(Char::isWhitespace) && '_' in requestedName) {
+            requestedName.replace("_", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        } else {
+            requestedName
+        }
+        return Genre(
+            id = GenreParser.key(requestedName),
+            name = name,
+            lightColorHex = "#9E9E9E", onLightColorHex = "#000000",
+            darkColorHex = "#616161", onDarkColorHex = "#FFFFFF"
+        )
     }
 
     /**

@@ -278,7 +278,8 @@ fun GenreDetailScreen(
     val contentColor = themeColor.onContainer
     
     val initialDisplayName = remember(decodedGenreId) {
-        decodedGenreId
+        // Song info passes the song's whole genre value; the view model opens its first genre.
+        (com.lostf1sh.pixelplayeross.utils.GenreParser.split(decodedGenreId).firstOrNull() ?: decodedGenreId)
             .replace("_", " ")
             .split(" ")
             .joinToString(" ") { word ->

@@ -89,6 +89,18 @@ class StatsViewModelTest {
     private val artistImageRepository = mockk<ArtistImageRepository>(relaxed = true)
 
     @Test
+    fun `each genre of a multi-genre song opens as a library genre`() = runTest {
+        coEvery { musicRepository.getAllSongsOnce() } returns
+            listOf(song("s1").copy(genre = "Alternative; Indie Rock"))
+        val viewModel = createViewModel()
+
+        assertThat(viewModel.isLibraryGenre("Indie Rock")).isTrue()
+        assertThat(viewModel.isLibraryGenre("alternative")).isTrue()
+        assertThat(viewModel.isLibraryGenre("Alternative Rock")).isFalse()
+        assertThat(viewModel.isLibraryGenre("Unknown Genre")).isFalse()
+    }
+
+    @Test
     fun `home overview is Empty instead of hidden when there is no listening history`() = runTest {
         loadGate = CompletableDeferred()
         val viewModel = createViewModel()
