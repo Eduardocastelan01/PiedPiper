@@ -708,6 +708,7 @@ class MainActivity : ComponentActivity() {
                 Screen.NavBarCrRad.route,
                 Screen.About.route,
                 Screen.Stats.route,
+                Screen.Recap.route,
                 Screen.EditTransition.route,
                 Screen.Experimental.route,
                 Screen.LyricsSettings.route,
@@ -994,7 +995,11 @@ class MainActivity : ComponentActivity() {
                                 .map { it.currentSong?.id != null }
                                 .distinctUntilChanged()
                         }.collectAsStateWithLifecycle(initialValue = false)
-                        val routesWithHiddenMiniPlayer = remember { setOf(Screen.NavBarCrRad.route) }
+                        // The recap story is full screen; its own Play button closes it so the
+                        // player shows up again.
+                        val routesWithHiddenMiniPlayer = remember {
+                            setOf(Screen.NavBarCrRad.route, Screen.Recap.route)
+                        }
                         val shouldHideMiniPlayer by remember(currentRoute) {
                             derivedStateOf { currentRoute in routesWithHiddenMiniPlayer }
                         }
