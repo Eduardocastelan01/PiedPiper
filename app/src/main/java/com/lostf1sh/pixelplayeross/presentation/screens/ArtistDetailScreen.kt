@@ -96,6 +96,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.ArtistAlbumSection
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.collapseKey
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.isAlbumSectionExpanded
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.isAnyAlbumSectionExpanded
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import com.lostf1sh.pixelplayeross.utils.shapes.RoundedStarShape
@@ -130,7 +131,9 @@ fun ArtistDetailScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val albumExpansionOverrides by viewModel.albumExpansionOverrides.collectAsStateWithLifecycle()
+    // Kept as State and read only by the album list and the expand-all button, so a header tap
+    // does not recompose the whole screen.
+    val albumExpansionOverrides = viewModel.albumExpansionOverrides.collectAsStateWithLifecycle()
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     
     var isTransitionFinished by remember { mutableStateOf(false) }
@@ -357,6 +360,7 @@ fun ArtistDetailScreen(
                         }
                     }
                     val visibleSections = remember(albumSections) { albumSections.filter { it.songs.isNotEmpty() } }
+                    val visibleSectionKeys = remember(visibleSections) { visibleSections.map { it.collapseKey() } }
                     val albumCount = visibleSections.size
                     val albumCountLabel = if (albumCount == 1) {
                         stringResource(R.string.detail_hero_album_count_one)
@@ -367,12 +371,26 @@ fun ArtistDetailScreen(
                     val isSectionExpanded: (String) -> Boolean = { sectionKey ->
                         isAlbumSectionExpanded(
                             key = sectionKey,
-                            overrides = albumExpansionOverrides,
+                            overrides = albumExpansionOverrides.value,
                             collapsedByDefault = albumsCollapsedByDefault,
                             sectionCount = albumCount
                         )
                     }
-                    val anySectionExpanded = visibleSections.any { isSectionExpanded(it.collapseKey()) }
+                    // Derived and read only by the summary row: this scope recomposes on every
+                    // frame of the header collapse, which should not re-check every album.
+                    val anySectionExpanded = remember(
+                        albumExpansionOverrides,
+                        visibleSectionKeys,
+                        albumsCollapsedByDefault
+                    ) {
+                        derivedStateOf {
+                            isAnyAlbumSectionExpanded(
+                                sectionKeys = visibleSectionKeys,
+                                overrides = albumExpansionOverrides.value,
+                                collapsedByDefault = albumsCollapsedByDefault
+                            )
+                        }
+                    }
 
                     val isScrollbarEnabled = LocalShowScrollbar.current
                     val showScrollBar by remember(isScrollbarEnabled) {
@@ -441,16 +459,17 @@ fun ArtistDetailScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     if (albumCount > 1) {
+                                        val anyExpanded = anySectionExpanded.value
                                         ArtistAlbumsExpandAllButton(
-                                            anyExpanded = anySectionExpanded,
-                                            onClick = { viewModel.setAllAlbumSectionsExpanded(!anySectionExpanded) }
+                                            anyExpanded = anyExpanded,
+                                            onClick = { viewModel.setAllAlbumSectionsExpanded(!anyExpanded) }
                                         )
                                     }
                                 }
                             }
                         }
                         visibleSections.forEachIndexed { index, section ->
-                            val sectionKey = section.collapseKey()
+                            val sectionKey = visibleSectionKeys[index]
                             val isFirstSection = index == 0
                             val isLastSection = index == visibleSections.lastIndex
                             val isExpanded = isSectionExpanded(sectionKey)

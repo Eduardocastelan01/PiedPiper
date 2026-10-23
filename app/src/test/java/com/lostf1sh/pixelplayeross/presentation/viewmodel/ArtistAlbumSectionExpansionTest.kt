@@ -47,6 +47,34 @@ class ArtistAlbumSectionExpansionTest {
     }
 
     @Test
+    fun `any album counts as expanded while the defaults leave them open`() {
+        val keys = listOf("a", "b", "c")
+
+        assertThat(isAnyAlbumSectionExpanded(keys, overrides = emptyMap(), collapsedByDefault = false)).isTrue()
+        // The only album opens even with the collapsed default on.
+        assertThat(isAnyAlbumSectionExpanded(listOf("a"), overrides = emptyMap(), collapsedByDefault = true)).isTrue()
+    }
+
+    @Test
+    fun `no album counts as expanded when every album starts or was set collapsed`() {
+        val keys = listOf("a", "b", "c")
+        val allCollapsed = keys.associateWith { false }
+
+        assertThat(isAnyAlbumSectionExpanded(keys, overrides = emptyMap(), collapsedByDefault = true)).isFalse()
+        assertThat(isAnyAlbumSectionExpanded(keys, allCollapsed, collapsedByDefault = false)).isFalse()
+        assertThat(isAnyAlbumSectionExpanded(emptyList(), overrides = emptyMap(), collapsedByDefault = false)).isFalse()
+    }
+
+    @Test
+    fun `one album opened on the page counts as expanded`() {
+        val keys = listOf("a", "b", "c")
+
+        assertThat(isAnyAlbumSectionExpanded(keys, mapOf("b" to true), collapsedByDefault = true)).isTrue()
+        // Overrides left over for albums that are not listed do not count.
+        assertThat(isAnyAlbumSectionExpanded(keys, mapOf("gone" to true), collapsedByDefault = true)).isFalse()
+    }
+
+    @Test
     fun `albums sharing an id but not a title get their own key`() {
         val first = section(albumId = 7L, title = "Live")
         val second = section(albumId = 7L, title = "Live (Deluxe)")

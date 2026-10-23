@@ -16,3 +16,15 @@ internal fun isAlbumSectionExpanded(
     collapsedByDefault: Boolean,
     sectionCount: Int
 ): Boolean = overrides[key] ?: !(collapsedByDefault && sectionCount > 1)
+
+/**
+ * Whether any of the artist's album sections, given by their [collapseKey]s, shows its songs:
+ * the "Collapse all / Expand all" button collapses while one does.
+ */
+internal fun isAnyAlbumSectionExpanded(
+    sectionKeys: List<String>,
+    overrides: Map<String, Boolean>,
+    collapsedByDefault: Boolean
+): Boolean = sectionKeys.any { key ->
+    isAlbumSectionExpanded(key, overrides, collapsedByDefault, sectionCount = sectionKeys.size)
+}
