@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputEventHandler
@@ -41,25 +42,26 @@ private val AutoScrollEdgeZone = 56.dp
 private val MaxAutoScrollSpeed = 1000.dp
 
 /**
- * Links a list's rows to its [dragToSelect] modifier. A row calls [onItemLongPressed] from its
- * long press, after toggling itself, to let the finger that is still down go on selecting rows.
+ * Links a list's rows to its [dragToSelect] modifier. A row calls [onItemLongPressed] with its
+ * item from its long press, after toggling itself, to let the finger that is still down go on
+ * selecting rows.
  */
-internal class DragToSelectState {
+internal class DragToSelectState<T : Any> {
     internal var isPointerDown = false
-    internal var isArmRequested = false
+    internal var longPressedItem: T? = null
 
     /**
-     * Arms drag-to-select for the finger that is holding the long-pressed row. A long press that
+     * Arms drag-to-select for the finger that is holding the row showing [item]. A long press that
      * does not come from a finger on the list (an accessibility action, or a tap in selection
      * mode, which is reported on release) is ignored.
      */
-    fun onItemLongPressed() {
-        if (isPointerDown) isArmRequested = true
+    fun onItemLongPressed(item: T) {
+        if (isPointerDown) longPressedItem = item
     }
 }
 
 @Composable
-internal fun rememberDragToSelectState(): DragToSelectState = remember { DragToSelectState() }
+internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remember { DragToSelectState() }
 
 /**
  * Drag-to-select for a [LazyColumn][androidx.compose.foundation.lazy.LazyColumn] of selectable
@@ -67,7 +69,11 @@ internal fun rememberDragToSelectState(): DragToSelectState = remember { DragToS
  * swiping) until the finger lifts; every row the finger is dragged over takes the long-pressed
  * row's new state, and the list auto-scrolls while the finger rests near its top or bottom edge.
  *
+ * The drag starts from the long-pressed row even if the list has moved under the finger since,
+ * and only follows the finger once it has moved by more than the touch slop.
+ *
  * Append it last to the list's modifier chain so pointer positions line up with the list's items.
+ * The list must not use `reverseLayout`.
  *
  * @param itemAt The selectable item at a list index, or null for rows that cannot be selected
  *   (headers, folders) or are not loaded yet.
@@ -80,7 +86,7 @@ internal fun rememberDragToSelectState(): DragToSelectState = remember { DragToS
  *   the navigation bar and mini player.
  */
 internal fun <T : Any> Modifier.dragToSelect(
-    state: DragToSelectState,
+    state: DragToSelectState<T>,
     listState: LazyListState,
     itemAt: (index: Int) -> T?,
     isSelected: (T) -> Boolean,
@@ -98,7 +104,7 @@ internal fun <T : Any> Modifier.dragToSelect(
 )
 
 private data class DragToSelectElement<T : Any>(
-    val state: DragToSelectState,
+    val state: DragToSelectState<T>,
     val listState: LazyListState,
     val itemAt: (Int) -> T?,
     val isSelected: (T) -> Boolean,
@@ -128,7 +134,7 @@ private data class DragToSelectElement<T : Any>(
 }
 
 private class DragToSelectNode<T : Any>(
-    private var state: DragToSelectState,
+    private var state: DragToSelectState<T>,
     private var listState: LazyListState,
     private var itemAt: (Int) -> T?,
     private var isSelected: (T) -> Boolean,
@@ -144,7 +150,17 @@ private class DragToSelectNode<T : Any>(
     )
 
     private var tracker: DragSelectionTracker<T>? = null
+    private var rangeGate: DragRangeGate? = null
     private var edgeGate: AutoScrollEdgeGate? = null
+
+    /**
+     * The finger in window coordinates. Positions in the list's own coordinates go stale when the
+     * list moves on screen (a top bar collapsing above it) while the finger rests, so they are
+     * derived from this whenever they are needed.
+     */
+    private var pointerInWindow = Offset.Zero
+
+    /** The finger in the list's coordinates as of the last [updateGeometry]. */
     private var pointerY = 0f
     private var bandTop = 0f
     private var bandBottom = 0f
@@ -152,7 +168,7 @@ private class DragToSelectNode<T : Any>(
     private var autoScrollJob: Job? = null
 
     fun update(
-        state: DragToSelectState,
+        state: DragToSelectState<T>,
         listState: LazyListState,
         itemAt: (Int) -> T?,
         isSelected: (T) -> Boolean,
@@ -175,28 +191,33 @@ private class DragToSelectNode<T : Any>(
     private suspend fun PointerInputScope.detectDragToSelect() = coroutineScope {
         val edgeZone = AutoScrollEdgeZone.toPx()
         val maxVelocity = MaxAutoScrollSpeed.toPx()
+        val touchSlop = viewConfiguration.touchSlop
         awaitEachGesture {
             // The Initial pass runs before the rows, the list's own scrolling and any parent
             // pager, so consuming there once armed keeps all of them still until the finger lifts.
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             val gestureState = state
             gestureState.isPointerDown = true
-            gestureState.isArmRequested = false
-            pointerY = down.position.y
+            gestureState.longPressedItem = null
+            pointerInWindow = toWindow(down.position)
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull { it.id == down.id }
                     if (change == null || !change.pressed) break
-                    if (tracker == null && gestureState.isArmRequested) {
-                        gestureState.isArmRequested = false
-                        // The long press fired between events, with the finger still on the row
-                        // at its last position; this event may already have moved it off the row.
-                        startSelection(anchorY = pointerY, touchSlop = viewConfiguration.touchSlop)
+                    if (tracker == null) {
+                        // The long press fired between events, with the finger still at its last
+                        // position; this event may already have moved it off the row.
+                        gestureState.longPressedItem?.let { item ->
+                            gestureState.longPressedItem = null
+                            startSelection(item, touchSlop)
+                        }
                     }
-                    pointerY = change.position.y
+                    pointerInWindow = toWindow(change.position)
                     if (tracker == null) continue
                     event.changes.forEach { it.consume() }
+                    rangeGate?.onPointerMoved(pointerInWindow.y)
+                    updateGeometry()
                     selectUnderPointer()
                     updateAutoScroll(edgeZone, maxVelocity)
                 }
@@ -206,32 +227,45 @@ private class DragToSelectNode<T : Any>(
                 autoScrollJob = null
                 tracker?.let { Timber.tag(LogTag).d("Drag-select ended on row %d", it.currentIndex) }
                 tracker = null
+                rangeGate = null
                 edgeGate = null
                 gestureState.isPointerDown = false
-                gestureState.isArmRequested = false
+                gestureState.longPressedItem = null
             }
         }
     }
 
-    private fun startSelection(anchorY: Float, touchSlop: Float) {
+    private fun toWindow(position: Offset): Offset = requireLayoutCoordinates().localToWindow(position)
+
+    private fun startSelection(item: T, touchSlop: Float) {
+        updateGeometry()
         val layoutInfo = listState.layoutInfo
-        val anchor = itemIndexAtY(anchorY, layoutInfo.viewportStartOffset, layoutInfo.visibleItemsInfo)
-        val anchorItem = anchor?.let(itemAt)
-        if (anchor == null || anchorItem == null) {
-            Timber.tag(LogTag).w("Drag-select not started: no selectable row at y=%.1f", anchorY)
+        val anchor = anchorIndexOf(
+            item = item,
+            y = pointerY,
+            viewportStartOffset = layoutInfo.viewportStartOffset,
+            visibleItems = layoutInfo.visibleItemsInfo,
+            itemAt = itemAt,
+        )
+        if (anchor == null) {
+            Timber.tag(LogTag).w("Drag-select not started: the long-pressed row is not on screen")
             return
         }
         // The long press has already toggled the anchor, so its state now is the drag's target.
-        val selecting = isSelected(anchorItem)
+        val selecting = isSelected(item)
         tracker = DragSelectionTracker(anchor, selecting)
-        edgeGate = AutoScrollEdgeGate(startY = anchorY, touchSlop = touchSlop)
+        rangeGate = DragRangeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
+        edgeGate = AutoScrollEdgeGate(startY = pointerInWindow.y, touchSlop = touchSlop)
         Timber.tag(LogTag).d("Drag-select started on row %d, selecting=%b", anchor, selecting)
     }
 
-    /** Extends the drag range to the row under the finger, limited to the rows on screen. */
+    /**
+     * Extends the drag range to the row under the finger, limited to the rows on screen, once
+     * the finger has moved off the long-pressed row's position or auto-scroll has moved the rows.
+     */
     private fun selectUnderPointer() {
         val tracker = tracker ?: return
-        updateVisibleBand()
+        if (rangeGate?.isOpen != true) return
         val y = if (bandBottom > bandTop) pointerY.coerceIn(bandTop, bandBottom - 1f) else pointerY
         val layoutInfo = listState.layoutInfo
         val index = itemIndexAtY(y, layoutInfo.viewportStartOffset, layoutInfo.visibleItemsInfo)
@@ -242,10 +276,15 @@ private class DragToSelectNode<T : Any>(
         currentValueOf(LocalHapticFeedback).performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
 
-    /** The part of the list that is on screen and not covered by its insets. */
-    private fun updateVisibleBand() {
+    /**
+     * Maps the finger into the list's current layout, and finds the part of the list that is on
+     * screen and not covered by its insets.
+     */
+    private fun updateGeometry() {
+        if (!isAttached) return
         val coordinates = requireLayoutCoordinates()
         val density = requireDensity()
+        pointerY = coordinates.windowToLocal(pointerInWindow).y
         var top = 0f
         var bottom = coordinates.size.height.toFloat()
         // Genre detail pushes its list down while the header is expanded, so the bottom of the
@@ -259,25 +298,31 @@ private class DragToSelectNode<T : Any>(
         bandBottom = bottom - with(density) { bottomInset.toPx() }
     }
 
-    private fun CoroutineScope.updateAutoScroll(edgeZone: Float, maxVelocity: Float) {
-        val gate = edgeGate ?: return
+    private fun currentAutoScrollVelocity(edgeZone: Float, maxVelocity: Float): Float {
+        val gate = edgeGate ?: return 0f
         val velocity = dragSelectAutoScrollVelocity(pointerY, bandTop, bandBottom, edgeZone, maxVelocity)
-        autoScrollVelocity = gate.filter(velocity, pointerY)
+        return gate.filter(velocity, pointerInWindow.y)
+    }
+
+    private fun CoroutineScope.updateAutoScroll(edgeZone: Float, maxVelocity: Float) {
+        autoScrollVelocity = currentAutoScrollVelocity(edgeZone, maxVelocity)
         if (autoScrollVelocity != 0f && autoScrollJob?.isActive != true) {
-            autoScrollJob = launch { autoScroll() }
+            autoScrollJob = launch { autoScroll(edgeZone, maxVelocity) }
         }
     }
 
     /** Scrolls while the finger rests in an edge zone, selecting the rows that scroll under it. */
-    private suspend fun autoScroll() {
+    private suspend fun autoScroll(edgeZone: Float, maxVelocity: Float) {
         listState.scroll {
             var previousFrameNanos = withFrameNanos { it }
             while (autoScrollVelocity != 0f) {
                 val frameNanos = withFrameNanos { it }
                 val seconds = (frameNanos - previousFrameNanos) / 1_000_000_000f
                 previousFrameNanos = frameNanos
-                scrollBy(autoScrollVelocity * seconds)
+                if (scrollBy(autoScrollVelocity * seconds) != 0f) rangeGate?.open()
+                updateGeometry()
                 selectUnderPointer()
+                autoScrollVelocity = currentAutoScrollVelocity(edgeZone, maxVelocity)
             }
         }
     }

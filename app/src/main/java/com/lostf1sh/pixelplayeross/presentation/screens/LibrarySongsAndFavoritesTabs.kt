@@ -100,7 +100,7 @@ fun LibraryFavoritesTab(
     val coroutineScope = rememberCoroutineScope()
     val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
     val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)
-    val dragSelectState = rememberDragToSelectState()
+    val dragSelectState = rememberDragToSelectState<Song>()
     val dragSelectSongAt: (Int) -> Song? = remember(favoriteSongs) {
         { index -> if (index in 0 until favoriteSongs.itemCount) favoriteSongs.peek(index) else null }
     }
@@ -269,7 +269,7 @@ fun LibraryFavoritesTab(
                                     isSelectionMode = isSelectionMode,
                                     onLongPress = {
                                         onSongLongPress(song)
-                                        dragSelectState.onItemLongPressed()
+                                        dragSelectState.onItemLongPressed(song)
                                     },
                                     onClick = {
                                         if (isSelectionMode) {

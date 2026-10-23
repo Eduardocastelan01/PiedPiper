@@ -1221,7 +1221,7 @@ fun SearchResultsList(
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
     val systemBarPaddingBottom = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding() + 94.dp
 
-    val dragSelectState = rememberDragToSelectState()
+    val dragSelectState = rememberDragToSelectState<Song>()
     // Section headers, albums, artists and playlists share the list with the songs but are not
     // selectable, so each list index maps to its song, if any.
     val dragSelectRows = remember(groupedResults) {
@@ -1314,7 +1314,7 @@ fun SearchResultsList(
                                     isSelectionMode = isSongSelectionMode,
                                     onLongPress = {
                                         onSongLongPress(item.song)
-                                        dragSelectState.onItemLongPressed()
+                                        dragSelectState.onItemLongPressed(item.song)
                                     }
                                 )
                             }

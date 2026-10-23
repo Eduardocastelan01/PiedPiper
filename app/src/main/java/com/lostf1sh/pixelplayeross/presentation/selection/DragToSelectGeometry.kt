@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.selection
 
 import androidx.compose.foundation.lazy.LazyListItemInfo
+import kotlin.math.abs
 
 /**
  * The index of the visible item under [y], a position relative to the top of the list's bounds.
@@ -22,6 +23,61 @@ internal fun itemIndexAtY(
     val last = visibleItems.last()
     if (contentY >= last.offset + last.size) return last.index
     return visibleItems.firstOrNull { contentY >= it.offset && contentY < it.offset + it.size }?.index
+}
+
+/**
+ * The index of the visible row showing [item], the long-pressed row a drag-select starts from.
+ *
+ * The row is found by its item rather than by the finger's position: entering selection mode can
+ * move the list under a finger that has not moved (a header changing height), leaving the finger
+ * over another row. If [item] shows more than once, the copy nearest [y] (relative to the top of
+ * the list's bounds, see [itemIndexAtY]) wins. Returns null when no visible row shows [item].
+ */
+internal fun <T : Any> anchorIndexOf(
+    item: T,
+    y: Float,
+    viewportStartOffset: Int,
+    visibleItems: List<LazyListItemInfo>,
+    itemAt: (index: Int) -> T?,
+): Int? {
+    val contentY = y + viewportStartOffset
+    return visibleItems
+        .filter { itemAt(it.index) == item }
+        .minByOrNull { row ->
+            when {
+                contentY < row.offset -> row.offset - contentY
+                contentY >= row.offset + row.size -> contentY - (row.offset + row.size)
+                else -> 0f
+            }
+        }
+        ?.index
+}
+
+/**
+ * Holds a drag-select on its long-pressed row until the finger has really moved: by more than
+ * [touchSlop] from [startY], where it was when the long press armed the drag, in coordinates that
+ * do not move with the list (the window's). Auto-scroll can also [open] it, since it moves rows
+ * under the finger on purpose.
+ *
+ * Without it, a list that shifts under a still finger as selection mode starts would put the next
+ * row under the finger, and the slightest wiggle would select that row too.
+ */
+internal class DragRangeGate(
+    private val startY: Float,
+    private val touchSlop: Float,
+) {
+    var isOpen = false
+        private set
+
+    /** Notes the finger at [y]; returns whether the drag range may follow it now. */
+    fun onPointerMoved(y: Float): Boolean {
+        if (abs(y - startY) > touchSlop) isOpen = true
+        return isOpen
+    }
+
+    fun open() {
+        isOpen = true
+    }
 }
 
 /**
@@ -55,7 +111,9 @@ private const val MinAutoScrollFraction = 0.15f
 /**
  * Keeps an edge zone from auto-scrolling just because the long-pressed row sits inside it. A zone
  * only starts scrolling once the finger has been outside it, or has moved towards its edge by
- * more than [touchSlop] since the drag started at [startY].
+ * more than [touchSlop] since the drag started at [startY]. Finger positions are in coordinates
+ * that do not move with the list (the window's), so a list shifting under a still finger does
+ * not count as the finger moving.
  */
 internal class AutoScrollEdgeGate(
     private val startY: Float,

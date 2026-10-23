@@ -93,7 +93,7 @@ fun LibrarySongsTab(
     val coroutineScope = rememberCoroutineScope()
     val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
     val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)
-    val dragSelectState = rememberDragToSelectState()
+    val dragSelectState = rememberDragToSelectState<Song>()
     val dragSelectSongAt: (Int) -> Song? = remember(songs) {
         { index -> if (index in 0 until songs.itemCount) songs.peek(index) else null }
     }
@@ -316,7 +316,7 @@ fun LibrarySongsTab(
                                     val rememberedOnLongPress: () -> Unit = remember(song) {
                                         {
                                             onSongLongPress(song)
-                                            dragSelectState.onItemLongPressed()
+                                            dragSelectState.onItemLongPressed(song)
                                         }
                                     }
 

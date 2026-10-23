@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.presentation.selection
 
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -107,6 +108,58 @@ class DragToSelectGeometryTest {
         assertEquals(0f, gate.filter(velocity = 0f, y = 600f))
         assertEquals(500f, gate.filter(velocity = 500f, y = 1_050f))
         assertEquals(-500f, gate.filter(velocity = -500f, y = 120f))
+    }
+
+    @Test
+    fun `the drag starts from the long-pressed row even when the list moved another row under the finger`() {
+        val itemAt = { index: Int -> "song-$index" }
+
+        // The finger is over row 6 now, but row 5 was long-pressed.
+        assertEquals(5, anchorIndexOf("song-5", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertEquals(4, anchorIndexOf("song-4", y = 250f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+    }
+
+    @Test
+    fun `a long-pressed item shown twice anchors on the copy nearest the finger`() {
+        val itemAt = { index: Int -> if (index == 4 || index == 6) "twice" else "song-$index" }
+
+        assertEquals(4, anchorIndexOf("twice", y = 60f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertEquals(6, anchorIndexOf("twice", y = 200f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        // With 120px of top padding, y = 200 is 80px into the content: on row 5, nearer row 4.
+        assertEquals(4, anchorIndexOf("twice", y = 200f, viewportStartOffset = -120, visibleItems = visibleItems, itemAt = itemAt))
+    }
+
+    @Test
+    fun `no anchor when the long-pressed item is not on screen or not selectable`() {
+        val itemAt = { index: Int -> if (index == 5) null else "song-$index" }
+
+        assertNull(anchorIndexOf("song-9", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = visibleItems, itemAt = itemAt))
+        assertNull(anchorIndexOf("song-5", y = 100f, viewportStartOffset = 0, visibleItems = emptyList(), itemAt = itemAt))
+    }
+
+    @Test
+    fun `the drag range waits for the finger to move past the touch slop`() {
+        val gate = DragRangeGate(startY = 1_000f, touchSlop = 20f)
+
+        // A list that slid under the finger leaves it where it was on screen; a wiggle stays shut.
+        assertFalse(gate.onPointerMoved(1_000f))
+        assertFalse(gate.onPointerMoved(1_002f))
+        assertFalse(gate.onPointerMoved(980f))
+        assertTrue(gate.onPointerMoved(1_021f))
+        // Once the finger has moved, the range follows it back over the long-pressed row too.
+        assertTrue(gate.onPointerMoved(1_000f))
+    }
+
+    @Test
+    fun `the drag range opens upwards and for auto-scroll`() {
+        val upwards = DragRangeGate(startY = 1_000f, touchSlop = 20f)
+        assertTrue(upwards.onPointerMoved(979f))
+
+        val autoScrolled = DragRangeGate(startY = 1_000f, touchSlop = 20f)
+        autoScrolled.open()
+        assertTrue(autoScrolled.isOpen)
+        assertTrue(autoScrolled.onPointerMoved(1_000f))
     }
 
     private fun item(index: Int, offset: Int, size: Int): LazyListItemInfo = object : LazyListItemInfo {

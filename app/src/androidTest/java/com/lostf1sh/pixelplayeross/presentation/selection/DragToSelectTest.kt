@@ -1,12 +1,17 @@
 package com.lostf1sh.pixelplayeross.presentation.selection
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -42,42 +47,54 @@ class DragToSelectTest {
     }
     private lateinit var listState: LazyListState
 
-    private fun setList() {
+    /**
+     * Shows the songs in a list under [header], which gets whether selection mode is on. The
+     * whole screen is tagged [ROOT_TAG], so touches injected through it stay put on screen when
+     * the list moves.
+     */
+    private fun setList(
+        rootModifier: Modifier = Modifier,
+        header: @Composable (isSelectionMode: Boolean) -> Unit = {},
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 val selectedIds by holder.selectedSongIds.collectAsState()
                 val isSelectionMode by holder.isSelectionMode.collectAsState()
-                val dragSelectState = rememberDragToSelectState()
+                val dragSelectState = rememberDragToSelectState<Song>()
                 listState = rememberLazyListState()
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(LIST_TAG)
-                        .dragToSelect(
-                            state = dragSelectState,
-                            listState = listState,
-                            itemAt = { index -> songs.getOrNull(index) },
-                            isSelected = { song -> holder.isSelected(song.id) },
-                            onSelectionChange = holder::applyDragSelection,
-                        ),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    items(songs, key = { it.id }) { song ->
-                        EnhancedSongListItem(
-                            modifier = Modifier.testTag(song.id),
-                            song = song,
-                            isPlaying = false,
-                            isSelected = song.id in selectedIds,
-                            selectionIndex = holder.getSelectionIndex(song.id),
-                            isSelectionMode = isSelectionMode,
-                            onLongPress = {
-                                holder.toggleSelection(song)
-                                dragSelectState.onItemLongPressed()
-                            },
-                            onMoreOptionsClick = {},
-                            onClick = {},
-                        )
+                Column(modifier = rootModifier.fillMaxSize().testTag(ROOT_TAG)) {
+                    header(isSelectionMode)
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .testTag(LIST_TAG)
+                            .dragToSelect(
+                                state = dragSelectState,
+                                listState = listState,
+                                itemAt = { index -> songs.getOrNull(index) },
+                                isSelected = { song -> holder.isSelected(song.id) },
+                                onSelectionChange = holder::applyDragSelection,
+                            ),
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(songs, key = { it.id }) { song ->
+                            EnhancedSongListItem(
+                                modifier = Modifier.testTag(song.id),
+                                song = song,
+                                isPlaying = false,
+                                isSelected = song.id in selectedIds,
+                                selectionIndex = holder.getSelectionIndex(song.id),
+                                isSelectionMode = isSelectionMode,
+                                onLongPress = {
+                                    holder.toggleSelection(song)
+                                    dragSelectState.onItemLongPressed(song)
+                                },
+                                onMoreOptionsClick = {},
+                                onClick = {},
+                            )
+                        }
                     }
                 }
             }
@@ -97,6 +114,8 @@ class DragToSelectTest {
         val next = composeRule.onNodeWithTag(songs[index + 1].id).fetchSemanticsNode().boundsInRoot
         return (row.bottom + next.top) / 2f - list.top
     }
+
+    private fun boundsInRoot(tag: String) = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     private fun selectedIds() = holder.selectedSongs.value.map { it.id }
 
@@ -175,7 +194,44 @@ class DragToSelectTest {
         }
     }
 
+    @Test
+    fun aListThatMovesUnderTheStillFingerAsSelectionStartsDoesNotSelectTheRowItSlidUnder() {
+        // Like Search's filter chips giving way to the shorter selection actions.
+        setList { isSelectionMode ->
+            Box(Modifier.fillMaxWidth().height(if (isSelectionMode) 40.dp else 160.dp))
+        }
+        val x = boundsInRoot(LIST_TAG).center.x
+        val listTopBefore = boundsInRoot(LIST_TAG).top
+        // The lower part of row 3, where a long press leaves the finger closest to the row below.
+        val fingerY = boundsInRoot(songs[3].id).bottom - 4f
+        var longPressTimeout = 0L
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            longPressTimeout = viewConfiguration.longPressTimeoutMillis
+            down(Offset(x, fingerY))
+        }
+        composeRule.mainClock.advanceTimeBy(longPressTimeout + 100)
+        composeRule.runOnIdle { assertThat(selectedIds()).containsExactly("song-3") }
+        // The header shrank: the list moved up, and the still finger is over a row below now.
+        assertThat(boundsInRoot(LIST_TAG).top).isLessThan(listTopBefore)
+        assertThat(boundsInRoot(songs[3].id).bottom).isLessThan(fingerY)
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput { moveBy(Offset(0f, 2f)) }
+        composeRule.runOnIdle { assertThat(selectedIds()).containsExactly("song-3") }
+
+        // A real drag then follows the rows where they are on screen now.
+        val row6 = boundsInRoot(songs[6].id).center.y
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            moveTo(Offset(x, row6))
+            up()
+        }
+        composeRule.runOnIdle {
+            assertThat(selectedIds()).containsExactly("song-3", "song-4", "song-5", "song-6").inOrder()
+        }
+    }
+
     private companion object {
+        const val ROOT_TAG = "drag_select_root"
         const val LIST_TAG = "drag_select_list"
     }
 }

@@ -2800,7 +2800,7 @@ fun LibraryFoldersTab(
         }
         // Uncached folder songs re-sort once their details load; an unscrolled folder stays at its top.
         KeepUnscrolledListAtTop(listState = listState, rows = songsToShow)
-        val dragSelectState = rememberDragToSelectState()
+        val dragSelectState = rememberDragToSelectState<Song>()
         // Folder rows come first in the list and are not selectable.
         val dragSelectSongAt: (Int) -> Song? = remember(itemsToShow.size, songsToShow) {
             { index -> songsToShow.getOrNull(index - itemsToShow.size) }
@@ -3012,7 +3012,7 @@ fun LibraryFoldersTab(
                                         isSelectionMode = isSelectionMode,
                                         onLongPress = {
                                             onSongLongPress(song)
-                                            dragSelectState.onItemLongPressed()
+                                            dragSelectState.onItemLongPressed(song)
                                         },
                                         onClick = {
                                             if (isSelectionMode) {

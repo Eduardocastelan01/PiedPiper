@@ -159,7 +159,7 @@ fun GenreDetailScreen(
             multiSelectionState.toggleSelection(song)
         }
     }
-    val dragSelectState = rememberDragToSelectState()
+    val dragSelectState = rememberDragToSelectState<Song>()
     // Read the holder directly: the collected selectedSongIds lag a frame behind the long press.
     val isDragSelectSongSelected: (Song) -> Boolean = remember(multiSelectionState) {
         { song -> multiSelectionState.isSelected(song.id) }
@@ -410,7 +410,7 @@ fun GenreDetailScreen(
                                 selectionIndex = multiSelectionState.getSelectionIndex(item.song.id),
                                 onLongPress = {
                                     onSongLongPress(item.song)
-                                    dragSelectState.onItemLongPressed()
+                                    dragSelectState.onItemLongPressed(item.song)
                                 }
                             )
                         }
