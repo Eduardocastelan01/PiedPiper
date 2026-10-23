@@ -56,13 +56,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
@@ -87,6 +90,9 @@ private const val REVEAL_WINDOW = 0.42f
 
 /** One reveal pass of a slide, from its first element starting to its last one landing. */
 internal const val RECAP_REVEAL_DURATION_MS = 1500
+
+/** How much, in sp, a count-up's font shrinks per try until its final value fits. */
+private const val COUNT_UP_SIZE_STEP = 2f
 
 // M3 emphasized-decelerate: elements arrive quickly and settle gently.
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
@@ -290,7 +296,8 @@ internal fun RecapBody(
 
 /**
  * A number counting up to [target] as [progress] goes from 0 to 1. Only this text recomposes
- * while it counts, and only when the formatted value actually changes.
+ * while it counts, and only when the formatted value actually changes. Its size is chosen once,
+ * for [target], so the number never shrinks partway through as it gains digits.
  */
 @Composable
 internal fun RecapCountUpText(
@@ -304,23 +311,55 @@ internal fun RecapCountUpText(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val formatter = remember(locale) { NumberFormat.getIntegerInstance(locale) }
-    val text by remember(target, formatter) {
-        derivedStateOf { formatter.format((target * progress().coerceIn(0f, 1f)).roundToLong()) }
-    }
-    BasicText(
-        text = text,
-        modifier = modifier,
-        style = TextStyle(
-            fontFamily = rememberRecapFlexFont(weight = 940, width = 122f),
-            fontSize = maxFontSize,
-            lineHeight = maxFontSize,
-            letterSpacing = (-1.5).sp,
-            color = color,
-            textAlign = textAlign
-        ),
-        maxLines = 1,
-        autoSize = TextAutoSize.StepBased(minFontSize = minFontSize, maxFontSize = maxFontSize, stepSize = 2.sp)
+    val style = TextStyle(
+        fontFamily = rememberRecapFlexFont(weight = 940, width = 122f),
+        fontSize = maxFontSize,
+        lineHeight = maxFontSize,
+        letterSpacing = (-1.5).sp,
+        color = color,
+        textAlign = textAlign
     )
+    val textMeasurer = rememberTextMeasurer(cacheSize = 0)
+    // Passing the minimum width on lets a caller's fillMaxWidth (and so textAlign) reach the text.
+    BoxWithConstraints(modifier = modifier, propagateMinConstraints = true) {
+        val fittedStyle = remember(target, formatter, style, constraints.maxWidth, textMeasurer) {
+            val fontSize = textMeasurer.largestFittingFontSize(
+                text = formatter.format(target),
+                style = style,
+                maxWidth = constraints.maxWidth,
+                minFontSize = minFontSize,
+                maxFontSize = maxFontSize
+            )
+            style.copy(fontSize = fontSize, lineHeight = fontSize)
+        }
+        val text by remember(target, formatter) {
+            derivedStateOf { formatter.format((target * progress().coerceIn(0f, 1f)).roundToLong()) }
+        }
+        BasicText(text = text, style = fittedStyle, maxLines = 1, softWrap = false)
+    }
+}
+
+/**
+ * The largest size from [maxFontSize] down to [minFontSize], in [COUNT_UP_SIZE_STEP] steps, at
+ * which [text] fits on one line within [maxWidth] pixels; [minFontSize] when none does.
+ */
+private fun TextMeasurer.largestFittingFontSize(
+    text: String,
+    style: TextStyle,
+    maxWidth: Int,
+    minFontSize: TextUnit,
+    maxFontSize: TextUnit
+): TextUnit {
+    if (maxWidth == Constraints.Infinity) return maxFontSize
+    var size = maxFontSize.value
+    while (size > minFontSize.value) {
+        val width = measure(text, style.copy(fontSize = size.sp, lineHeight = size.sp), softWrap = false, maxLines = 1)
+            .size
+            .width
+        if (width <= maxWidth) return size.sp
+        size -= COUNT_UP_SIZE_STEP
+    }
+    return minFontSize
 }
 
 /** A small rounded tag on a slide, e.g. a play count or a duration. */
