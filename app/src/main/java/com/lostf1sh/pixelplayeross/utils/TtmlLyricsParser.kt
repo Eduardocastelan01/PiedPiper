@@ -57,13 +57,16 @@ internal object TtmlLyricsParser {
                     val extras = ParagraphExtras()
                     val serializedBody = normalizeParagraphBody(serializeChildren(paragraph, extras))
                         .withoutRedundantEndTags()
-                    if (serializedBody.isBlank()) continue
+                    val background = extras.background.toString().replace('\n', ' ').trim()
+                        .withoutRedundantEndTags()
+                    // A paragraph sung only in the background keeps an empty main line to carry it.
+                    if (serializedBody.isBlank() && background.isEmpty()) continue
                     val timestamp = "[${formatLrcTimestamp(beginMs)}]"
                     val voicePrefix = voices.voiceOf(paragraph)?.let { "v$it:" }.orEmpty()
                     add(
                         beginMs to buildString {
                             append(timestamp).append(voicePrefix).append(serializedBody)
-                            extras.background.toString().replace('\n', ' ').trim().withoutRedundantEndTags()
+                            background
                                 .takeIf { it.isNotEmpty() }
                                 ?.let { append("\n[bg:").append(it).append(']') }
                             extras.translation.toString().trim()

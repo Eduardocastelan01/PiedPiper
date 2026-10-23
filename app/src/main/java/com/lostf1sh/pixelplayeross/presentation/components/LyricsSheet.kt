@@ -1311,9 +1311,13 @@ fun SyncedLyricsList(
         }
     }
     val isPreviewSeeking = positionOverrideMs != null
-    val currentLineIndex by remember(lines, positionProvider) {
+    // Hidden backing vocals must not keep their line lit.
+    val lineEndTimesMs = remember(lines, showBackgroundVocals) {
+        resolveLineEndTimesMs(lines, includeBackground = showBackgroundVocals)
+    }
+    val litLines by remember(lines, lineEndTimesMs, positionProvider) {
         derivedStateOf {
-            resolveCurrentLineIndex(lines = lines, position = positionProvider())
+            resolveLitLines(lines = lines, lineEndTimesMs = lineEndTimesMs, position = positionProvider())
         }
     }
     val linesHaveMultipleVoices = remember(lines) { hasMultipleVoices(lines) }
@@ -1328,6 +1332,8 @@ fun SyncedLyricsList(
     var lastAutoScrolledLineIndex by remember(lines) { mutableIntStateOf(-1) }
 
     BoxWithConstraints(modifier = modifier) {
+        // The list follows the last line being sung.
+        val currentLineIndex = litLines.last
         val metrics = remember(maxHeight, highlightZoneFraction, highlightOffsetDp) {
             calculateHighlightMetrics(maxHeight, highlightZoneFraction, highlightOffsetDp)
         }
@@ -1420,9 +1426,12 @@ fun SyncedLyricsList(
                     items = lines,
                     key = { index, item -> "${item.time}_$index" }
                 ) { index, line ->
-                    val nextTime = lines.getOrNull(index + 1)?.time ?: Int.MAX_VALUE
-                    val distanceFromCurrent = if (currentLineIndex != -1) abs(currentLineIndex - index) else 100
-                    
+                    val lineEndTimeMs = lineEndTimesMs.getOrElse(index) { line.time + 1L }
+                    val distanceFromCurrent = litLines.distanceTo(index)
+                    val showsBackgroundOnly = line.line.isBlank() &&
+                        showBackgroundVocals &&
+                        line.background?.text?.isNotBlank() == true
+
                     val parallaxModifier = if (useAnimatedLyrics) {
                         Modifier.graphicsLayer {
                             val currentLayoutInfo = listState.layoutInfo
@@ -1438,10 +1447,12 @@ fun SyncedLyricsList(
                         }
                     } else Modifier
 
-                    if (line.line.isNotBlank()) {
+                    // A line that only holds backing vocals (after an instrumental marker, or a TTML
+                    // paragraph sung entirely in the background) shows them instead of the bubbles.
+                    if (line.line.isNotBlank() || showsBackgroundOnly) {
                         LyricLineRow(
                             line = line,
-                            nextTime = nextTime,
+                            lineEndTimeMs = lineEndTimeMs,
                             positionProvider = positionProvider,
                             distanceFromCurrent = distanceFromCurrent,
                             useAnimatedLyrics = useAnimatedLyrics,
@@ -1475,7 +1486,7 @@ fun SyncedLyricsList(
                             positionFlow = playbackPositionFlow,
                             time = line.time,
                             color = LocalContentColor.current.copy(alpha = 0.6f),
-                            nextTime = nextTime,
+                            nextTime = lineEndTimeMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                             modifier = parallaxModifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
@@ -1492,7 +1503,7 @@ fun SyncedLyricsList(
 @Composable
 fun LyricLineRow(
     line: SyncedLine,
-    nextTime: Int,
+    lineEndTimeMs: Long,
     positionProvider: () -> Long,
     distanceFromCurrent: Int = 100,
     useAnimatedLyrics: Boolean = false,
@@ -1517,12 +1528,11 @@ fun LyricLineRow(
     val backgroundClusters = remember(background) { buildLyricClusters(background?.words) }
     val backgroundText = remember(background) { background?.text?.let(::sanitizeLyricLineText).orEmpty() }
     val lineStartTime = line.time.toLong()
-    val lineEndTime = remember(line, nextTime) {
-        resolveLineEndTimeMs(line, nextTime)
+    val isCurrentLine by remember(lineStartTime, lineEndTimeMs, positionProvider) {
+        derivedStateOf { positionProvider() in lineStartTime..<lineEndTimeMs }
     }
-    val isCurrentLine by remember(lineStartTime, lineEndTime, positionProvider) {
-        derivedStateOf { positionProvider() in lineStartTime..<lineEndTime }
-    }
+    // Every line being sung keeps full focus, also when it is not the one the list follows.
+    val focusDistance = if (isCurrentLine) 0 else distanceFromCurrent.coerceAtLeast(1)
     val decorativeMotionEnabled = useAnimatedLyrics && ValueAnimator.areAnimatorsEnabled()
     val unhighlightedColor = LocalContentColor.current.copy(alpha = 0.45f)
     // Words not sung yet sit a little dimmer when decorative motion is on.
@@ -1540,10 +1550,10 @@ fun LyricLineRow(
         label = "lineColor"
     )
 
-    val targetScale = if (decorativeMotionEnabled) when (distanceFromCurrent) {
+    val targetScale = if (decorativeMotionEnabled) when (focusDistance) {
         0 -> if (immersiveMode) 1.02f else 1.07f; 1 -> 0.97f; else -> 0.92f
     } else 1f
-    val targetAlpha = if (decorativeMotionEnabled) when (distanceFromCurrent) {
+    val targetAlpha = if (decorativeMotionEnabled) when (focusDistance) {
         0 -> 1.0f; 1 -> 0.6f; else -> 0.3f
     } else 1f
 
@@ -1558,8 +1568,8 @@ fun LyricLineRow(
         label = "lineAlpha"
     )
 
-    val targetBlur = if (decorativeMotionEnabled && animatedLyricsBlurEnabled && distanceFromCurrent > 0) {
-        (distanceFromCurrent * animatedLyricsBlurStrength).coerceAtMost(10f).dp
+    val targetBlur = if (decorativeMotionEnabled && animatedLyricsBlurEnabled && focusDistance > 0) {
+        (focusDistance * animatedLyricsBlurStrength).coerceAtMost(10f).dp
     } else 0.dp
 
     val blurRadius by animateDpAsState(
@@ -1655,7 +1665,23 @@ fun LyricLineRow(
             .padding(vertical = verticalPadding, horizontal = 2.dp),
         horizontalAlignment = horizontalAlignment
     ) {
-        if (wordClusters.isNullOrEmpty()) {
+        if (!wordClusters.isNullOrEmpty()) {
+            // One child per visual word: syllables with no space between them stay together.
+            SyncedWordFlow(
+                clusters = wordClusters,
+                positionProvider = positionProvider,
+                rangeStartMs = lineStartTime,
+                rangeEndMs = lineEndTimeMs,
+                style = style,
+                fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
+                reserveBoldWidth = true,
+                highlightedColor = accentColor,
+                unhighlightedColor = unsungWordColor,
+                highlightStyle = wordHighlightStyle,
+                emphasisEnabled = decorativeMotionEnabled,
+                lyricsAlignment = lyricsAlignment
+            )
+        } else if (sanitizedLine.isNotBlank()) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = boxAlignment) {
                 Text(
                     text = sanitizedLine,
@@ -1672,22 +1698,6 @@ fun LyricLineRow(
                     textAlign = textAlign
                 )
             }
-        } else {
-            // One child per visual word: syllables with no space between them stay together.
-            SyncedWordFlow(
-                clusters = wordClusters,
-                positionProvider = positionProvider,
-                rangeStartMs = lineStartTime,
-                rangeEndMs = lineEndTime,
-                style = style,
-                fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
-                reserveBoldWidth = true,
-                highlightedColor = accentColor,
-                unhighlightedColor = unsungWordColor,
-                highlightStyle = wordHighlightStyle,
-                emphasisEnabled = decorativeMotionEnabled,
-                lyricsAlignment = lyricsAlignment
-            )
         }
 
         if (showRomanization && !romanizationText.isNullOrBlank()) {
@@ -1705,7 +1715,7 @@ fun LyricLineRow(
                 clusters = backgroundClusters,
                 positionProvider = positionProvider,
                 rangeStartMs = lineStartTime,
-                rangeEndMs = lineEndTime,
+                rangeEndMs = lineEndTimeMs,
                 style = backgroundStyle,
                 fontWeight = FontWeight.Normal,
                 reserveBoldWidth = false,
@@ -1981,15 +1991,51 @@ private fun rememberInterpolatedPlaybackPosition(
 }
 
 /**
- * A line stays current until the next one starts, or until its last syllable (main or backing
- * vocals) has been sung when that runs later, so overlapping duet parts both stay lit.
+ * A line stays current until the next one starts, or until its last syllable (main or, when
+ * shown, backing vocals) has been sung when that runs later, so overlapping duet parts both
+ * stay lit.
  */
-internal fun resolveLineEndTimeMs(line: SyncedLine, nextLineStartMs: Int): Long {
-    val baseEnd = nextLineStartMs.toLong()
-    val timedWords = line.words.orEmpty() + line.background?.words.orEmpty()
-    val lastWordStart = timedWords.maxOfOrNull { it.time.toLong() } ?: line.time.toLong()
-    val lastWordEnd = timedWords.maxOfOrNull { (it.endTime ?: it.time).toLong() } ?: lastWordStart
-    return maxOf(baseEnd, lastWordStart + 1L, lastWordEnd)
+internal fun resolveLineEndTimeMs(
+    line: SyncedLine,
+    nextLineStartMs: Int,
+    includeBackground: Boolean = true
+): Long {
+    val words = line.words.orEmpty()
+    val backgroundWords = if (includeBackground) line.background?.words.orEmpty() else emptyList()
+    if (words.isEmpty() && backgroundWords.isEmpty()) {
+        return maxOf(nextLineStartMs.toLong(), line.time + 1L)
+    }
+    var lastWordStart = Long.MIN_VALUE
+    var lastWordEnd = Long.MIN_VALUE
+    for (word in words) {
+        lastWordStart = maxOf(lastWordStart, word.time.toLong())
+        lastWordEnd = maxOf(lastWordEnd, (word.endTime ?: word.time).toLong())
+    }
+    for (word in backgroundWords) {
+        lastWordStart = maxOf(lastWordStart, word.time.toLong())
+        lastWordEnd = maxOf(lastWordEnd, (word.endTime ?: word.time).toLong())
+    }
+    return maxOf(nextLineStartMs.toLong(), lastWordStart + 1L, lastWordEnd)
+}
+
+/**
+ * When each line stops being current, computed once per lyrics rather than every frame. A line
+ * runs until the next line with a different start: lines that share a start (two singers at
+ * once) end together instead of the first ending as soon as it begins.
+ */
+internal fun resolveLineEndTimesMs(
+    lines: List<SyncedLine>,
+    includeBackground: Boolean = true
+): LongArray {
+    val endTimes = LongArray(lines.size)
+    var nextStartMs = Int.MAX_VALUE
+    for (index in lines.indices.reversed()) {
+        val line = lines[index]
+        val following = lines.getOrNull(index + 1)
+        if (following != null && following.time != line.time) nextStartMs = following.time
+        endTimes[index] = resolveLineEndTimeMs(line, nextStartMs, includeBackground)
+    }
+    return endTimes
 }
 
 internal fun resolveSeekPositionMs(
@@ -2080,14 +2126,43 @@ internal suspend fun snapToSnapIndex(
 internal fun resolveCurrentLineIndex(
     lines: List<SyncedLine>,
     position: Long
-): Int {
-    if (lines.isEmpty()) return -1
+): Int = resolveLitLines(lines, resolveLineEndTimesMs(lines), position).last
 
-    return lines.withIndex().lastOrNull { (index, line) ->
-        val nextTime = lines.getOrNull(index + 1)?.time ?: Int.MAX_VALUE
-        val lineEndTime = resolveLineEndTimeMs(line, nextTime)
-        position in line.time.toLong()..<lineEndTime
-    }?.index ?: -1
+/**
+ * The lines being sung: more than one while duet parts overlap or two singers start together.
+ * [last] is the line the list follows; every lit line keeps full focus.
+ */
+internal data class LitLyricLines(val first: Int, val last: Int) {
+    /** How many lines [index] is away from the lit ones; 0 inside them, large when none is lit. */
+    fun distanceTo(index: Int): Int = when {
+        last < 0 -> NOTHING_LIT_DISTANCE
+        index < first -> first - index
+        index > last -> index - last
+        else -> 0
+    }
+
+    companion object {
+        val None = LitLyricLines(first = -1, last = -1)
+        private const val NOTHING_LIT_DISTANCE = 100
+    }
+}
+
+/** Runs every frame while word-synced lyrics play, so it reads the precomputed [lineEndTimesMs]. */
+internal fun resolveLitLines(
+    lines: List<SyncedLine>,
+    lineEndTimesMs: LongArray,
+    position: Long
+): LitLyricLines {
+    var first = -1
+    var last = -1
+    for (index in lines.indices) {
+        val endTimeMs = lineEndTimesMs.getOrNull(index) ?: break
+        if (position >= lines[index].time && position < endTimeMs) {
+            if (first < 0) first = index
+            last = index
+        }
+    }
+    return if (last < 0) LitLyricLines.None else LitLyricLines(first, last)
 }
 
 @Composable

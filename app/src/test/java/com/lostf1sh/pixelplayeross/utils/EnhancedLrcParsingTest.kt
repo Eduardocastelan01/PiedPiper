@@ -102,6 +102,25 @@ class EnhancedLrcParsingTest {
     }
 
     @Test
+    fun backgroundLineAfterInstrumentalMarker_staysOnTheEmptyLine() {
+        val lyrics = LyricsUtils.parseLyrics(
+            """
+            [00:58.00]Last words
+            [01:00.00]
+            [bg:<01:00.50>(ooh)<01:01.40>]
+            [01:05.00]Next verse
+            """.trimIndent()
+        )
+
+        val lines = requireNotNull(lyrics.synced)
+        assertEquals(listOf("Last words", "", "Next verse"), lines.map { it.line })
+        assertNull(lines[0].background)
+        assertEquals("(ooh)", lines[1].background!!.text)
+        assertEquals(61_400, lines[1].background!!.words!!.single().endTime)
+        assertEquals("(ooh)", lyrics.plain!![1])
+    }
+
+    @Test
     fun plainBackgroundLine_attachesAsText() {
         val line = parseSynced("[00:02.00]Main line\n[bg: (ooh, ooh)]").single()
 

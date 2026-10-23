@@ -165,6 +165,94 @@ class LyricsSheetLogicTest {
     }
 
     @Test
+    fun resolveLineEndTimesMs_sameTimestampDuetLinesEndTogetherAtTheNextLaterLine() {
+        val lines = listOf(
+            SyncedLine(time = 18_000, line = "Together", voice = 1),
+            SyncedLine(time = 18_000, line = "Together", voice = 2),
+            SyncedLine(time = 20_000, line = "Next")
+        )
+
+        val endTimes = resolveLineEndTimesMs(lines)
+
+        assertEquals(listOf(20_000L, 20_000L, Int.MAX_VALUE.toLong()), endTimes.toList())
+    }
+
+    @Test
+    fun resolveLineEndTimesMs_firstSingerOfSameTimestampWordDuetSweepsItsLastWord() {
+        val words = listOf(SyncedWord(18_000, "Both"), SyncedWord(18_500, "at"), SyncedWord(19_000, "once"))
+        val lines = listOf(
+            SyncedLine(time = 18_000, line = "Both at once", words = words, voice = 1),
+            SyncedLine(time = 18_000, line = "Both at once", words = words, voice = 2),
+            SyncedLine(time = 22_000, line = "Next")
+        )
+
+        assertEquals(22_000L, resolveLineEndTimesMs(lines).first())
+    }
+
+    @Test
+    fun resolveLineEndTimesMs_hiddenBackgroundVocalsDoNotKeepTheLineLit() {
+        val lines = listOf(
+            SyncedLine(
+                time = 2_000,
+                line = "in my bones",
+                words = listOf(SyncedWord(2_000, "in"), SyncedWord(4_600, "bones")),
+                background = BackgroundVocals(
+                    text = "(bones)",
+                    words = listOf(SyncedWord(time = 6_500, word = "(bones)", endTime = 7_400))
+                )
+            ),
+            SyncedLine(time = 7_000, line = "Next")
+        )
+
+        assertEquals(7_400L, resolveLineEndTimesMs(lines, includeBackground = true).first())
+        assertEquals(7_000L, resolveLineEndTimesMs(lines, includeBackground = false).first())
+    }
+
+    @Test
+    fun resolveLitLines_lightsBothSingersOfASameTimestampDuet() {
+        val lines = listOf(
+            SyncedLine(time = 10_000, line = "Before"),
+            SyncedLine(time = 18_000, line = "Together", voice = 1),
+            SyncedLine(time = 18_000, line = "Together", voice = 2),
+            SyncedLine(time = 20_000, line = "Next")
+        )
+        val endTimes = resolveLineEndTimesMs(lines)
+
+        val lit = resolveLitLines(lines, endTimes, position = 19_000L)
+
+        assertEquals(LitLyricLines(first = 1, last = 2), lit)
+        assertEquals(2, resolveCurrentLineIndex(lines, position = 19_000L))
+        assertEquals(listOf(1, 0, 0, 1), lines.indices.map(lit::distanceTo))
+    }
+
+    @Test
+    fun resolveLitLines_keepsAnOverlappingLineLitWithTheNextOne() {
+        val lines = listOf(
+            SyncedLine(
+                time = 1_000,
+                line = "Hold on",
+                words = listOf(SyncedWord(1_000, "Hold"), SyncedWord(1_500, "on", endTime = 3_500))
+            ),
+            SyncedLine(time = 3_000, line = "Answer", voice = 2)
+        )
+
+        val lit = resolveLitLines(lines, resolveLineEndTimesMs(lines), position = 3_200L)
+
+        assertEquals(LitLyricLines(first = 0, last = 1), lit)
+    }
+
+    @Test
+    fun resolveLitLines_reportsNothingLitBeforeTheFirstLine() {
+        val lines = listOf(SyncedLine(time = 5_000, line = "First"))
+
+        val lit = resolveLitLines(lines, resolveLineEndTimesMs(lines), position = 1_000L)
+
+        assertEquals(LitLyricLines.None, lit)
+        assertEquals(-1, resolveCurrentLineIndex(lines, position = 1_000L))
+        assertTrue(lit.distanceTo(0) > 2)
+    }
+
+    @Test
     fun sanitizeSyncedWords_promotesFirstVisibleWordAfterLeadingMarker() {
         val words = listOf(
             SyncedWord(time = 1000, word = "v1:"),

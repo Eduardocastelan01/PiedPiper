@@ -767,7 +767,8 @@ object LyricsUtils {
             }
             val plainVersion = pairedLines.map { line ->
                 buildString {
-                    append(line.line)
+                    // A line sung only in the background reads as its backing vocals.
+                    append(line.line.ifBlank { line.background?.text.orEmpty() })
                     if (!line.romanization.isNullOrEmpty()) append("\n").append(line.romanization)
                     if (!line.translation.isNullOrEmpty()) append("\n").append(line.translation)
                 }
