@@ -641,7 +641,7 @@ class PlayerViewModel @Inject constructor(
 
     fun showAndPlaySongFromLibrary(
         song: Song,
-        queueName: String = "Library",
+        queueName: String = context.getString(R.string.tab_library),
         isVoluntaryPlay: Boolean = true
     ) {
         launchLatestFullQueuePlayback(
@@ -658,7 +658,7 @@ class PlayerViewModel @Inject constructor(
 
     fun showAndPlaySongFromFavorites(
         song: Song,
-        queueName: String = "Liked Songs",
+        queueName: String = context.getString(R.string.queue_name_liked_songs),
         isVoluntaryPlay: Boolean = true
     ) {
         launchLatestFullQueuePlayback(
@@ -1330,7 +1330,7 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
-    fun shuffleAllSongs(queueName: String = "All Songs (Shuffled)") {
+    fun shuffleAllSongs(queueName: String = context.getString(R.string.queue_name_all_songs_shuffled)) {
         Timber.tag("ShuffleDebug").d("shuffleAllSongs called.")
         
         viewModelScope.launch {
@@ -1376,7 +1376,11 @@ class PlayerViewModel @Inject constructor(
 
                 if (songs.isNotEmpty()) {
                     Timber.d("[TileDebug] Calling playSongsShuffled with ${songs.size} songs")
-                    playSongsShuffled(songs, "All Songs (Shuffled)", startAtZero = true)
+                    playSongsShuffled(
+                        songs,
+                        context.getString(R.string.queue_name_all_songs_shuffled),
+                        startAtZero = true
+                    )
                 } else {
                     Timber.w("[TileDebug] No songs found even after sync - library may be empty")
                     sendToast(context.getString(R.string.player_no_songs_in_library_toast))
@@ -1397,7 +1401,11 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val randomSongs = musicRepository.getRandomSongs(limit = SHUFFLE_ALL_SONG_LIMIT)
             if (randomSongs.isNotEmpty()) {
-                playSongsShuffled(randomSongs, "All Songs (Shuffled)", startAtZero = true)
+                playSongsShuffled(
+                    randomSongs,
+                    context.getString(R.string.queue_name_all_songs_shuffled),
+                    startAtZero = true
+                )
             }
         }
     }
@@ -1408,7 +1416,11 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val favSongs = musicRepository.getFavoriteSongsOnce(playerUiState.value.currentStorageFilter)
             if (favSongs.isNotEmpty()) {
-                playSongsShuffled(favSongs, "Liked Songs (Shuffled)", startAtZero = true)
+                playSongsShuffled(
+                    favSongs,
+                    context.getString(R.string.queue_name_liked_songs_shuffled),
+                    startAtZero = true
+                )
             }
         }
     }
@@ -1944,7 +1956,7 @@ class PlayerViewModel @Inject constructor(
 
     fun showAndPlaySong(song: Song) {
         Timber.tag("ShuffleDebug").d("showAndPlaySong (single song overload) called for '${song.title}'")
-        showAndPlaySong(song, listOf(song), "Library")
+        showAndPlaySong(song, listOf(song), context.getString(R.string.tab_library))
     }
 
     fun playSongAtPosition(song: Song, startPositionMs: Long) {
@@ -3270,7 +3282,7 @@ class PlayerViewModel @Inject constructor(
      */
     fun playSelectedSongs(songs: List<Song>) {
         if (songs.isEmpty()) return
-        playSongs(songs, songs.first(), "Selected Songs")
+        playSongs(songs, songs.first(), context.getString(R.string.queue_name_selected_songs))
         multiSelectionStateHolder.clearSelection()
     }
 
