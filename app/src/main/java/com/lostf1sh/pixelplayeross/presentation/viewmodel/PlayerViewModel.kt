@@ -66,6 +66,7 @@ import com.lostf1sh.pixelplayeross.data.service.MusicNotificationProvider
 import com.lostf1sh.pixelplayeross.data.service.MusicService
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
+import com.lostf1sh.pixelplayeross.di.DispatcherProvider
 import com.lostf1sh.pixelplayeross.utils.AppShortcutManager
 import com.lostf1sh.pixelplayeross.utils.ValidatedLyricsImport
 import com.lostf1sh.pixelplayeross.utils.QueueUtils
@@ -297,7 +298,8 @@ class PlayerViewModel @Inject constructor(
     val multiSelectionStateHolder: MultiSelectionStateHolder,
     val playlistSelectionStateHolder: PlaylistSelectionStateHolder,
     private val sessionToken: SessionToken,
-    private val mediaControllerFactory: com.lostf1sh.pixelplayeross.data.media.MediaControllerFactory
+    private val mediaControllerFactory: com.lostf1sh.pixelplayeross.data.media.MediaControllerFactory,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
     private val _playerUiState = MutableStateFlow(PlayerUiState())
@@ -797,7 +799,7 @@ class PlayerViewModel @Inject constructor(
         val missingIds = ArrayList<String>()
         val cachedQueue = ArrayList<Song>(orderedIds.size)
 
-        withContext(Dispatchers.Default) {
+        withContext(dispatchers.default) {
             orderedIds.forEach { songId ->
                 val cachedSong = cachedSongsById[songId]
                 if (cachedSong != null) {
@@ -813,7 +815,7 @@ class PlayerViewModel @Inject constructor(
         }
 
         val missingSongsById = getSongsByIdsChunked(missingIds).associateBy { it.id }
-        return withContext(Dispatchers.Default) {
+        return withContext(dispatchers.default) {
             val finalQueue = ArrayList<Song>(orderedIds.size)
             orderedIds.forEach { songId ->
                 val resolvedSong = cachedSongsById[songId] ?: missingSongsById[songId]
@@ -831,7 +833,7 @@ class PlayerViewModel @Inject constructor(
             return musicRepository.getSongsByIds(songIds).first()
         }
 
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             buildList(songIds.size) {
                 songIds.chunked(SONG_ID_QUERY_CHUNK_SIZE).forEach { chunk ->
                     addAll(musicRepository.getSongsByIds(chunk).first())
@@ -1100,7 +1102,7 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         }
-            .flowOn(Dispatchers.Default)
+            .flowOn(dispatchers.default)
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
@@ -2092,7 +2094,7 @@ class PlayerViewModel @Inject constructor(
         Timber.tag("ShuffleDebug").d("playAlbum called for album: ${album.title}")
         viewModelScope.launch {
             try {
-                val songsList: List<Song> = withContext(Dispatchers.IO) {
+                val songsList: List<Song> = withContext(dispatchers.io) {
                     musicRepository.getSongsForAlbum(album.id).first()
                 }
 
@@ -2118,7 +2120,7 @@ class PlayerViewModel @Inject constructor(
         Timber.tag("ShuffleDebug").d("playArtist called for artist: ${artist.name}")
         viewModelScope.launch {
             try {
-                val songsList: List<Song> = withContext(Dispatchers.IO) {
+                val songsList: List<Song> = withContext(dispatchers.io) {
                     musicRepository.getSongsForArtist(artist.id).first()
                 }
 
@@ -2393,7 +2395,7 @@ class PlayerViewModel @Inject constructor(
 
             val allSongsById = libraryStateHolder.allSongsById.value
             
-            val queue = withContext(Dispatchers.Default) {
+            val queue = withContext(dispatchers.default) {
                 mediaItems.mapNotNull { mediaItem ->
                     resolveSongFromMediaItem(mediaItem, allSongsById)
                 }
@@ -2513,7 +2515,7 @@ class PlayerViewModel @Inject constructor(
 
         metadataProbeJob?.cancel()
         metadataProbeMediaId = mediaId
-        metadataProbeJob = viewModelScope.launch(Dispatchers.IO) {
+        metadataProbeJob = viewModelScope.launch(dispatchers.io) {
             val probedMetadata = runCatching {
                 val retriever = MediaMetadataRetriever()
                 try {
@@ -2891,7 +2893,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             val finalSongsToPlay = if (isPersistent && isShuffleOn) {
-                withContext(Dispatchers.Default) {
+                withContext(dispatchers.default) {
                     QueueUtils.buildAnchoredShuffleQueueSuspending(
                         validSongs,
                         validSongs.indexOfFirst { it.id == validStartSong.id }.coerceAtLeast(0)
@@ -3005,7 +3007,7 @@ class PlayerViewModel @Inject constructor(
         } else {
             setPreparingSong(null)
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(dispatchers.io) {
             val albumArtUri = song.albumArtUriString
             if (albumArtUri.isNullOrBlank()) {
                 themeStateHolder.extractAndGenerateColorScheme(
@@ -3039,7 +3041,7 @@ class PlayerViewModel @Inject constructor(
         songsToPlay: List<Song>,
         startSongId: String,
         playlistId: String?
-    ): PreparedPlaybackQueueSegments = withContext(Dispatchers.Default) {
+    ): PreparedPlaybackQueueSegments = withContext(dispatchers.default) {
         val currentIndex = songsToPlay
             .indexOfFirst { it.id == startSongId }
             .takeIf { it >= 0 }
@@ -3475,7 +3477,7 @@ class PlayerViewModel @Inject constructor(
 
     /** Resolves the selected genres to their songs, in selection order and without duplicates. */
     suspend fun getSongsForGenres(genres: List<Genre>): List<Song> {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             genres.flatMap { genre ->
                 musicRepository.getMusicByGenre(genre.name).first()
             }.distinctBy { it.id }
@@ -3623,7 +3625,7 @@ class PlayerViewModel @Inject constructor(
         val albumsToProcess = albums.take(MAX_ALBUM_BATCH_SELECTION)
         val wasTrimmed = albums.size > albumsToProcess.size
 
-        val songs = withContext(Dispatchers.IO) {
+        val songs = withContext(dispatchers.io) {
             buildList {
                 albumsToProcess.forEach { album ->
                     val albumSongs = musicRepository.getSongsForAlbum(album.id).first()
@@ -3645,7 +3647,7 @@ class PlayerViewModel @Inject constructor(
     suspend fun resolveAlbumSongsForBatchActions(albums: List<Album>): List<Song> {
         if (albums.isEmpty()) return emptyList()
         val visibleSongIds = currentLibrarySelectionSongIds()
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             flattenDistinctGroups(
                 groups = albums.map { album ->
                     sortSongsForAlbumSelection(musicRepository.getSongsForAlbum(album.id).first())
@@ -3663,7 +3665,7 @@ class PlayerViewModel @Inject constructor(
     suspend fun resolveArtistSongsForBatchActions(artists: List<Artist>): List<Song> {
         if (artists.isEmpty()) return emptyList()
         val visibleSongIds = currentLibrarySelectionSongIds()
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatchers.io) {
             flattenDistinctGroups(
                 groups = artists.map { artist ->
                     musicRepository.getSongsForArtist(artist.id).first()
@@ -3711,7 +3713,7 @@ class PlayerViewModel @Inject constructor(
             val skippedCount = songs.size - deletableSongs.size
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val deleteRequests = withContext(Dispatchers.IO) {
+                val deleteRequests = withContext(dispatchers.io) {
                     deletableSongs.mapNotNull { song ->
                         com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
                             .resolveDeleteRequestUri(
@@ -3836,7 +3838,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val intentSender = withContext(Dispatchers.IO) {
+                val intentSender = withContext(dispatchers.io) {
                     com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
                         .resolveDeleteRequestUri(
                             context = activity,
@@ -4352,7 +4354,7 @@ class PlayerViewModel @Inject constructor(
     fun selectSongForInfo(song: Song) {
         _selectedSongForInfo.value = song
         viewModelScope.launch {
-            val hydrated = withContext(Dispatchers.IO) {
+            val hydrated = withContext(dispatchers.io) {
                 musicRepository.getSong(song.id).first()
             } ?: return@launch
             if (_selectedSongForInfo.value?.id == song.id) {
@@ -4757,7 +4759,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun performLyricsSave(song: Song, lyrics: Lyrics, preferSynced: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(dispatchers.io) {
             try {
                 val songFile = java.io.File(song.path)
                 val lrcFile = java.io.File(songFile.parentFile, "${songFile.nameWithoutExtension}.lrc")
@@ -4883,7 +4885,7 @@ class PlayerViewModel @Inject constructor(
         val uris = uriStrings.mapNotNull { it?.takeIf(String::isNotBlank) }.distinct()
         if (uris.isEmpty()) return
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             albumArtThemeDao.deleteThemesByUris(uris)
         }
     }
@@ -5003,7 +5005,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             repeat(90) { attempt ->
                 val controllerReady = mediaController != null
-                val songs = withContext(Dispatchers.IO) {
+                val songs = withContext(dispatchers.io) {
                     musicRepository.getAllSongsOnce()
                 }
                 Timber.tag("PixelPlayerBenchmark").i(
@@ -5060,7 +5062,7 @@ class PlayerViewModel @Inject constructor(
                 val sourceSong = if (song.lyrics != null) {
                     song
                 } else {
-                    withContext(Dispatchers.IO) {
+                    withContext(dispatchers.io) {
                         musicRepository.getSong(song.id).first()
                     } ?: song
                 }
