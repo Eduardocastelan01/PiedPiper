@@ -101,6 +101,31 @@ class MultiSelectionStateHolder @Inject constructor() {
     }
 
     /**
+     * Applies one step of a drag-to-select gesture as a single state update.
+     * Songs in [deselect] are removed first; songs in [select] that are not selected yet are then
+     * appended in the given order, so selection badges follow the finger.
+     *
+     * @param select Songs the drag has just selected
+     * @param deselect Songs the drag has just deselected
+     */
+    fun applyDragSelection(select: List<Song>, deselect: List<Song>) {
+        if (select.isEmpty() && deselect.isEmpty()) return
+        val removedIds = deselect.mapTo(hashSetOf()) { it.id }
+        val currentList = _selectedSongs.value.filterNot { it.id in removedIds }.toMutableList()
+        val currentIds = currentList.mapTo(linkedSetOf()) { it.id }
+
+        select.forEach { song ->
+            if (currentIds.add(song.id)) {
+                currentList.add(song)
+            }
+        }
+
+        if (currentIds != _selectedSongIds.value) {
+            updateState(currentList, currentIds)
+        }
+    }
+
+    /**
      * Clears all selected songs, exiting selection mode.
      */
     fun clearSelection() {
