@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.text.Normalizer
 import java.util.Locale
 
 class GenreParserTest {
@@ -128,7 +129,7 @@ class GenreParserTest {
 
     @Test
     fun `likePattern widens spacing, slashes and non ASCII letters to wildcards`() {
-        assertEquals("%Indie%Rock%", GenreParser.likePattern("Indie Rock"))
+        assertEquals("%Indie%Pop%", GenreParser.likePattern("Indie Pop"))
         assertEquals("%Rap%Hip-Hop%", GenreParser.likePattern("Rap/Hip-Hop"))
         assertEquals("%lectro%", GenreParser.likePattern("Électro"))
         assertEquals("%", GenreParser.likePattern("流行"))
@@ -138,6 +139,55 @@ class GenreParserTest {
     fun `likePattern never carries LIKE wildcards or escapes from the name`() {
         assertEquals("%100%Pure%", GenreParser.likePattern("100% Pure"))
         assertEquals("%Lo%Fi%", GenreParser.likePattern("Lo_Fi"))
-        assertEquals("%Rock%Pop%", GenreParser.likePattern("Rock\\Pop"))
+        assertEquals("%Jazz%Pop%", GenreParser.likePattern("Jazz\\Pop"))
+    }
+
+    @Test
+    fun `likePattern leaves out k, since key also reads the Kelvin sign as k`() {
+        assertEquals("%Roc%", GenreParser.likePattern("Rock"))
+        assertEquals("%-Pop%", GenreParser.likePattern("K-Pop"))
+    }
+
+    @Test
+    fun `likePattern leaves out an ASCII letter that a combining accent follows`() {
+        // A precomposed "Électro" holds no plain 'E', so a decomposed spelling must not ask for one.
+        assertEquals("%lectro%", GenreParser.likePattern("E\u0301lectro"))
+        assertEquals("%lectro%", GenreParser.likePattern("\u00C9lectro"))
+        assertEquals("%Caf%", GenreParser.likePattern("Cafe\u0301"))
+    }
+
+    @Test
+    fun `likePattern matches every stored spelling that matches accepts`() {
+        // Every character with another spelling under key: precomposed and decomposed accents,
+        // NFC singletons such as the Kelvin sign, and case pairs such as "İ" and "i" + U+0307.
+        val misses = mutableListOf<String>()
+        for (codePoint in 128..Character.MAX_CODE_POINT) {
+            if (codePoint in Char.MIN_SURROGATE.code..Char.MAX_SURROGATE.code) continue
+            val char = String(Character.toChars(codePoint))
+            val spellings = listOf(
+                char,
+                Normalizer.normalize(char, Normalizer.Form.NFC),
+                Normalizer.normalize(char, Normalizer.Form.NFD)
+            ).flatMap { listOf(it, it.lowercase(Locale.ROOT), it.uppercase(Locale.ROOT)) }.distinct()
+            if (spellings.size == 1) continue
+            val names = spellings.map { "Ab${it}cd" }
+            names.forEach { genre ->
+                val pattern = GenreParser.likePattern(genre)
+                names.filter { stored -> GenreParser.matches(stored, genre) && !sqliteLike(pattern, stored) }
+                    .forEach { stored -> misses += "U+%04X: %s misses %s".format(codePoint, pattern, stored) }
+            }
+        }
+
+        assertEquals(emptyList<String>(), misses.take(10))
+    }
+
+    /** SQLite's default LIKE: '%' matches any run of characters, and only ASCII letters ignore case. */
+    private fun sqliteLike(pattern: String, value: String): Boolean {
+        fun foldAscii(text: String) = String(CharArray(text.length) { index ->
+            text[index].let { char -> if (char in 'A'..'Z') char.lowercaseChar() else char }
+        })
+        assertFalse('_' in pattern)
+        val regex = foldAscii(pattern).split('%').joinToString(".*") { Regex.escape(it) }
+        return Regex(regex, RegexOption.DOT_MATCHES_ALL).matches(foldAscii(value))
     }
 }

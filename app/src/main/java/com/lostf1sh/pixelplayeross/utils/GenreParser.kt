@@ -119,19 +119,43 @@ object GenreParser {
 
     /**
      * A SQL LIKE pattern that matches every stored value [matches] would accept for [genre], plus
-     * some it would not; callers filter the rows with [matches] afterwards. Only ASCII letters,
-     * digits and plain punctuation are kept: LIKE folds ASCII case only, and spacing, '/' and
-     * non-ASCII letters can be spelled differently under the same [key], so those become '%'.
-     * That also leaves no '%', '_' or '\' from the name to escape.
+     * some it would not; callers filter the rows with [matches] afterwards. Only characters that
+     * every spelling under the same [key] stores as the same bytes are kept: ASCII letters, digits
+     * and plain punctuation, as LIKE folds ASCII case only. Everything else becomes '%': spacing
+     * and '/', non-ASCII letters, an ASCII character a combining mark follows (decomposed "É" is
+     * 'E' plus U+0301, while another spelling stores it precomposed with no 'E' at all), and 'K'
+     * and '`', which [key] also makes from the Kelvin sign and the Greek varia. That also leaves
+     * no '%', '_' or '\' from the name to escape.
      */
-    fun likePattern(genre: String): String = buildString {
-        append('%')
-        genre.forEach { char ->
-            val keep = char.code < 128 && (char.isLetterOrDigit() || char in LIKE_SAFE_PUNCTUATION)
-            if (keep) append(char) else if (last() != '%') append('%')
+    fun likePattern(genre: String): String {
+        val name = Normalizer.normalize(genre, Normalizer.Form.NFC)
+        return buildString {
+            append('%')
+            name.forEachIndexed { index, char ->
+                if (isLikeLiteral(name, index)) append(char) else if (last() != '%') append('%')
+            }
+            if (last() != '%') append('%')
         }
-        if (last() != '%') append('%')
+    }
+
+    private fun isLikeLiteral(name: String, index: Int): Boolean {
+        val char = name[index]
+        val plain = char.code < 128 &&
+            (char.isLetterOrDigit() || char in LIKE_SAFE_PUNCTUATION) &&
+            char.lowercaseChar() !in NFC_ASCII_TWINS
+        val accented = index + 1 < name.length && isCombiningMark(name.codePointAt(index + 1))
+        return plain && !accented
+    }
+
+    private fun isCombiningMark(codePoint: Int): Boolean = when (Character.getType(codePoint)) {
+        Character.NON_SPACING_MARK.toInt(),
+        Character.COMBINING_SPACING_MARK.toInt(),
+        Character.ENCLOSING_MARK.toInt() -> true
+        else -> false
     }
 
     private const val LIKE_SAFE_PUNCTUATION = "-'&.+!#()[]{}:\"*?@$^=~<>`"
+
+    /** Lowercase ASCII characters that [key] also produces from a non-ASCII character. */
+    private const val NFC_ASCII_TWINS = "k`"
 }

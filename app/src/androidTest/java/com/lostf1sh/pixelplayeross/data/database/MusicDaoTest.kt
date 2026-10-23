@@ -370,4 +370,34 @@ class MusicDaoTest {
         assertEquals(listOf(1L, 2L), popIds.sorted())
         assertEquals(blankGenres.keys.sorted(), unknownIds.sorted())
     }
+
+    @Test
+    fun genreQueries_findEverySpellingThatNormalizesToTheSameGenre() = runTest {
+        val composed = "\u00C9lectro"
+        val decomposed = "E\u0301lectro"
+        // KELVIN SIGN, which NFC turns into a plain 'K'.
+        val kelvinKPop = "\u212A-Pop"
+        insertSongsWithParents(
+            listOf(
+                createSongEntity(1L, "Song 1", "Artist", "Album", "/music/1.mp3", genre = composed),
+                createSongEntity(2L, "Song 2", "Artist", "Album", "/music/2.mp3", genre = "House; $decomposed"),
+                createSongEntity(3L, "Song 3", "Artist", "Album", "/music/3.mp3", genre = "Electro"),
+                createSongEntity(4L, "Song 4", "Artist", "Album", "/music/4.mp3", genre = "K-Pop"),
+                createSongEntity(5L, "Song 5", "Artist", "Album", "/music/5.mp3", genre = kelvinKPop)
+            )
+        )
+
+        suspend fun songIdsInGenre(genre: String): List<Long> =
+            musicDao.getSongsWithGenreLike(GenreParser.likePattern(genre), emptyList(), false)
+                .first()
+                .filter { song -> GenreParser.matches(song.genre, genre) }
+                .map(SongEntity::id)
+                .sorted()
+
+        assertEquals(listOf(1L, 2L), songIdsInGenre(composed))
+        assertEquals(listOf(1L, 2L), songIdsInGenre(decomposed))
+        assertEquals(listOf(3L), songIdsInGenre("Electro"))
+        assertEquals(listOf(4L, 5L), songIdsInGenre("K-Pop"))
+        assertEquals(listOf(4L, 5L), songIdsInGenre(kelvinKPop))
+    }
 }
