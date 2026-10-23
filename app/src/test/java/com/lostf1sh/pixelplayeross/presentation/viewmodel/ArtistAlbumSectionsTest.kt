@@ -45,6 +45,18 @@ class ArtistAlbumSectionsTest {
         assertNull(section.genre)
     }
 
+    @Test
+    fun `a cloud album without genre tags does not show the source placeholder as its genre`() {
+        val section = buildAlbumSections(
+            listOf(
+                song("1", albumId = 50L, album = "Streamed", year = 2021, genre = "Jellyfin"),
+                song("2", albumId = 50L, album = "Streamed", year = 2021, genre = "Jellyfin")
+            )
+        ).single()
+
+        assertNull(section.genre)
+    }
+
     private fun song(id: String, albumId: Long, album: String, year: Int, genre: String?) = Song(
         id = id,
         title = "Track $id",

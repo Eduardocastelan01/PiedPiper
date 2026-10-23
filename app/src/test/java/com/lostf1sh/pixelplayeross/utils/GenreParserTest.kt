@@ -97,6 +97,13 @@ class GenreParserTest {
     }
 
     @Test
+    fun `dominantGenre skips the placeholders cloud sync stores for songs without a genre`() {
+        assertNull(GenreParser.dominantGenre(listOf("Jellyfin", "Jellyfin")))
+        assertNull(GenreParser.dominantGenre(listOf("Navidrome")))
+        assertEquals("Soul", GenreParser.dominantGenre(listOf("Jellyfin", "Jellyfin", "Soul")))
+    }
+
+    @Test
     fun `likePattern widens spacing, slashes and non ASCII letters to wildcards`() {
         assertEquals("%Indie%Rock%", GenreParser.likePattern("Indie Rock"))
         assertEquals("%Rap%Hip-Hop%", GenreParser.likePattern("Rap/Hip-Hop"))

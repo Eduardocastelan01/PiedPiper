@@ -20,8 +20,17 @@ object GenreParser {
     private val SEPARATOR_REGEX = Regex("""\s*[;,|\\\u0000]\s*""")
     private val WHITESPACE_REGEX = Regex("""\s+""")
 
+    /**
+     * Genres the Jellyfin and Navidrome sync store for songs the server sent without one. They stay
+     * browsable as tiles, but name the source rather than the music, so [dominantGenre] skips them.
+     */
+    const val JELLYFIN_PLACEHOLDER = "Jellyfin"
+    const val NAVIDROME_PLACEHOLDER = "Navidrome"
+
     /** Placeholders tag editors and MediaStore write for a missing genre. */
     private val UNKNOWN_VALUES = setOf("unknown", "<unknown>", "unknown genre")
+
+    private val SOURCE_PLACEHOLDER_KEYS = setOf(key(JELLYFIN_PLACEHOLDER), key(NAVIDROME_PLACEHOLDER))
 
     /**
      * The distinct genres in [raw], in tag order. Blank values and "unknown" placeholders are
@@ -74,7 +83,7 @@ object GenreParser {
     /**
      * The genre most songs in [rawGenres] share, counting each genre of a multi-genre song, for
      * labels such as an album's "House · 2016". Ties go to the genre seen first; null when no
-     * song has a genre.
+     * song has a genre other than a cloud source placeholder.
      */
     fun dominantGenre(rawGenres: Iterable<String?>): String? {
         val counts = LinkedHashMap<String, Int>()
@@ -82,6 +91,7 @@ object GenreParser {
         rawGenres.forEach { raw ->
             split(raw).forEach { name ->
                 val genreKey = key(name)
+                if (genreKey in SOURCE_PLACEHOLDER_KEYS) return@forEach
                 counts[genreKey] = (counts[genreKey] ?: 0) + 1
                 names.putIfAbsent(genreKey, name)
             }
