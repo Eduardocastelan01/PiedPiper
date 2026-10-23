@@ -14,13 +14,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
@@ -227,6 +233,61 @@ class DragToSelectTest {
         }
         composeRule.runOnIdle {
             assertThat(selectedIds()).containsExactly("song-3", "song-4", "song-5", "song-6").inOrder()
+        }
+    }
+
+    @Test
+    fun autoScrollCollapsesANestedScrollTopBarLikeAFingerDragDoes() {
+        val density = composeRule.density
+        val minHeaderHeightPx = with(density) { 60.dp.toPx() }
+        var headerHeightPx by mutableFloatStateOf(with(density) { 200.dp.toPx() })
+        val sources = mutableSetOf<NestedScrollSource>()
+        var postFlings = 0
+        // Collapses as the list scrolls towards its end, like genre detail's top bar.
+        val connection = object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                sources += source
+                if (available.y >= 0f) return Offset.Zero
+                val newHeight = (headerHeightPx + available.y).coerceAtLeast(minHeaderHeightPx)
+                val consumed = newHeight - headerHeightPx
+                headerHeightPx = newHeight
+                return Offset(0f, consumed)
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                postFlings++
+                return Velocity.Zero
+            }
+        }
+        setList(rootModifier = Modifier.nestedScroll(connection)) {
+            Box(Modifier.fillMaxWidth().height(with(density) { headerHeightPx.toDp() }))
+        }
+        val x = boundsInRoot(LIST_TAG).center.x
+        val row0 = boundsInRoot(songs[0].id).center.y
+        val bottomEdge = boundsInRoot(LIST_TAG).bottom - 8f
+
+        composeRule.onNodeWithTag(ROOT_TAG).performTouchInput {
+            down(Offset(x, row0))
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(Offset(x, bottomEdge))
+            // Rest in the bottom edge zone while the list auto-scrolls.
+            repeat(20) { step ->
+                advanceEventTime(100)
+                moveBy(Offset(0f, if (step % 2 == 0) 1f else -1f))
+            }
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertThat(headerHeightPx).isEqualTo(minHeaderHeightPx)
+            assertThat(sources).containsExactly(NestedScrollSource.UserInput)
+            assertThat(listState.firstVisibleItemIndex).isGreaterThan(0)
+            // The finger let go over the bottom row: everything from song 0 down to it is selected.
+            val selected = selectedIds()
+            assertThat(selected).isEqualTo(songs.take(selected.size).map { it.id })
+            assertThat(selected.size).isGreaterThan(listState.firstVisibleItemIndex)
+            // Lifting settles the top bar like a drag that ends without a fling.
+            assertThat(postFlings).isEqualTo(1)
         }
     }
 

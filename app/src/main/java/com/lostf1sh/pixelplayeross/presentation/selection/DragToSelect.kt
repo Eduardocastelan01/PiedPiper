@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.selection
 
+import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.lazy.LazyListState
@@ -9,6 +10,10 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScrollModifierNode
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputEventHandler
 import androidx.compose.ui.input.pointer.PointerInputScope
@@ -23,6 +28,7 @@ import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -70,7 +76,9 @@ internal fun <T : Any> rememberDragToSelectState(): DragToSelectState<T> = remem
  * row's new state, and the list auto-scrolls while the finger rests near its top or bottom edge.
  *
  * The drag starts from the long-pressed row even if the list has moved under the finger since,
- * and only follows the finger once it has moved by more than the touch slop.
+ * and only follows the finger once it has moved by more than the touch slop. Auto-scroll reaches
+ * parents through nested scrolling like a finger dragging the list would, so a collapsing top bar
+ * collapses with it.
  *
  * Append it last to the list's modifier chain so pointer positions line up with the list's items.
  * The list must not use `reverseLayout`.
@@ -133,6 +141,9 @@ private data class DragToSelectElement<T : Any>(
     }
 }
 
+/** Takes no part in nested scrolling itself; the node only dispatches through it. */
+private object PassThroughNestedScrollConnection : NestedScrollConnection
+
 private class DragToSelectNode<T : Any>(
     private var state: DragToSelectState<T>,
     private var listState: LazyListState,
@@ -148,6 +159,13 @@ private class DragToSelectNode<T : Any>(
     private val pointerInputNode = delegate(
         SuspendingPointerInputModifierNode(PointerInputEventHandler { detectDragToSelect() })
     )
+
+    // Auto-scroll goes to the list's nested-scroll parents the way a finger drag on the list does.
+    private val nestedScrollDispatcher = NestedScrollDispatcher()
+
+    init {
+        delegate(nestedScrollModifierNode(PassThroughNestedScrollConnection, nestedScrollDispatcher))
+    }
 
     private var tracker: DragSelectionTracker<T>? = null
     private var rangeGate: DragRangeGate? = null
@@ -166,6 +184,7 @@ private class DragToSelectNode<T : Any>(
     private var bandBottom = 0f
     private var autoScrollVelocity = 0f
     private var autoScrollJob: Job? = null
+    private var hasDispatchedNestedScroll = false
 
     fun update(
         state: DragToSelectState<T>,
@@ -225,6 +244,10 @@ private class DragToSelectNode<T : Any>(
                 autoScrollVelocity = 0f
                 autoScrollJob?.cancel()
                 autoScrollJob = null
+                if (hasDispatchedNestedScroll) {
+                    hasDispatchedNestedScroll = false
+                    launch { settleNestedScroll() }
+                }
                 tracker?.let { Timber.tag(LogTag).d("Drag-select ended on row %d", it.currentIndex) }
                 tracker = null
                 rangeGate = null
@@ -319,11 +342,43 @@ private class DragToSelectNode<T : Any>(
                 val frameNanos = withFrameNanos { it }
                 val seconds = (frameNanos - previousFrameNanos) / 1_000_000_000f
                 previousFrameNanos = frameNanos
-                if (scrollBy(autoScrollVelocity * seconds) != 0f) rangeGate?.open()
+                if (dispatchScroll(autoScrollVelocity * seconds) != 0f) rangeGate?.open()
+                // A collapsing top bar moves the list on screen, and with it the finger's place
+                // in the list and in its edge zones.
                 updateGeometry()
                 selectUnderPointer()
                 autoScrollVelocity = currentAutoScrollVelocity(edgeZone, maxVelocity)
             }
         }
+    }
+
+    /**
+     * Scrolls by [delta] pixels, positive towards the end of the list, the way a finger dragging
+     * the list would: nested-scroll parents see the scroll before and after the list takes its
+     * part, so a collapsing top bar collapses first. Returns the distance the list and its
+     * parents consumed.
+     */
+    private fun ScrollScope.dispatchScroll(delta: Float): Float {
+        hasDispatchedNestedScroll = true
+        // Nested-scroll deltas follow the finger, which moves up to scroll a list towards its end.
+        val available = Offset(0f, -delta)
+        val consumedBefore = nestedScrollDispatcher.dispatchPreScroll(available, NestedScrollSource.UserInput)
+        val left = available - consumedBefore
+        val consumedByList = Offset(0f, -scrollBy(-left.y))
+        val consumedAfter = nestedScrollDispatcher.dispatchPostScroll(
+            consumed = consumedByList,
+            available = left - consumedByList,
+            source = NestedScrollSource.UserInput,
+        )
+        return -(consumedBefore + consumedByList + consumedAfter).y
+    }
+
+    /**
+     * Ends an auto-scroll for nested-scroll parents the way a finger that lifts without flinging
+     * ends a drag, so a top bar left half collapsed settles.
+     */
+    private suspend fun settleNestedScroll() {
+        val left = Velocity.Zero - nestedScrollDispatcher.dispatchPreFling(Velocity.Zero)
+        nestedScrollDispatcher.dispatchPostFling(consumed = Velocity.Zero, available = left)
     }
 }
