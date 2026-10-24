@@ -235,4 +235,20 @@ class RemoteArtworkCacheTest {
                 .build()
         }
         .build()
+
+    @Test
+    fun `cached image type is read from the file signature`() {
+        assertThat(RemoteArtworkCache.imageMimeType(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())))
+            .isEqualTo("image/jpeg")
+        assertThat(RemoteArtworkCache.imageMimeType(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)))
+            .isEqualTo("image/png")
+        assertThat(RemoteArtworkCache.imageMimeType("GIF89a".toByteArray())).isEqualTo("image/gif")
+        assertThat(RemoteArtworkCache.imageMimeType("RIFF\u0000\u0000\u0000\u0000WEBP".toByteArray()))
+            .isEqualTo("image/webp")
+        assertThat(RemoteArtworkCache.imageMimeType("\u0000\u0000\u0000\u001CftypavifX".toByteArray()))
+            .isEqualTo("image/avif")
+        assertThat(RemoteArtworkCache.imageMimeType("\u0000\u0000\u0000\u001CftypheicX".toByteArray()))
+            .isEqualTo("image/heif")
+        assertThat(RemoteArtworkCache.imageMimeType("<?xml version".toByteArray())).isNull()
+    }
 }

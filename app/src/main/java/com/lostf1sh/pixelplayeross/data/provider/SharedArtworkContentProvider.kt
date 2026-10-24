@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.AssetFileDescriptor
 import android.database.Cursor
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Binder
 import android.os.ParcelFileDescriptor
@@ -40,14 +41,14 @@ class SharedArtworkContentProvider : ContentProvider() {
 
     override fun getType(uri: Uri): String? {
         val appContext = context?.applicationContext ?: return null
-        return if (
-            parseSongId(uri, appContext.packageName) != null ||
-            parseCloudArtworkUri(uri.toString(), appContext.packageName) != null
-        ) {
-            DEFAULT_CONTENT_TYPE
-        } else {
-            null
+        val cloudArtworkUri = parseCloudArtworkUri(uri.toString(), appContext.packageName)
+        if (cloudArtworkUri != null) {
+            // Cloud covers are served as cached, in whatever format the server sent.
+            return RemoteArtworkCache.cacheFileFor(appContext.cacheDir, cloudArtworkUri)
+                ?.let(RemoteArtworkCache::imageMimeType)
+                ?: DEFAULT_CONTENT_TYPE
         }
+        return if (parseSongId(uri, appContext.packageName) != null) DEFAULT_CONTENT_TYPE else null
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
@@ -192,12 +193,35 @@ class SharedArtworkContentProvider : ContentProvider() {
          */
         internal const val MAX_SHARED_CLOUD_ARTWORK_BYTES = 2L * 1024 * 1024
 
+        /*
+         * The byte limit doesn't bound the decoded size: a highly compressed original can be
+         * small on disk and still decode to a huge bitmap, so the dimensions are checked too.
+         */
+        internal const val MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX = 2048
+
         /** The cached cover file for [rawArtworkUri] if it can be served as-is, else null. */
-        internal fun resolveCachedCloudArtwork(cacheDir: File, rawArtworkUri: String): File? {
+        internal fun resolveCachedCloudArtwork(
+            cacheDir: File,
+            rawArtworkUri: String,
+            readArtworkImageBounds: (File) -> ArtworkImageBounds? = ::decodeArtworkImageBounds,
+        ): File? {
             if (!isSupportedCloudArtworkUri(rawArtworkUri)) return null
             return RemoteArtworkCache.cacheFileFor(cacheDir, rawArtworkUri)
                 ?.takeIf { it.length() <= MAX_SHARED_CLOUD_ARTWORK_BYTES }
                 ?.takeIf(RemoteArtworkCache::isCachedImage)
+                ?.takeIf { file ->
+                    val bounds = readArtworkImageBounds(file) ?: return@takeIf false
+                    bounds.width <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX &&
+                        bounds.height <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX
+                }
+        }
+
+        /** Reads only the image header; null when the platform can't decode it. */
+        private fun decodeArtworkImageBounds(file: File): ArtworkImageBounds? {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.path, options)
+            return ArtworkImageBounds(options.outWidth, options.outHeight)
+                .takeIf { it.width > 0 && it.height > 0 }
         }
 
         fun authority(packageName: String): String = packageName + AUTHORITY_SUFFIX
@@ -353,3 +377,5 @@ class SharedArtworkContentProvider : ContentProvider() {
                 ?: parseCloudArtworkUri(uriString, packageName)?.let { "cloud:$it" }
     }
 }
+
+internal data class ArtworkImageBounds(val width: Int, val height: Int)
