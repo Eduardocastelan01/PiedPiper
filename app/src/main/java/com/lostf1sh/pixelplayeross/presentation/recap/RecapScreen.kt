@@ -97,8 +97,11 @@ import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -204,6 +207,9 @@ private fun RecapStory(
     var isHeld by remember { mutableStateOf(false) }
     var isPausedByUser by rememberSaveable { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
+    // The timer's move to the next slide, kept so pausing or leaving the app can stop it mid-way.
+    // Only read in coroutines, so setting it never recomposes the story.
+    val autoMove = remember { mutableStateOf<Job?>(null) }
     // Hoisted out of the pages so the timer can tell when a slide that does not fit (landscape,
     // large fonts) is being scrolled.
     val slideScrollStates = rememberSaveable(slides.size, saver = SlideScrollStatesSaver) {
@@ -244,9 +250,24 @@ private fun RecapStory(
                         }
                     }
                     // Scrolling flips isScrollInProgress, which would cancel this collector.
-                    if (page < lastIndex) scope.launch { pagerState.animateScrollToPage(page + 1) }
+                    if (page < lastIndex) {
+                        autoMove.value = scope.launch { pagerState.animateScrollToPage(page + 1) }
+                    }
                 }
         }
+    }
+
+    // The move runs outside the timer so it is not cancelled by its own scrolling; stop it here
+    // when the story is paused or the app is left, and settle on the nearer slide rather than
+    // leaving the story between two. A slide that stays gets its time again (see above).
+    LaunchedEffect(pagerState) {
+        snapshotFlow { isPausedByUser || !lifecycleState.isAtLeast(Lifecycle.State.RESUMED) }
+            .filter { it }
+            .collect {
+                val move = autoMove.value?.takeIf { it.isActive } ?: return@collect
+                move.cancelAndJoin()
+                pagerState.scrollToPage(pagerState.currentPage)
+            }
     }
 
     fun goTo(page: Int) {
