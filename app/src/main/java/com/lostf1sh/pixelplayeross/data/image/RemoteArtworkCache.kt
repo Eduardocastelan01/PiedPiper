@@ -38,7 +38,42 @@ internal object RemoteArtworkCache {
 
     private const val SIGNATURE_BYTES = 12
 
+    /** Cover size the fetchers request when the cover URI carries no `size` parameter. */
+    const val DEFAULT_COVER_SIZE_PX = 500
+
+    private val COVER_SCHEMES = setOf("navidrome_cover", "jellyfin_cover")
+
     private val downloadLocks = HashMap<String, DownloadLock>()
+
+    /** Name of the file the [scheme] fetcher caches cover [coverId] at [sizePx] in. */
+    fun cacheFileName(scheme: String, coverId: String, sizePx: Int): String =
+        "${scheme}_${coverId}_$sizePx.jpg"
+
+    /**
+     * The cache file the Navidrome/Jellyfin fetcher writes for [rawArtworkUri]
+     * (`navidrome_cover://<id>` or `jellyfin_cover://<id>`, optionally with `?size=`), or null
+     * when the URI is not a cloud cover URI this cache can name.
+     */
+    fun cacheFileFor(cacheDir: File, rawArtworkUri: String): File? {
+        val scheme = rawArtworkUri.substringBefore("://", missingDelimiterValue = "").lowercase()
+        if (scheme !in COVER_SCHEMES) return null
+        val afterScheme = rawArtworkUri.substring(scheme.length + "://".length)
+        val coverId = afterScheme.substringBefore('?').substringBefore('#').substringBefore('/')
+        // Hosts with user info or a port would not match the id the fetcher reads from Uri.host.
+        if (coverId.isBlank() || coverId.any { it == '@' || it == ':' || it == '\\' }) return null
+        val sizePx = afterScheme.substringAfter('?', missingDelimiterValue = "")
+            .substringBefore('#')
+            .split('&')
+            .firstOrNull { it.startsWith("size=") }
+            ?.removePrefix("size=")
+            ?.toIntOrNull()
+            ?: DEFAULT_COVER_SIZE_PX
+        return File(cacheDir, cacheFileName(scheme, coverId, sizePx))
+    }
+
+    /** Whether [file] holds a cached image (not an empty file or a cached server error body). */
+    fun isCachedImage(file: File): Boolean =
+        file.isFile && file.length() > 0L && hasImageSignature(readSignature(file))
 
     suspend fun cachedResult(file: File): SourceResult? = withContext(Dispatchers.IO) {
         if (!file.isFile || file.length() == 0L) return@withContext null

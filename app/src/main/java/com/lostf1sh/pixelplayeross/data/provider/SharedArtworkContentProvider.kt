@@ -8,19 +8,19 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.AssetFileDescriptor
 import android.database.Cursor
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Binder
 import android.os.ParcelFileDescriptor
-import androidx.core.graphics.drawable.toBitmap
 import coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.lostf1sh.pixelplayeross.data.image.RemoteArtworkCache
 import com.lostf1sh.pixelplayeross.utils.AlbumArtUtils
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,7 +71,7 @@ class SharedArtworkContentProvider : ContentProvider() {
         enforceArtworkReadAccess(uri, appContext)
         val cloudArtworkUri = parseCloudArtworkUri(uri.toString(), appContext.packageName)
         if (cloudArtworkUri != null) {
-            return openCloudArtworkPipe(appContext, cloudArtworkUri)
+            return openCachedCloudArtwork(appContext, cloudArtworkUri)
         }
 
         val file = resolveArtworkFile(uri)
@@ -134,32 +134,46 @@ class SharedArtworkContentProvider : ContentProvider() {
         }
     }
 
-    private fun openCloudArtworkPipe(
+    /**
+     * Serves cloud artwork only from the Navidrome/Jellyfin disk cache, never from the network.
+     *
+     * Callers read this synchronously: Bluetooth's AVRCP target (it holds MEDIA_CONTENT_CONTROL,
+     * so it may open the published cover) decodes the session's artwork URI on the Bluetooth
+     * process's main thread, several times per metadata or playback-state change. Downloading
+     * and re-encoding the cover inside that read stalled com.android.bluetooth until it crashed
+     * or dropped the headset while streaming. The cached file is the server-resized cover the
+     * fetchers already store for the app's own UI and notification, so it is small and opens
+     * instantly; a cover that is not cached yet fails fast and is fetched in the background
+     * for the next read. Media3 also publishes the decoded bitmap, which these surfaces prefer.
+     */
+    private fun openCachedCloudArtwork(
         appContext: Context,
         rawArtworkUri: String,
     ): ParcelFileDescriptor {
-        val pipe = ParcelFileDescriptor.createPipe()
+        val cachedFile = resolveCachedCloudArtwork(appContext.cacheDir, rawArtworkUri)
+        if (cachedFile == null) {
+            warmCloudArtworkCache(appContext, rawArtworkUri)
+            throw FileNotFoundException("Cloud artwork is not cached yet")
+        }
+        return ParcelFileDescriptor.open(cachedFile, ParcelFileDescriptor.MODE_READ_ONLY)
+    }
+
+    private fun warmCloudArtworkCache(appContext: Context, rawArtworkUri: String) {
+        if (!cloudArtworkWarmups.add(rawArtworkUri)) return
         cloudArtworkScope.launch {
-            ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { output ->
+            try {
                 val request = ImageRequest.Builder(appContext)
                     .data(Uri.parse(rawArtworkUri))
-                    .size(CLOUD_ARTWORK_SIZE_PX, CLOUD_ARTWORK_SIZE_PX)
+                    .size(RemoteArtworkCache.DEFAULT_COVER_SIZE_PX)
                     .precision(Precision.INEXACT)
                     .allowHardware(false)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .memoryCachePolicy(CachePolicy.DISABLED)
                     .build()
-                val drawable = appContext.imageLoader.execute(request).drawable ?: return@use
-                val fallbackSizePx = CLOUD_ARTWORK_SIZE_PX
-                val bitmap = drawable.toBitmap(
-                    width = drawable.intrinsicWidth.takeIf { it > 0 } ?: fallbackSizePx,
-                    height = drawable.intrinsicHeight.takeIf { it > 0 } ?: fallbackSizePx,
-                    config = Bitmap.Config.ARGB_8888,
-                )
-                bitmap.compress(Bitmap.CompressFormat.JPEG, CLOUD_ARTWORK_JPEG_QUALITY, output)
+                appContext.imageLoader.execute(request)
+            } finally {
+                cloudArtworkWarmups.remove(rawArtworkUri)
             }
         }
-        return pipe[0]
     }
 
     companion object {
@@ -167,10 +181,24 @@ class SharedArtworkContentProvider : ContentProvider() {
         private const val PATH_SONG = "song"
         private const val PATH_CLOUD = "cloud"
         private const val DEFAULT_CONTENT_TYPE = "image/jpeg"
-        private const val CLOUD_ARTWORK_SIZE_PX = 1024
-        private const val CLOUD_ARTWORK_JPEG_QUALITY = 90
         private val CLOUD_ARTWORK_SCHEMES = setOf("navidrome_cover", "jellyfin_cover")
         private val cloudArtworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val cloudArtworkWarmups: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+        /*
+         * Covers are cached server-resized to about 500 px, i.e. tens to a few hundred KB. A
+         * larger file means the server ignored the size and sent the original, which readers
+         * such as Bluetooth would decode at full resolution in their own process.
+         */
+        internal const val MAX_SHARED_CLOUD_ARTWORK_BYTES = 2L * 1024 * 1024
+
+        /** The cached cover file for [rawArtworkUri] if it can be served as-is, else null. */
+        internal fun resolveCachedCloudArtwork(cacheDir: File, rawArtworkUri: String): File? {
+            if (!isSupportedCloudArtworkUri(rawArtworkUri)) return null
+            return RemoteArtworkCache.cacheFileFor(cacheDir, rawArtworkUri)
+                ?.takeIf { it.length() <= MAX_SHARED_CLOUD_ARTWORK_BYTES }
+                ?.takeIf(RemoteArtworkCache::isCachedImage)
+        }
 
         fun authority(packageName: String): String = packageName + AUTHORITY_SUFFIX
 

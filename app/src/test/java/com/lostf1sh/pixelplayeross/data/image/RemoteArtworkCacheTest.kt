@@ -195,6 +195,22 @@ class RemoteArtworkCacheTest {
      * checks then pin down where it blocked: it shares the first fetch's lock, has not finished,
      * and has not sent a request of its own.
      */
+    @Test
+    fun `cache file for a cover URI matches the file its fetcher writes`() {
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://al-1"))
+            .isEqualTo(File(cacheDir, "navidrome_cover_al-1_500.jpg"))
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "jellyfin_cover://item-2?size=300"))
+            .isEqualTo(File(cacheDir, "jellyfin_cover_item-2_300.jpg"))
+    }
+
+    @Test
+    fun `cache file is not named for unsupported or malformed cover URIs`() {
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "https://music.example/cover.jpg")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://user@al-1")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://al-1:80")).isNull()
+    }
+
     private fun CoroutineScope.startFetchWaitingForLock(server: GatedCoverServer, target: File): Deferred<SourceResult> {
         val fetch = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
             RemoteArtworkCache.download(server.client, request(), target)
