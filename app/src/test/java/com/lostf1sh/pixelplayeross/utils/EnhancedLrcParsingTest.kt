@@ -299,6 +299,28 @@ class EnhancedLrcParsingTest {
     }
 
     @Test
+    fun trLinesUnderALineWithText_areSkippedSoTheLinesReadBackTheSameThroughEverySavePath() {
+        val lines = parseSynced(
+            """
+            [00:10.00]Hello
+            [tr:Hola]
+            [tr:Saludos]
+            [00:12.00]Next line
+            [00:12.00]Siguiente línea
+            [tr:Otra]
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("Hello", "Next line"), lines.map { it.line })
+        assertEquals(listOf(null, "Siguiente línea"), lines.map { it.translation })
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
+        readBackFromEverySavePath(lines).forEach { (path, readBack) ->
+            assertEquals(listOf("Hello", "Next line"), readBack.map { it.line }, path)
+            assertEquals(listOf(null, "Siguiente línea"), readBack.map { it.translation }, path)
+        }
+    }
+
+    @Test
     fun trLineBeforeAnySyncedLine_isSkippedLikeAHeaderTag() {
         val line = parseSynced("[tr:Someone]\n[00:01.00]Hi").single()
 

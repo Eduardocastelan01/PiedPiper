@@ -651,7 +651,7 @@ object LyricsUtils {
     // Enhanced-LRC backing vocals for the line above: [bg: <00:12.00>(oh <00:12.40>yeah)]
     private val LRC_BACKGROUND_LINE_REGEX = Regex("^\\[bg:(.*)]$", RegexOption.IGNORE_CASE)
 
-    // Translation of the line above, written for a line with no main text: [tr: (Uh uh)]
+    // Translation of the line above, read only for a line with no main text: [tr: (Uh uh)]
     private val LRC_TRANSLATION_LINE_REGEX = Regex("^\\[tr:(.*)]$", RegexOption.IGNORE_CASE)
 
     // Enhanced-LRC singer prefix, before or right after the first word tag: "v1: Hi", "<00:01.00>v2:Hi".
@@ -725,13 +725,15 @@ object LyricsUtils {
                 }
                 return@forEach
             }
-            // Also checked before the metadata pattern. Before any synced line it has no line to
-            // translate and is skipped like a header tag.
+            // Also checked before the metadata pattern. Only read under a line with no main text,
+            // the one place translationLrcLine writes it; anywhere else it is skipped like a header
+            // tag, since a line with text writes its translation at its own time and would not
+            // read a `[tr: …]` translation back the same way.
             val translationMatch = LRC_TRANSLATION_LINE_REGEX.matchEntire(line)
             if (translationMatch != null) {
                 val previous = syncedLines.lastOrNull()
                 val translation = stripFormatCharacters(translationMatch.groupValues[1]).trim()
-                if (previous != null && translation.isNotEmpty()) {
+                if (previous != null && previous.line.isBlank() && translation.isNotEmpty()) {
                     syncedLines[syncedLines.lastIndex] = previous.copy(
                         translation = previous.translation?.let { "$it\n$translation" } ?: translation
                     )
