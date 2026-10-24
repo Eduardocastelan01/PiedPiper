@@ -189,7 +189,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.LibraryNavigationMode
 import com.lostf1sh.pixelplayeross.data.worker.SyncProgress
 import com.lostf1sh.pixelplayeross.presentation.screens.search.components.GenreTypography
 import com.lostf1sh.pixelplayeross.presentation.utils.SegmentedItemShapeDefaults
-import com.lostf1sh.pixelplayeross.presentation.utils.clipToShapePath
+import com.lostf1sh.pixelplayeross.presentation.utils.clipCardCornersFallback
 import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
 import com.lostf1sh.pixelplayeross.presentation.utils.seamlessSelectionScale
 import com.lostf1sh.pixelplayeross.presentation.components.SyncProgressBar
@@ -3501,7 +3501,7 @@ fun AlbumGridItemRedesigned(
                         Modifier
                     }
                 )
-                .clipToShapePath(cardShape)
+                .clipCardCornersFallback(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {
@@ -3642,7 +3642,7 @@ fun ArtistListItem(
                     Modifier
                 }
             )
-            .clipToShapePath(cardShape)
+            .clipCardCornersFallback(cardShape)
             .combinedClickable(
                 enabled = !isLoading,
                 onClick = {
@@ -3788,7 +3788,7 @@ fun AlbumListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
-                .clipToShapePath(cardShape),
+                .clipCardCornersFallback(cardShape),
             shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
@@ -3837,9 +3837,7 @@ fun AlbumListItem(
                         Modifier
                     }
                 )
-                // Clipped on the canvas: an outline clip leaves the corners of non-uniform
-                // (segmented first/last) rows square on older render pipelines.
-                .clipToShapePath(cardShape)
+                .clipCardCornersFallback(cardShape)
                 .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {
