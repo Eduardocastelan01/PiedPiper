@@ -972,11 +972,18 @@ fun LibraryScreen(
             }
         }
     ) { innerScaffoldPadding ->
+        // Starts from the current state rather than defaults: coming back to Library with a
+        // non-default sort or the albums list view would otherwise see a sort change and a
+        // grid/list switch on the first frame and lose the saved scroll position.
         val playerUiState by remember(playerViewModel) {
             playerViewModel.playerUiState
                 .map { uiState -> uiState.toLibraryScreenProjection() }
                 .distinctUntilChanged()
-        }.collectAsStateWithLifecycle(initialValue = LibraryScreenPlayerProjection())
+        }.collectAsStateWithLifecycle(
+            initialValue = remember(playerViewModel) {
+                playerViewModel.playerUiState.value.toLibraryScreenProjection()
+            }
+        )
         val isLibraryContentEmpty by remember(playerViewModel) {
             combine(
                 playerViewModel.songCountFlow,
