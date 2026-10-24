@@ -195,6 +195,22 @@ class RemoteArtworkCacheTest {
      * checks then pin down where it blocked: it shares the first fetch's lock, has not finished,
      * and has not sent a request of its own.
      */
+    @Test
+    fun `cache file for a cover URI matches the file its fetcher writes`() {
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://al-1"))
+            .isEqualTo(File(cacheDir, "navidrome_cover_al-1_500.jpg"))
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "jellyfin_cover://item-2?size=300"))
+            .isEqualTo(File(cacheDir, "jellyfin_cover_item-2_300.jpg"))
+    }
+
+    @Test
+    fun `cache file is not named for unsupported or malformed cover URIs`() {
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "https://music.example/cover.jpg")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://user@al-1")).isNull()
+        assertThat(RemoteArtworkCache.cacheFileFor(cacheDir, "navidrome_cover://al-1:80")).isNull()
+    }
+
     private fun CoroutineScope.startFetchWaitingForLock(server: GatedCoverServer, target: File): Deferred<SourceResult> {
         val fetch = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
             RemoteArtworkCache.download(server.client, request(), target)
@@ -219,4 +235,20 @@ class RemoteArtworkCacheTest {
                 .build()
         }
         .build()
+
+    @Test
+    fun `cached image type is read from the file signature`() {
+        assertThat(RemoteArtworkCache.imageMimeType(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())))
+            .isEqualTo("image/jpeg")
+        assertThat(RemoteArtworkCache.imageMimeType(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)))
+            .isEqualTo("image/png")
+        assertThat(RemoteArtworkCache.imageMimeType("GIF89a".toByteArray())).isEqualTo("image/gif")
+        assertThat(RemoteArtworkCache.imageMimeType("RIFF\u0000\u0000\u0000\u0000WEBP".toByteArray()))
+            .isEqualTo("image/webp")
+        assertThat(RemoteArtworkCache.imageMimeType("\u0000\u0000\u0000\u001CftypavifX".toByteArray()))
+            .isEqualTo("image/avif")
+        assertThat(RemoteArtworkCache.imageMimeType("\u0000\u0000\u0000\u001CftypheicX".toByteArray()))
+            .isEqualTo("image/heif")
+        assertThat(RemoteArtworkCache.imageMimeType("<?xml version".toByteArray())).isNull()
+    }
 }

@@ -38,7 +38,42 @@ internal object RemoteArtworkCache {
 
     private const val SIGNATURE_BYTES = 12
 
+    /** Cover size the fetchers request when the cover URI carries no `size` parameter. */
+    const val DEFAULT_COVER_SIZE_PX = 500
+
+    private val COVER_SCHEMES = setOf("navidrome_cover", "jellyfin_cover")
+
     private val downloadLocks = HashMap<String, DownloadLock>()
+
+    /** Name of the file the [scheme] fetcher caches cover [coverId] at [sizePx] in. */
+    fun cacheFileName(scheme: String, coverId: String, sizePx: Int): String =
+        "${scheme}_${coverId}_$sizePx.jpg"
+
+    /**
+     * The cache file the Navidrome/Jellyfin fetcher writes for [rawArtworkUri]
+     * (`navidrome_cover://<id>` or `jellyfin_cover://<id>`, optionally with `?size=`), or null
+     * when the URI is not a cloud cover URI this cache can name.
+     */
+    fun cacheFileFor(cacheDir: File, rawArtworkUri: String): File? {
+        val scheme = rawArtworkUri.substringBefore("://", missingDelimiterValue = "").lowercase()
+        if (scheme !in COVER_SCHEMES) return null
+        val afterScheme = rawArtworkUri.substring(scheme.length + "://".length)
+        val coverId = afterScheme.substringBefore('?').substringBefore('#').substringBefore('/')
+        // Hosts with user info or a port would not match the id the fetcher reads from Uri.host.
+        if (coverId.isBlank() || coverId.any { it == '@' || it == ':' || it == '\\' }) return null
+        val sizePx = afterScheme.substringAfter('?', missingDelimiterValue = "")
+            .substringBefore('#')
+            .split('&')
+            .firstOrNull { it.startsWith("size=") }
+            ?.removePrefix("size=")
+            ?.toIntOrNull()
+            ?: DEFAULT_COVER_SIZE_PX
+        return File(cacheDir, cacheFileName(scheme, coverId, sizePx))
+    }
+
+    /** Whether [file] holds a cached image (not an empty file or a cached server error body). */
+    fun isCachedImage(file: File): Boolean =
+        file.isFile && file.length() > 0L && hasImageSignature(readSignature(file))
 
     suspend fun cachedResult(file: File): SourceResult? = withContext(Dispatchers.IO) {
         if (!file.isFile || file.length() == 0L) return@withContext null
@@ -131,17 +166,27 @@ internal object RemoteArtworkCache {
         )
     }
 
-    internal fun hasImageSignature(header: ByteArray): Boolean {
+    internal fun hasImageSignature(header: ByteArray): Boolean = imageMimeType(header) != null
+
+    /** MIME type of the image cached in [file], read from its signature, or null if it is not an image. */
+    fun imageMimeType(file: File): String? = imageMimeType(readSignature(file))
+
+    internal fun imageMimeType(header: ByteArray): String? {
         fun matches(offset: Int, vararg expected: Int): Boolean =
             header.size >= offset + expected.size &&
                 expected.indices.all { header[offset + it].toInt() and 0xFF == expected[it] }
 
-        return matches(0, 0xFF, 0xD8, 0xFF) || // JPEG
-            matches(0, 0x89, 0x50, 0x4E, 0x47) || // PNG
-            matches(0, 0x47, 0x49, 0x46, 0x38) || // GIF8
-            (matches(0, 0x52, 0x49, 0x46, 0x46) && matches(8, 0x57, 0x45, 0x42, 0x50)) || // RIFF....WEBP
-            matches(4, 0x66, 0x74, 0x79, 0x70) || // ISO-BMFF ftyp (HEIF/AVIF)
-            matches(0, 0x42, 0x4D) // BMP
+        return when {
+            matches(0, 0xFF, 0xD8, 0xFF) -> "image/jpeg"
+            matches(0, 0x89, 0x50, 0x4E, 0x47) -> "image/png"
+            matches(0, 0x47, 0x49, 0x46, 0x38) -> "image/gif" // GIF8
+            matches(0, 0x52, 0x49, 0x46, 0x46) && matches(8, 0x57, 0x45, 0x42, 0x50) -> "image/webp" // RIFF....WEBP
+            // ISO-BMFF ftyp box; the major brand tells AVIF from HEIF.
+            matches(4, 0x66, 0x74, 0x79, 0x70) ->
+                if (matches(8, 0x61, 0x76, 0x69, 0x66) || matches(8, 0x61, 0x76, 0x69, 0x73)) "image/avif" else "image/heif"
+            matches(0, 0x42, 0x4D) -> "image/bmp"
+            else -> null
+        }
     }
 
     private fun readSignature(file: File): ByteArray = runCatching {

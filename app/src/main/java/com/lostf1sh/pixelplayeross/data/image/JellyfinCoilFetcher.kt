@@ -55,9 +55,13 @@ class JellyfinCoilFetcher(
             return null
         }
 
-        val sizeParam = uri.getQueryParameter("size")?.toIntOrNull() ?: 500
+        val sizeParam = uri.getQueryParameter("size")?.toIntOrNull()
+            ?: RemoteArtworkCache.DEFAULT_COVER_SIZE_PX
 
-        val cachedFile = File(cacheDir, "jellyfin_cover_${itemId}_$sizeParam.jpg")
+        val cachedFile = File(
+            cacheDir,
+            RemoteArtworkCache.cacheFileName("jellyfin_cover", itemId, sizeParam)
+        )
         RemoteArtworkCache.cachedResult(cachedFile)?.let { return it }
 
         val imageUrl = repository.getImageUrl(itemId, sizeParam)

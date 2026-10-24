@@ -62,9 +62,13 @@ class NavidromeCoilFetcher(
             return null
         }
 
-        val sizeParam = uri.getQueryParameter("size")?.toIntOrNull() ?: 500
+        val sizeParam = uri.getQueryParameter("size")?.toIntOrNull()
+            ?: RemoteArtworkCache.DEFAULT_COVER_SIZE_PX
 
-        val cachedFile = File(cacheDir, "navidrome_cover_${coverArtId}_$sizeParam.jpg")
+        val cachedFile = File(
+            cacheDir,
+            RemoteArtworkCache.cacheFileName("navidrome_cover", coverArtId, sizeParam)
+        )
         RemoteArtworkCache.cachedResult(cachedFile)?.let { return it }
 
         val coverArtUrl = repository.getCoverArtUrl(coverArtId, sizeParam)
