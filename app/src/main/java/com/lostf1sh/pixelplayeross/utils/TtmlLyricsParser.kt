@@ -70,7 +70,8 @@ internal object TtmlLyricsParser {
                     val background = extras.background.toString().replace('\n', ' ').trim()
                         .withoutRedundantEndTags()
                     // A paragraph sung only in the background keeps an empty main line to carry it.
-                    // Its translation, written below at the same time, pairs with that line.
+                    // Its translation is written as a `[tr: …]` line, so a paragraph sung at the
+                    // same time is not read back as that translation.
                     if (serializedBody.isBlank() && background.isEmpty()) continue
                     val timestamp = "[${formatLrcTimestamp(beginMs)}]"
                     val voicePrefix = voices.voiceOf(paragraph)?.let { "v$it:" }.orEmpty()
@@ -82,7 +83,10 @@ internal object TtmlLyricsParser {
                                 ?.let { append("\n[bg:").append(it).append(']') }
                             extras.translation.toString().trim()
                                 .takeIf { it.isNotEmpty() }
-                                ?.let { append('\n').append(timestamp).append(it) }
+                                ?.let { translation ->
+                                    append('\n')
+                                    append(LyricsUtils.translationLrcLine(timestamp, serializedBody, translation))
+                                }
                         }
                     )
                 }

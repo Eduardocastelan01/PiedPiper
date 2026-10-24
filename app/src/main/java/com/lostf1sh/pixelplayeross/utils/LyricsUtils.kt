@@ -651,6 +651,9 @@ object LyricsUtils {
     // Enhanced-LRC backing vocals for the line above: [bg: <00:12.00>(oh <00:12.40>yeah)]
     private val LRC_BACKGROUND_LINE_REGEX = Regex("^\\[bg:(.*)]$", RegexOption.IGNORE_CASE)
 
+    // Translation of the line above, written for a line with no main text: [tr: (Uh uh)]
+    private val LRC_TRANSLATION_LINE_REGEX = Regex("^\\[tr:(.*)]$", RegexOption.IGNORE_CASE)
+
     // Enhanced-LRC singer prefix, before or right after the first word tag: "v1: Hi", "<00:01.00>v2:Hi".
     private val LRC_VOICE_PREFIX_REGEX = Regex(
         "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*v(\\d{1,4})\\s*:\\s*",
@@ -722,6 +725,19 @@ object LyricsUtils {
                 }
                 return@forEach
             }
+            // Also checked before the metadata pattern. Before any synced line it has no line to
+            // translate and is skipped like a header tag.
+            val translationMatch = LRC_TRANSLATION_LINE_REGEX.matchEntire(line)
+            if (translationMatch != null) {
+                val previous = syncedLines.lastOrNull()
+                val translation = stripFormatCharacters(translationMatch.groupValues[1]).trim()
+                if (previous != null && translation.isNotEmpty()) {
+                    syncedLines[syncedLines.lastIndex] = previous.copy(
+                        translation = previous.translation?.let { "$it\n$translation" } ?: translation
+                    )
+                }
+                return@forEach
+            }
             if (LRC_METADATA_PATTERN.matcher(line).matches()) return@forEach
 
             val lineMatcher = LRC_LINE_REGEX.matcher(line)
@@ -749,9 +765,13 @@ object LyricsUtils {
                     SyncedLine(time = lineTimestamp.toInt(), line = text, voice = voice)
                 }
                 // Backing vocals written just before a line at that line's own time are sung with
-                // it. Kept on an empty line of their own, the line would pair as their translation.
-                val opening = syncedLines.singleOrNull()
-                    ?.takeIf { holdsOpeningBackground && it.line.isBlank() && it.time == syncedLine.time }
+                // it, unless a `[tr: …]` line already gave them a translation of their own.
+                val opening = syncedLines.singleOrNull()?.takeIf {
+                    holdsOpeningBackground &&
+                        it.line.isBlank() &&
+                        it.translation == null &&
+                        it.time == syncedLine.time
+                }
                 holdsOpeningBackground = false
                 if (opening != null) {
                     syncedLines[0] = syncedLine.copy(background = opening.background)
@@ -1061,8 +1081,8 @@ object LyricsUtils {
      * The second line is treated as a translation of the first.
      * Only pairs one translation per original — a third line at the same timestamp stays separate.
      * A line marked for another singer (`v2:` after `v1:`) is a duet part, not a translation.
-     * An empty line that carries backing vocals (a TTML paragraph sung only in the background)
-     * takes an untimed line as its translation, so it hides with them; a word-timed one is sung.
+     * An empty line (one sung only in the background) takes no line as its translation, since the
+     * next line may be sung at the same time; its translation is read from a `[tr: …]` line instead.
      */
     internal fun pairTranslationLines(lines: List<SyncedLine>): List<SyncedLine> {
         if (lines.size < 2) return lines
@@ -1075,9 +1095,9 @@ object LyricsUtils {
                 next != null &&
                 next.time == current.time &&
                 current.translation == null &&
+                current.line.isNotBlank() &&
                 next.line.isNotBlank() &&
-                (next.voice == null || next.voice == current.voice) &&
-                (current.line.isNotBlank() || current.takesTranslationAsBackingOnlyLine(next))
+                (next.voice == null || next.voice == current.voice)
             ) {
                 val translationParts = mutableListOf(next.line)
                 var consumed = 2
@@ -1101,12 +1121,6 @@ object LyricsUtils {
         }
         return result
     }
-
-    private fun SyncedLine.takesTranslationAsBackingOnlyLine(next: SyncedLine): Boolean =
-        line.isBlank() &&
-            !background?.text.isNullOrBlank() &&
-            next.words.isNullOrEmpty() &&
-            next.background == null
 
     internal fun stripLrcTimestamps(value: String): String {
         if (value.isEmpty()) return value
@@ -1132,7 +1146,8 @@ object LyricsUtils {
     /**
      * Writes synced lyrics as enhanced LRC that [parseLyrics] reads back into the same lines:
      * a `vN:` singer prefix, `<mm:ss.xx>` syllable tags (plus a closing tag where a syllable's
-     * end is known), a `[bg: …]` line for backing vocals, then translations at the line's time.
+     * end is known), a `[bg: …]` line for backing vocals, then translations at the line's time
+     * (as `[tr: …]` lines under a line with no main text, see [translationLrcLine]).
      * The backing line comes before the translations so it attaches to the sung line again.
      */
     fun toEnhancedLrc(lines: List<SyncedLine>, includeWordTimings: Boolean = true): String {
@@ -1156,10 +1171,19 @@ object LyricsUtils {
                 line.translation
                     ?.lines()
                     ?.filter { it.isNotBlank() }
-                    ?.forEach { translationLine -> add(timestamp + translationLine) }
+                    ?.forEach { translationLine -> add(translationLrcLine(timestamp, line.line, translationLine)) }
             }
         }.joinToString("\n")
     }
+
+    /**
+     * One line of [mainLine]'s translation. A line with main text takes the next line at its own
+     * time as its translation, which other players read too. An empty main line (sung only in the
+     * background) cannot: a line sung at that time would read back as its translation, so its
+     * translation is written as `[tr: …]` instead.
+     */
+    internal fun translationLrcLine(timestamp: String, mainLine: String, translationLine: String): String =
+        if (mainLine.isBlank()) "[tr:$translationLine]" else timestamp + translationLine
 
     private fun formatTimedWords(words: List<SyncedWord>): String = buildString {
         words.forEachIndexed { index, word ->

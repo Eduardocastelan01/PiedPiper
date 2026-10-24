@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.utils
 
 import com.lostf1sh.pixelplayeross.data.model.BackgroundVocals
+import com.lostf1sh.pixelplayeross.data.model.Lyrics
 import com.lostf1sh.pixelplayeross.data.model.SyncedLine
 import com.lostf1sh.pixelplayeross.data.model.SyncedWord
 import java.text.Normalizer
@@ -179,13 +180,23 @@ class EnhancedLrcParsingTest {
         assertNull(untimed.translation)
     }
 
+    /**
+     * The lines read back from each way the app writes lyrics: the word-timed enhanced LRC of the
+     * disk cache and database, the untimed copy stored beside it, and Save as .lrc.
+     */
+    private fun readBackFromEverySavePath(lines: List<SyncedLine>): Map<String, List<SyncedLine>> = mapOf(
+        "enhanced LRC" to parseSynced(LyricsUtils.toEnhancedLrc(lines)),
+        "untimed LRC" to parseSynced(LyricsUtils.toEnhancedLrc(lines, includeWordTimings = false)),
+        "Save as .lrc" to parseSynced(LyricsUtils.toLrcString(Lyrics(synced = lines)))
+    )
+
     @Test
-    fun untimedLineAtTheTimeOfABackingOnlyLine_isItsTranslation() {
+    fun trLineUnderABackingOnlyLine_isItsTranslationThroughEverySavePath() {
         val lyrics = LyricsUtils.parseLyrics(
             """
             [00:10.00]v2:
             [bg:<00:10.00>(Ooh <00:10.50>ooh)<00:11.20>]
-            [00:10.00](Uh uh)
+            [tr:(Uh uh)]
             [00:12.00]v1:Lead line
             """.trimIndent()
         )
@@ -197,15 +208,36 @@ class EnhancedLrcParsingTest {
         assertEquals("(Uh uh)", backingLine.translation)
         assertEquals("(Ooh ooh)", backingLine.background!!.text)
         assertEquals("(Ooh ooh)\n(Uh uh)", lyrics.plain!!.first())
+        assertTrue(LyricsUtils.syncedToLrcString(lines).lines().contains("[tr:(Uh uh)]"))
         assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
-        val untimed = parseSynced(LyricsUtils.syncedToLrcString(lines)).first()
-        assertEquals("", untimed.line)
-        assertEquals("(Uh uh)", untimed.translation)
-        assertEquals(BackgroundVocals(text = "(Ooh ooh)"), untimed.background)
+        readBackFromEverySavePath(lines).forEach { (path, readBack) ->
+            assertEquals(listOf("", "Lead line"), readBack.map { it.line }, path)
+            assertEquals(listOf("(Uh uh)", null), readBack.map { it.translation }, path)
+            assertEquals("(Ooh ooh)", readBack.first().background!!.text, path)
+            assertEquals(listOf(2, 1), readBack.map { it.voice }, path)
+        }
     }
 
     @Test
-    fun wordTimedLineAtTheTimeOfABackingOnlyLine_staysASungLine() {
+    fun untimedLineAtTheTimeOfABackingOnlyLine_isSungRatherThanTakenAsItsTranslation() {
+        val lines = parseSynced(
+            """
+            [00:10.00]v2:
+            [bg:<00:10.00>(Ooh <00:10.50>ooh)<00:11.20>]
+            [00:10.00]Sung line
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "Sung line"), lines.map { it.line })
+        assertTrue(lines.all { it.translation == null })
+        readBackFromEverySavePath(lines).forEach { (path, readBack) ->
+            assertEquals(listOf("", "Sung line"), readBack.map { it.line }, path)
+            assertTrue(readBack.all { it.translation == null }, path)
+        }
+    }
+
+    @Test
+    fun wordTimedLineAtTheTimeOfABackingOnlyLine_staysASungLineThroughEverySavePath() {
         val lines = parseSynced(
             """
             [00:10.00]
@@ -216,6 +248,79 @@ class EnhancedLrcParsingTest {
 
         assertEquals(listOf("", "Sung line"), lines.map { it.line })
         assertTrue(lines.all { it.translation == null })
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
+        readBackFromEverySavePath(lines).forEach { (path, readBack) ->
+            // Save as .lrc drops the word tags; the line must still be sung, not a translation.
+            assertEquals(listOf("", "Sung line"), readBack.map { it.line }, path)
+            assertTrue(readBack.all { it.translation == null }, path)
+            assertEquals("(ooh)", readBack.first().background!!.text, path)
+            assertNull(readBack[1].background, path)
+        }
+    }
+
+    @Test
+    fun backingOnlyLineWithATranslation_andASungLineAtTheSameTime_keepBothThroughEverySavePath() {
+        val lines = parseSynced(
+            """
+            [00:10.00]
+            [bg:<00:10.00>(ooh)]
+            [tr:(uh)]
+            [00:10.00]<00:10.00>Sung <00:10.50>line
+            [00:10.00]Línea cantada
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "Sung line"), lines.map { it.line })
+        assertEquals(listOf("(uh)", "Línea cantada"), lines.map { it.translation })
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
+        readBackFromEverySavePath(lines).forEach { (path, readBack) ->
+            assertEquals(listOf("", "Sung line"), readBack.map { it.line }, path)
+            assertEquals(listOf("(uh)", "Línea cantada"), readBack.map { it.translation }, path)
+            assertEquals("(ooh)", readBack.first().background!!.text, path)
+        }
+    }
+
+    @Test
+    fun multilineTranslationOfABackingOnlyLine_isWrittenAsOneTrLinePerRow() {
+        val lines = listOf(
+            SyncedLine(
+                time = 10_000,
+                line = "",
+                translation = "(uh)\nby: translator",
+                background = BackgroundVocals(text = "(ooh)")
+            ),
+            SyncedLine(time = 10_000, line = "Sung line")
+        )
+
+        val lrc = LyricsUtils.syncedToLrcString(lines)
+
+        assertEquals("[00:10.00]\n[bg:(ooh)]\n[tr:(uh)]\n[tr:by: translator]\n[00:10.00]Sung line", lrc)
+        assertEquals(lines, parseSynced(lrc))
+    }
+
+    @Test
+    fun trLineBeforeAnySyncedLine_isSkippedLikeAHeaderTag() {
+        val line = parseSynced("[tr:Someone]\n[00:01.00]Hi").single()
+
+        assertEquals("Hi", line.line)
+        assertNull(line.translation)
+    }
+
+    @Test
+    fun openingBackgroundLineWithATranslation_isNotMovedUnderTheLineAtItsTime() {
+        val lines = parseSynced(
+            """
+            [bg:<00:03.00>(oh)]
+            [tr:(uh)]
+            [00:03.00]First line
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("", "First line"), lines.map { it.line })
+        assertEquals(listOf("(uh)", null), lines.map { it.translation })
+        assertEquals("(oh)", lines.first().background!!.text)
+        assertNull(lines[1].background)
+        assertEquals(lines, parseSynced(LyricsUtils.toEnhancedLrc(lines)))
     }
 
     @Test

@@ -165,7 +165,43 @@ class TtmlLyricsParserTest {
         assertEquals("(Uh uh)", backingLine.translation)
         assertEquals("(Ooh ooh)", backingLine.background!!.text)
         assertEquals("(Ooh ooh)\n(Uh uh)", lyrics.plain!![1])
+        assertTrue(requireNotNull(TtmlLyricsParser.parseToEnhancedLrc(ttmlText)).lines().contains("[tr:(Uh uh)]"))
         assertEquals(synced, LyricsUtils.parseLyrics(LyricsUtils.toEnhancedLrc(synced)).synced)
+        val untimed = requireNotNull(LyricsUtils.parseLyrics(LyricsUtils.syncedToLrcString(synced)).synced)
+        assertEquals(listOf("Lead line", ""), untimed.map { it.line })
+        assertEquals(listOf(null, "(Uh uh)"), untimed.map { it.translation })
+        assertEquals("(Ooh ooh)", untimed[1].background!!.text)
+    }
+
+    @Test
+    fun paragraphSungAtTheTimeOfABackingOnlyParagraph_staysASungLineThroughEverySavePath() {
+        val lyrics = LyricsUtils.parseLyrics(
+            ttml(
+                body = """
+                    <p begin="10.000" ttm:agent="v1"><span ttm:role="x-bg"><span begin="10.000" end="10.500">(Ooh)</span></span><span ttm:role="x-translation" xml:lang="es">(Uh)</span></p>
+                    <p begin="10.000" ttm:agent="v1"><span begin="10.000" end="10.400">Sung</span> <span begin="10.400" end="11.000">line</span><span ttm:role="x-translation" xml:lang="es">Línea cantada</span></p>
+                    <p begin="12.000" ttm:agent="v1">Line timed only</p>
+                    <p begin="12.000" ttm:agent="v1"><span ttm:role="x-bg">(Aah)</span></p>
+                """.trimIndent()
+            )
+        )
+
+        val synced = requireNotNull(lyrics.synced)
+        assertEquals(listOf("", "Sung line", "Line timed only", ""), synced.map { it.line })
+        assertEquals(listOf("(Uh)", "Línea cantada", null, null), synced.map { it.translation })
+        assertEquals(listOf("(Ooh)", null, null, "(Aah)"), synced.map { it.background?.text })
+        val savedForms = listOf(
+            LyricsUtils.toEnhancedLrc(synced),
+            LyricsUtils.toEnhancedLrc(synced, includeWordTimings = false),
+            LyricsUtils.toLrcString(lyrics)
+        )
+        assertEquals(synced, LyricsUtils.parseLyrics(savedForms.first()).synced)
+        savedForms.forEach { saved ->
+            val readBack = requireNotNull(LyricsUtils.parseLyrics(saved).synced)
+            assertEquals(synced.map { it.line }, readBack.map { it.line }, saved)
+            assertEquals(synced.map { it.translation }, readBack.map { it.translation }, saved)
+            assertEquals(synced.map { it.background?.text }, readBack.map { it.background?.text }, saved)
+        }
     }
 
     @Test

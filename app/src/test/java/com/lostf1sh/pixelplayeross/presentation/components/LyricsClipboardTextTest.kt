@@ -218,6 +218,21 @@ class LyricsClipboardTextTest {
     }
 
     @Test
+    fun fullLyrics_lineSungAtTheTimeOfABackingOnlyLine_isStillCopiedAfterSavingAsLrc() {
+        val parsed = LyricsUtils.parseLyrics(
+            """
+            [00:10.00]
+            [bg:<00:10.00>(ooh)]
+            [00:10.00]<00:10.00>Sung <00:10.50>line
+            """.trimIndent()
+        )
+        val saved = LyricsUtils.parseLyrics(LyricsUtils.toLrcString(parsed))
+
+        assertEquals("(ooh)\nSung line", LyricsClipboardText.fullLyrics(saved, includeBackground = true))
+        assertEquals("Sung line", LyricsClipboardText.fullLyrics(saved, includeBackground = false))
+    }
+
+    @Test
     fun syncedLine_wordTimedLine_matchesTheWordsTheScreenDraws() {
         // Kugou producers can omit spaces between timed Latin tokens. The parser keeps the raw
         // text in `line` but marks the word boundary, and the lyrics screen draws "Hello world".
