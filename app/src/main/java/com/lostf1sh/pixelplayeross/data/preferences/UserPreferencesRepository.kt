@@ -907,7 +907,7 @@ constructor(
     val minTracksPerAlbumFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.MIN_TRACKS_PER_ALBUM] ?: 1
-        }
+        }.distinctUntilChanged()
 
     suspend fun setMinTracksPerAlbum(minTracks: Int) {
         dataStore.edit { preferences ->
