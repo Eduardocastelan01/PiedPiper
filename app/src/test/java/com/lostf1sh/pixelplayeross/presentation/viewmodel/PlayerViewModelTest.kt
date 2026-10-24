@@ -27,6 +27,7 @@ import androidx.media3.common.Player
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,6 +59,7 @@ import com.lostf1sh.pixelplayeross.MainCoroutineExtension
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
+import com.lostf1sh.pixelplayeross.di.DispatcherProvider
 import com.lostf1sh.pixelplayeross.utils.AppShortcutManager
 import com.lostf1sh.pixelplayeross.utils.MediaItemBuilder
 import com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
@@ -102,6 +104,14 @@ class PlayerViewModelTest {
     private lateinit var mockMediaControllerFactory: com.lostf1sh.pixelplayeross.data.media.MediaControllerFactory
 
     private val testDispatcher = StandardTestDispatcher()
+
+    // Keeps the view model's background hops on the test scheduler: work left on a real pool
+    // would resume through Dispatchers.Main after tearDown resets it and fail a later test.
+    private val testDispatchers = object : DispatcherProvider {
+        override val main: CoroutineDispatcher = testDispatcher
+        override val io: CoroutineDispatcher = testDispatcher
+        override val default: CoroutineDispatcher = testDispatcher
+    }
 
     private val _allSongsFlow = MutableStateFlow<ImmutableList<Song>>(persistentListOf())
     private val _searchHistoryFlow = MutableStateFlow<ImmutableList<SearchHistoryItem>>(persistentListOf())
@@ -244,7 +254,8 @@ class PlayerViewModelTest {
             mockMultiSelectionStateHolder,
             mockPlaylistSelectionStateHolder,
             sessionToken,
-            mockMediaControllerFactory
+            mockMediaControllerFactory,
+            testDispatchers
         )
     }
 
@@ -724,8 +735,9 @@ class PlayerViewModelTest {
             advanceUntilIdle()
 
             playerViewModel.showAndPlaySongFromLibrary(song2)
-            // The full library queue is resolved on Dispatchers.Default, outside the test scheduler.
-            val state = playerViewModel.playerUiState.first { it.currentPlaybackQueue.isNotEmpty() }
+            advanceUntilIdle()
+
+            val state = playerViewModel.playerUiState.value
 
             assertEquals("音乐库", state.currentQueueSourceName)
             assertEquals(librarySongs.map { it.id }, state.currentPlaybackQueue.map { it.id })
