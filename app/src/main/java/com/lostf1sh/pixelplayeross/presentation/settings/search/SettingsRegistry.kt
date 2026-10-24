@@ -250,6 +250,40 @@ object SettingsRegistry {
                 keywordsStatic = listOf("lyrics size", "text size", "font size", "bigger lyrics", "accessibility")
             ),
             SettingSpec(
+                id = "lyrics_word_highlight",
+                itemKey = "item_lyrics_word_highlight",
+                titleRes = R.string.lyrics_highlight_style_title,
+                subtitleRes = R.string.lyrics_highlight_style_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("karaoke", "word highlight", "gradient", "sweep", "fade", "word by word")
+            ),
+            SettingSpec(
+                id = "lyrics_duet_layout",
+                itemKey = "item_lyrics_duet_layout",
+                titleRes = R.string.lyrics_duet_layout_title,
+                subtitleRes = R.string.lyrics_duet_layout_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("duet", "singer", "voices", "v1", "v2", "alignment"),
+                getValue = { it.lyricsDuetLayoutEnabled },
+                onToggle = { viewModel, checked -> viewModel.setLyricsDuetLayoutEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "lyrics_background_vocals",
+                itemKey = "item_lyrics_background_vocals",
+                titleRes = R.string.lyrics_background_vocals_title,
+                subtitleRes = R.string.lyrics_background_vocals_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("background vocals", "backing vocals", "bg", "adlib", "harmony"),
+                getValue = { it.showLyricsBackgroundVocals },
+                onToggle = { viewModel, checked -> viewModel.setShowLyricsBackgroundVocals(checked) }
+            ),
+            SettingSpec(
                 id = "lyrics_animated_blur",
                 itemKey = "item_lyrics_animated_blur",
                 titleRes = R.string.presentation_batch_f_exp_lyric_blur_title,
