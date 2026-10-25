@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.lostf1sh.pixelplayeross.presentation.components
 
 import androidx.compose.animation.AnimatedContent
@@ -34,6 +36,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -599,7 +603,7 @@ private fun MixPreviewActionBar(
                         fadeIn(motion.fastEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec())
                     }, label = "mix_save_icon") { stage ->
                         when (stage) {
-                            0 -> CircularProgressIndicator(Modifier.size(18.dp), color = colors.onSecondary, strokeWidth = 2.dp)
+                            0 -> LoadingIndicator(Modifier.size(18.dp), color = colors.onSecondary)
                             1 -> Icon(Icons.Rounded.Check, null, Modifier.size(20.dp))
                             else -> Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null, Modifier.size(20.dp))
                         }

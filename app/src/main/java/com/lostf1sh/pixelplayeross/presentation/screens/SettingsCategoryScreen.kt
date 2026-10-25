@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
@@ -92,7 +94,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -624,7 +626,7 @@ fun SettingsCategoryScreen(
                                         },
                                         trailingIcon = {
                                             if (m3uSyncState.isSyncing) {
-                                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                                LoadingIndicator(modifier = Modifier.size(20.dp))
                                             }
                                         },
                                         modifier = Modifier.settingHighlight(
@@ -2903,7 +2905,7 @@ private fun BackupPasswordPromptDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        LoadingIndicator(modifier = Modifier.size(24.dp))
                     }
                 }
             }

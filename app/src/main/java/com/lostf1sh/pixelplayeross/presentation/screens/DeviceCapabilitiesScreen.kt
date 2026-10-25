@@ -1,3 +1,5 @@
+@file:kotlin.OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.content.Intent
@@ -49,7 +51,7 @@ import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -350,9 +352,8 @@ private fun PerformanceReportCard(
             enabled = !isGenerating
         ) {
             if (isGenerating) {
-                CircularProgressIndicator(
+                LoadingIndicator(
                     modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
