@@ -8,6 +8,7 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Material 3 expressive menu: one rounded group whose items take leading, middle and trailing
@@ -18,7 +19,7 @@ import androidx.compose.ui.Modifier
 fun ExpressiveDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
-    actions: List<DetailHeroMenuAction>,
+    actions: ImmutableList<DetailHeroMenuAction>,
     modifier: Modifier = Modifier,
     vibrant: Boolean = false,
 ) {

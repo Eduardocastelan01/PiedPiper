@@ -119,6 +119,7 @@ import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.R
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.ImmutableList
 
 private const val UseSharedCollapsibleTopBarProbe = true
 
@@ -1382,15 +1383,18 @@ private fun artistImageMenuActions(
     hasCustomImage: Boolean,
     onChangeImage: () -> Unit,
     onClearCustomImage: () -> Unit
-): List<DetailHeroMenuAction> {
+): ImmutableList<DetailHeroMenuAction> {
     val changePhoto = stringResource(R.string.presentation_batch_d_change_photo)
     val resetToDefault = stringResource(R.string.presentation_batch_d_reset_to_default)
     return remember(hasCustomImage, changePhoto, resetToDefault, onChangeImage, onClearCustomImage) {
-        buildList {
-            add(DetailHeroMenuAction(changePhoto, Icons.Rounded.AddAPhoto, onChangeImage))
-            if (hasCustomImage) {
-                add(DetailHeroMenuAction(resetToDefault, Icons.Rounded.Delete, onClearCustomImage))
-            }
+        val changePhotoAction = DetailHeroMenuAction(changePhoto, Icons.Rounded.AddAPhoto, onChangeImage)
+        if (hasCustomImage) {
+            persistentListOf(
+                changePhotoAction,
+                DetailHeroMenuAction(resetToDefault, Icons.Rounded.Delete, onClearCustomImage)
+            )
+        } else {
+            persistentListOf(changePhotoAction)
         }
     }
 }
