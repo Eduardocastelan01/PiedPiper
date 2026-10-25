@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,7 +59,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.MashupViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.presentation.components.rememberModalSheetState
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -209,10 +210,12 @@ private fun DeckUi(
                         Text(deckState.song?.title ?: stringResource(R.string.presentation_batch_d_mashup_no_song_loaded), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(deckState.song?.artist ?: stringResource(R.string.presentation_batch_d_mashup_artist_placeholder), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.height(8.dp))
-                        ValueSlider(
-                            value = deckState.progress,
+                        Slider(
+                            state = rememberSyncedSliderState(
+                                value = deckState.progress,
+                                valueRange = 0f..1f
+                            ),
                             onValueChange = onSeek,
-                            valueRange = 0f..1f,
                             enabled = deckState.song != null,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -278,7 +281,7 @@ private fun SliderControl(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(60.dp), color = if(enabled) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f))
-        ValueSlider(value = value, onValueChange = onValueChange, valueRange = valueRange, steps = steps, modifier = Modifier.weight(1f), enabled = enabled)
+        Slider(state = rememberSyncedSliderState(value = value, steps = steps, valueRange = valueRange), onValueChange = onValueChange, modifier = Modifier.weight(1f), enabled = enabled)
         if (endContent != null) {
             Box(modifier = Modifier.width(40.dp), contentAlignment = Alignment.Center) { endContent() }
         }
@@ -291,7 +294,7 @@ private fun Crossfader(value: Float, onValueChange: (Float) -> Unit, modifier: M
         Text(stringResource(R.string.presentation_batch_d_mashup_crossfader), style = MaterialTheme.typography.titleMedium)
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.presentation_batch_d_mashup_deck_1), style = MaterialTheme.typography.bodyMedium)
-            ValueSlider(value = value, onValueChange = onValueChange, valueRange = -1f..1f, modifier = Modifier
+            Slider(state = rememberSyncedSliderState(value = value, valueRange = -1f..1f), onValueChange = onValueChange, modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 8.dp))
             Text(stringResource(R.string.presentation_batch_d_mashup_deck_2), style = MaterialTheme.typography.bodyMedium)

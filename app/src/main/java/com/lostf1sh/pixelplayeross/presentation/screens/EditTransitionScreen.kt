@@ -50,6 +50,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -82,7 +83,7 @@ import com.lostf1sh.pixelplayeross.data.model.Curve
 import com.lostf1sh.pixelplayeross.data.model.TransitionMode
 import com.lostf1sh.pixelplayeross.data.model.TransitionSettings
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.TransitionViewModel
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import java.util.concurrent.TimeUnit
 import androidx.compose.ui.res.stringResource
@@ -465,11 +466,13 @@ private fun TransitionDurationSection(
 
         CrossfadeVisualizer(durationMs = settings.durationMs)
 
-        ValueSlider(
-            value = settings.durationMs.toFloat(),
+        Slider(
+            state = rememberSyncedSliderState(
+                value = settings.durationMs.toFloat(),
+                steps = 11,
+                valueRange = 0f..12000f
+            ),
             onValueChange = { onDurationChange(it.toInt()) },
-            valueRange = 0f..12000f,
-            steps = 11,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
