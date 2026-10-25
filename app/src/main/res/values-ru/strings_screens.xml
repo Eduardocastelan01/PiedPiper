@@ -8,6 +8,7 @@
     <string name="licenses_tab_all">Все</string>
     <string name="licenses_tab_libraries">Библиотеки</string>
     <string name="licenses_tab_fonts">Шрифты</string>
+    <string name="licenses_tab_contributors">Участники</string>
     <string name="licenses_tab_data">Данные</string>
     <string name="licenses_tab_raw_notice">Текст уведомления</string>
     <string name="licenses_search_placeholder">Поиск библиотек или лицензий…</string>

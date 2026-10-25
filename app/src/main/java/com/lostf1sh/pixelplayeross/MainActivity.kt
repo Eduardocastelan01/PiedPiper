@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import com.lostf1sh.pixelplayeross.utils.traceSection
@@ -144,6 +145,7 @@ import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import com.lostf1sh.pixelplayeross.utils.AppLocaleManager
 import com.lostf1sh.pixelplayeross.utils.CrashHandler
 import com.lostf1sh.pixelplayeross.utils.LogUtils
+import com.lostf1sh.pixelplayeross.utils.PhoneOrientationPolicy
 import com.lostf1sh.pixelplayeross.utils.shouldKeepScreenAwake
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.ImmutableList
@@ -707,6 +709,7 @@ class MainActivity : ComponentActivity() {
                 Screen.DJSpace.route,
                 Screen.NavBarCrRad.route,
                 Screen.About.route,
+                Screen.Licenses.route,
                 Screen.Stats.route,
                 Screen.Recap.route,
                 Screen.EditTransition.route,
@@ -1197,6 +1200,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+    }
+
+    // configChanges keeps this activity alive across fold/unfold, so re-check the phone lock here.
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        PhoneOrientationPolicy.apply(this)
     }
 
 

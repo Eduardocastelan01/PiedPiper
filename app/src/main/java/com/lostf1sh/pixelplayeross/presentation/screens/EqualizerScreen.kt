@@ -52,7 +52,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TabRow
@@ -141,6 +140,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.CustomPresetsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.ReorderPresetsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.SavePresetDialog
 import com.lostf1sh.pixelplayeross.presentation.components.RenamePresetDialog
+import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository.EqualizerViewMode
 import androidx.compose.material.icons.rounded.ViewQuilt
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1438,7 +1438,7 @@ private fun IndividualEffectRow(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        Slider(
+        ValueSlider(
             value = strength.toFloat(),
             onValueChange = { onStrengthChange(it.roundToInt()) },
             valueRange = 0f..maxStrength.toFloat(),
@@ -1494,7 +1494,7 @@ private fun VolumeControlCard(
                 )
                 
                 Column(modifier = Modifier.weight(1f)) {
-                    Slider(
+                    ValueSlider(
                         value = volume,
                         onValueChange = { newValue ->
                             val currentPercent = (newValue * 100).roundToInt()
@@ -1705,7 +1705,7 @@ private fun HybridHorizontalSlider(
         }
 
         Box(modifier = Modifier.weight(1f)) {
-            androidx.compose.material3.Slider(
+            ValueSlider(
                 value = level.toFloat(),
                 onValueChange = { 
                     val intVal = it.roundToInt()

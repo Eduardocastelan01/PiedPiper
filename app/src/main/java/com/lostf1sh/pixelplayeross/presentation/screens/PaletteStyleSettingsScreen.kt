@@ -37,7 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,6 +64,7 @@ import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtColorAccuracy
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtPaletteStyle
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
@@ -674,11 +674,11 @@ private fun PaletteAccuracySlider(
             }
         }
 
-        Slider(
+        ValueSlider(
             value = clampedValue.toFloat(),
             onValueChange = {
                 val nextValue = AlbumArtColorAccuracy.clamp(it.roundToInt())
-                if (nextValue == lastDispatchedValue) return@Slider
+                if (nextValue == lastDispatchedValue) return@ValueSlider
 
                 if (hapticsEnabled) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)

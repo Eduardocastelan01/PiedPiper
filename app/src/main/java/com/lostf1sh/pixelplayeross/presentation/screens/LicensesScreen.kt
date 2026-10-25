@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.content.ClipData
@@ -54,8 +56,10 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Dataset
 import androidx.compose.material.icons.rounded.FontDownload
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -109,7 +113,6 @@ import timber.log.Timber
 import kotlin.math.roundToInt
 
 private const val NoticesAssetPath = "licenses/THIRD_PARTY_NOTICES.md"
-private const val OflAssetPath = "licenses/OFL.txt"
 
 private enum class LicenseTab(
     @StringRes val titleRes: Int,
@@ -119,6 +122,7 @@ private enum class LicenseTab(
     ALL(R.string.licenses_tab_all, Icons.Rounded.Category, null),
     LIBRARIES(R.string.licenses_tab_libraries, Icons.Rounded.Code, LicenseCategory.LIBRARIES),
     FONTS(R.string.licenses_tab_fonts, Icons.Rounded.FontDownload, LicenseCategory.FONTS),
+    CONTRIBUTORS(R.string.licenses_tab_contributors, Icons.Rounded.Groups, LicenseCategory.CONTRIBUTORS),
     DATA(R.string.licenses_tab_data, Icons.Rounded.Dataset, LicenseCategory.DATA),
     RAW_NOTICE(R.string.licenses_tab_raw_notice, Icons.AutoMirrored.Rounded.Article, null),
 }
@@ -127,10 +131,12 @@ private enum class LicenseTab(
 private data class LicensesContent(
     val notices: List<LicenseNotice>,
     val rawParagraphs: List<String>,
-    val oflText: String,
+    /** Full license texts keyed by [licenseTextAssetPath]. */
+    val licenseTexts: Map<String, String>,
 )
 
 private fun LicenseCategory.icon(): ImageVector = when (this) {
+    LicenseCategory.CONTRIBUTORS -> Icons.Rounded.Groups
     LicenseCategory.LIBRARIES -> Icons.Rounded.Code
     LicenseCategory.FONTS -> Icons.Rounded.FontDownload
     LicenseCategory.DATA -> Icons.Rounded.Dataset
@@ -155,14 +161,17 @@ fun LicensesScreen(
 
     LaunchedEffect(Unit) {
         content = withContext(Dispatchers.IO) {
-            val notices = context.readAssetText(NoticesAssetPath)
-            val ofl = context.readAssetText(OflAssetPath)
+            val noticesMarkdown = context.readAssetText(NoticesAssetPath)
+            val notices = parseThirdPartyNotices(noticesMarkdown)
+            val contributorsNotice = context.readAssetText(ContributorsNoticeAssetPath)
             LicensesContent(
-                notices = parseThirdPartyNotices(notices),
-                rawParagraphs = (notices.split("\n\n") + ofl.split("\n\n"))
+                notices = notices,
+                rawParagraphs = (contributorsNotice.split("\n\n") + noticesMarkdown.split("\n\n"))
                     .map { it.trimEnd() }
                     .filter { it.isNotBlank() },
-                oflText = ofl,
+                licenseTexts = notices
+                    .mapNotNullTo(mutableSetOf()) { it.licenseTextAssetPath() }
+                    .associateWith { path -> reflowLicenseText(context.readAssetText(path)) },
             )
         }
     }
@@ -289,7 +298,7 @@ fun LicensesScreen(
                     .padding(top = currentTopBarHeightDp),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                ContainedLoadingIndicator()
             }
         } else {
             LazyColumn(
@@ -497,7 +506,9 @@ fun LicensesScreen(
     activeDetailItem?.let { item ->
         LicenseDetailDialog(
             item = item,
-            oflText = content?.oflText.orEmpty(),
+            licenseText = item.licenseTextAssetPath()
+                ?.let { content?.licenseTexts?.get(it) }
+                .orEmpty(),
             onDismiss = { activeDetailItem = null },
         )
     }
@@ -612,7 +623,7 @@ private fun LicenseBadge(licenseName: String) {
 @Composable
 private fun LicenseDetailDialog(
     item: LicenseNotice,
-    oflText: String,
+    licenseText: String,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -620,15 +631,15 @@ private fun LicenseDetailDialog(
     val sourceLabel = stringResource(R.string.licenses_detail_source)
     val licenseLabel = stringResource(R.string.licenses_detail_license)
     val copiedMessage = stringResource(R.string.licenses_toast_copied)
-    val noticeText = remember(item, oflText, sectionLabel, sourceLabel, licenseLabel) {
+    val noticeText = remember(item, licenseText, sectionLabel, sourceLabel, licenseLabel) {
         buildString {
             appendLine(item.name)
             if (item.section.isNotBlank()) appendLine("$sectionLabel: ${item.section}")
             if (item.source.isNotBlank()) appendLine("$sourceLabel: ${item.source}")
             append("$licenseLabel: ${item.licenseName}")
-            if (item.usesOpenFontLicense() && oflText.isNotBlank()) {
+            if (licenseText.isNotBlank()) {
                 append("\n\n")
-                append(oflText.trim())
+                append(licenseText.trim())
             }
         }
     }

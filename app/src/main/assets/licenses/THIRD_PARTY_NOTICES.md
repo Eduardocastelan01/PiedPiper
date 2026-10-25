@@ -2,47 +2,64 @@
 
 PixelPlayerOSS is licensed under the GNU General Public License v3.0 (GPL-3.0) and includes third-party open-source components.
 
-Bundled fonts:
+Portions of this software were originally contributed to the public PixelPlayer repository under the MIT License. Those contributions remain licensed under the MIT License, and their notice is preserved as required.
 
-| Asset | Source | License |
+The full text of every license listed here is bundled in `licenses/texts/`.
+
+## PixelPlayer contributors
+
+| Component | Copyright | License |
 | --- | --- | --- |
-| Google Sans Flex (`gflex_variable.ttf`) | `https://fonts.google.com/specimen/Google+Sans+Flex/license?preview.script=Latn` | SIL Open Font License 1.1 |
-| Roboto Flex (`genre_variable.ttf`) | `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 |
+| PixelPlayer Contributors | Theo Vilardo & open-source contributors | MIT License |
+| PixelPlayerOSS | Theo Vilardo · maintained by lostf1sh | GPL-3.0 |
 
-Bundled data assets:
+## Libraries
+
+| Component | Copyright | License |
+| --- | --- | --- |
+| AndroidX / Jetpack (Compose, Material 3, Media3, Room, Paging, Navigation, Lifecycle, WorkManager, Glance, Security, Graphics Shapes) | The Android Open Source Project | Apache 2.0 |
+| Material Components for Android | Google | Apache 2.0 |
+| Kotlin standard library and kotlinx (coroutines, serialization, collections-immutable) | JetBrains s.r.o. and Kotlin contributors | Apache 2.0 |
+| Dagger / Hilt | The Dagger Authors (Google) | Apache 2.0 |
+| Accompanist (permissions, drawable-painter) | Google | Apache 2.0 |
+| Coil | Coil Contributors | Apache 2.0 |
+| Gson | Google | Apache 2.0 |
+| Retrofit | Square, Inc. | Apache 2.0 |
+| OkHttp | Square, Inc. | Apache 2.0 |
+| Timber | Jake Wharton | Apache 2.0 |
+| Ktor | JetBrains s.r.o. | Apache 2.0 |
+| Netty | The Netty Project | Apache 2.0 |
+| SnakeYAML | Andrey Somov and SnakeYAML contributors | Apache 2.0 |
+| Apache Commons Lang | The Apache Software Foundation | Apache 2.0 |
+| Apache HttpComponents HttpClient | The Apache Software Foundation | Apache 2.0 |
+| jose4j | Brian Campbell | Apache 2.0 |
+| Kuromoji | Atilika Inc. | Apache 2.0 |
+| TagLib Android bindings (`libtaglib.so`) | Kyant0 · `https://github.com/Kyant0/taglib` | Apache 2.0 |
+| Vorbis Java | Nick Burch (Gagravarr) | Apache 2.0 |
+| JSyn (via Media3 MIDI) | Phil Burk · `https://github.com/philburk/jsyn` | Apache 2.0 |
+| Wavy Slider | Mahdi Hosseinzadeh (Mahozad) | Apache 2.0 |
+| Compose Reorderable | Calvin Liang | Apache 2.0 |
+| Capturable | Shreyas Patil | MIT License |
+| Smooth Corner Rect Android Compose | racra · `https://github.com/racra/smooth-corner-rect-android-compose` | MIT License |
+| Bouncy Castle (bcprov, bcpkix) | The Legion of the Bouncy Castle Inc. | MIT License |
+| TagLib (native audio metadata library) | TagLib authors · `https://taglib.org` | LGPL-2.1 |
+| JAudioTagger | Paul Taylor and JAudioTagger contributors | LGPL-2.1 |
+| Jellyfin FFmpeg decoder (`libffmpegJNI.so`) | Jellyfin · `https://github.com/jellyfin/jellyfin-androidx-media` | GPL-3.0 |
+| pinyin4j | Li Min and pinyin4j contributors | BSD 3-Clause |
+| JDOM 2 | Jason Hunter & Brett McLaughlin | JDOM License |
+
+## Bundled fonts
+
+| Asset | Copyright | License |
+| --- | --- | --- |
+| Google Sans Flex (`gflex_variable.ttf`) | Google LLC · `https://fonts.google.com/specimen/Google+Sans+Flex` | SIL Open Font License 1.1 |
+| Roboto Flex (`genre_variable.ttf`) | The Roboto Flex Project Authors · `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 |
+
+## Bundled data assets
 
 | Asset | Source | License |
 | --- | --- | --- |
 | Artist genres (`nlp/artist-genres.txt`) | Artist-to-genre labels derived from Wikidata, `https://www.wikidata.org` | CC0 1.0 |
 | Smart Mix concepts (`nlp/concepts.txt`) | Word-to-genre-family/mood concept table generated offline | GPL-3.0 |
-
-Native runtime artifacts:
-
-| Artifact | Native library | License/source evidence |
-| --- | --- | --- |
-| `org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1` | `libffmpegJNI.so` | GPL-3.0, `https://github.com/jellyfin/jellyfin-androidx-media` |
-| `io.github.kyant0:taglib:1.0.6` | `libtaglib.so` | Apache-2.0, `https://github.com/Kyant0/taglib` |
-| `androidx.graphics:graphics-shapes:1.1.0` | `libandroidx.graphics.path.so` | Apache-2.0, AOSP/AndroidX source |
-
-JitPack artifacts:
-
-| Artifact | Source | License |
-| --- | --- | --- |
-| `com.github.racra:smooth-corner-rect-android-compose:v1.0.0` | `https://github.com/racra/smooth-corner-rect-android-compose` | MIT |
-| `com.github.philburk:jsyn` | `https://github.com/philburk/jsyn` | Apache-2.0 |
-
-Main library license families:
-
-| Family | Examples | License |
-| --- | --- | --- |
-| AndroidX and Jetpack Compose | Activity, AppCompat, Benchmark, Compose, Glance, Hilt extensions, Lifecycle, Media3, Navigation, Paging, Room, Security, WorkManager | Apache-2.0 |
-| Google libraries | Material Components, Gson, Guava transitive pieces | Apache-2.0 |
-| JetBrains/Kotlin libraries | Kotlin stdlib, coroutines, serialization, immutable collections | Apache-2.0 |
-| Square libraries | OkHttp, Retrofit | Apache-2.0 |
-| Ktor/Netty | Ktor server CIO/core, Netty transitive libraries | Apache-2.0 |
-| Audio/metadata libraries | JAudioTagger, Vorbis Java | LGPL/MPL/BSD-family |
-| UI utilities | Accompanist, Coil, Capturable, CodeView, Reorderable, Wavy Slider | Apache-2.0/MIT |
-| Text/search utilities | Kuromoji, pinyin4j | Apache-2.0/BSD-style |
-| Security/compatibility transitive constraints | Bouncy Castle, Commons Lang, HttpClient, JDOM2, jose4j | MIT/Apache-2.0/Bouncy Castle/JDOM-style |
 
 See `THIRD_PARTY_NOTICES.md` in the source repository for the fuller dependency review notes.

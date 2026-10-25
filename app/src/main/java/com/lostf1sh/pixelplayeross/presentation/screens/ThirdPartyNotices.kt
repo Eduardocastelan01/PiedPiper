@@ -2,7 +2,7 @@ package com.lostf1sh.pixelplayeross.presentation.screens
 
 import androidx.compose.runtime.Immutable
 
-enum class LicenseCategory { LIBRARIES, FONTS, DATA }
+enum class LicenseCategory { CONTRIBUTORS, LIBRARIES, FONTS, DATA }
 
 @Immutable
 data class LicenseNotice(
@@ -13,6 +13,8 @@ data class LicenseNotice(
     val section: String,
     val category: LicenseCategory,
 )
+
+internal const val ContributorsNoticeAssetPath = "licenses/PIXELPLAYER_CONTRIBUTORS.txt"
 
 private val TableSeparatorCell = Regex("^:?-{3,}:?$")
 
@@ -71,6 +73,7 @@ internal fun parseThirdPartyNotices(markdown: String): List<LicenseNotice> {
 private fun categoryForSection(section: String): LicenseCategory {
     val normalized = section.lowercase()
     return when {
+        "contributor" in normalized -> LicenseCategory.CONTRIBUTORS
         "font" in normalized -> LicenseCategory.FONTS
         "data" in normalized -> LicenseCategory.DATA
         else -> LicenseCategory.LIBRARIES
@@ -88,3 +91,38 @@ internal fun LicenseNotice.matchesQuery(query: String): Boolean {
 internal fun LicenseNotice.usesOpenFontLicense(): Boolean =
     licenseName.contains("Open Font License", ignoreCase = true) ||
         licenseName.contains("OFL", ignoreCase = true)
+
+/**
+ * Bundled asset holding the full license text shown for this notice, or null when none applies.
+ * The PixelPlayer contributors' MIT notice carries its own copyright line and contributor list.
+ */
+internal fun LicenseNotice.licenseTextAssetPath(): String? {
+    val license = licenseName.lowercase()
+    if (category == LicenseCategory.CONTRIBUTORS && "mit" in license) return ContributorsNoticeAssetPath
+    val fileName = when {
+        "lgpl" in license -> "LGPL-2.1.txt"
+        "gpl" in license -> "GPL-3.0.txt"
+        "apache" in license -> "Apache-2.0.txt"
+        "mit" in license -> "MIT.txt"
+        "bsd" in license -> "BSD-3-Clause.txt"
+        "cc0" in license -> "CC0-1.0.txt"
+        "jdom" in license -> "JDOM.txt"
+        usesOpenFontLicense() -> "OFL-1.1.txt"
+        else -> null
+    }
+    return fileName?.let { "licenses/texts/$it" }
+}
+
+private val BlankLines = Regex("\\n\\s*\\n")
+private val LineBreakWithIndent = Regex("\\s*\\n\\s*")
+
+/**
+ * Joins the hard-wrapped lines of each paragraph so license texts wrap to the screen width
+ * instead of breaking mid-sentence on narrow displays. Paragraph breaks are kept.
+ */
+internal fun reflowLicenseText(text: String): String =
+    text.trim()
+        .split(BlankLines)
+        .map { paragraph -> paragraph.trim().replace(LineBreakWithIndent, " ") }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n\n")

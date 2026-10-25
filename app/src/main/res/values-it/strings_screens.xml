@@ -8,6 +8,7 @@
     <string name="licenses_tab_all">Tutti</string>
     <string name="licenses_tab_libraries">Librerie</string>
     <string name="licenses_tab_fonts">Font</string>
+    <string name="licenses_tab_contributors">Collaboratori</string>
     <string name="licenses_tab_data">Dati</string>
     <string name="licenses_tab_raw_notice">Testo originale</string>
     <string name="licenses_search_placeholder">Cerca librerie o licenze…</string>

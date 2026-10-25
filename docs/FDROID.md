@@ -82,8 +82,8 @@ The dependency license review table is tracked in `docs/DEPENDENCY_LICENSES.md`.
 
 | Asset | Source | License evidence |
 | --- | --- | --- |
-| `app/src/main/res/font/gflex_variable.ttf` | Google Sans Flex, `https://fonts.google.com/specimen/Google+Sans+Flex/license?preview.script=Latn` | Google Fonts license page declares SIL Open Font License 1.1; OFL text is included at `app/src/main/assets/licenses/OFL.txt`. |
-| `app/src/main/res/font/genre_variable.ttf` | Roboto Flex, `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 text is included at `app/src/main/assets/licenses/OFL.txt`. |
+| `app/src/main/res/font/gflex_variable.ttf` | Google Sans Flex, `https://fonts.google.com/specimen/Google+Sans+Flex/license?preview.script=Latn` | Google Fonts license page declares SIL Open Font License 1.1; OFL text is included at `app/src/main/assets/licenses/texts/OFL-1.1.txt`. |
+| `app/src/main/res/font/genre_variable.ttf` | Roboto Flex, `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 text is included at `app/src/main/assets/licenses/texts/OFL-1.1.txt`. |
 
 ## Native And Binary Maven Artifacts
 

@@ -21,7 +21,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -173,7 +172,7 @@ fun PlaybackSpeedControls(
                     contentDescription = stringResource(R.string.playback_speed_decrease)
                 )
             }
-            Slider(
+            ValueSlider(
                 value = draft,
                 onValueChange = { dragValue = PlaybackSpeedUtils.snapToFineStep(it) },
                 onValueChangeFinished = {

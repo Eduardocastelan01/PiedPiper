@@ -9,7 +9,7 @@ PixelPlayerOSS is licensed under the GNU General Public License v3.0 (GPL-3.0). 
 | `app/src/main/res/font/gflex_variable.ttf` | Google Sans Flex, `https://fonts.google.com/specimen/Google+Sans+Flex/license?preview.script=Latn` | SIL Open Font License 1.1 |
 | `app/src/main/res/font/genre_variable.ttf` | Roboto Flex, `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 |
 
-The OFL text is included in `app/src/main/assets/licenses/OFL.txt`.
+The OFL text is included in `app/src/main/assets/licenses/texts/OFL-1.1.txt`, next to the full text of every other license the app shows under Licenses & attribution.
 
 ## Bundled Smart Mix Data Assets
 

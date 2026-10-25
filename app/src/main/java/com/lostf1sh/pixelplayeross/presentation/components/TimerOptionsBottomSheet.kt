@@ -26,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -174,7 +173,7 @@ fun TimerOptionsBottomSheet(
                             )
                         )
                 ) {
-                    Slider(
+                    ValueSlider(
                         value = timerSliderPosition,
                         onValueChange = { newValue ->
                             timerSliderPosition = newValue
@@ -264,7 +263,7 @@ fun TimerOptionsBottomSheet(
                             shape = RoundedCornerShape(18.dp)
                         )
                 ) {
-                    Slider(
+                    ValueSlider(
                         value = counterSliderPosition,
                         onValueChange = { newValue ->
                             counterSliderPosition = newValue

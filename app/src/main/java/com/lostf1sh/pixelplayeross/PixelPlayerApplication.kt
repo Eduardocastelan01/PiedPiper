@@ -25,6 +25,7 @@ import com.lostf1sh.pixelplayeross.utils.FolderArtworkSettingsCoordinator
 import com.lostf1sh.pixelplayeross.utils.AppLocaleManager
 import com.lostf1sh.pixelplayeross.utils.CrashHandler
 import com.lostf1sh.pixelplayeross.utils.MediaMetadataRetrieverPool
+import com.lostf1sh.pixelplayeross.utils.PhoneOrientationPolicy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -137,6 +138,8 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
         }
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+
+        registerActivityLifecycleCallbacks(PhoneOrientationPolicy)
 
         syncManager.get().start()
 

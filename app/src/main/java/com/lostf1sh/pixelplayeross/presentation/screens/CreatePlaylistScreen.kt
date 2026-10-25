@@ -124,8 +124,8 @@ import com.lostf1sh.pixelplayeross.presentation.components.ImageCropView
 import com.lostf1sh.pixelplayeross.data.model.PlaylistShapeType
 import com.lostf1sh.pixelplayeross.data.model.SmartPlaylistRule
 import com.lostf1sh.pixelplayeross.presentation.components.SongPickerSelectionPane
+import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
-import androidx.compose.material3.Slider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import com.lostf1sh.pixelplayeross.utils.shapes.RoundedStarShape
@@ -1629,7 +1629,7 @@ fun ThickSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int = 0
 ) {
-    Slider(
+    ValueSlider(
         value = value,
         onValueChange = onValueChange,
         valueRange = valueRange,

@@ -8,6 +8,7 @@
     <string name="licenses_tab_all">الكل</string>
     <string name="licenses_tab_libraries">المكتبات</string>
     <string name="licenses_tab_fonts">الخطوط</string>
+    <string name="licenses_tab_contributors">المساهمون</string>
     <string name="licenses_tab_data">البيانات</string>
     <string name="licenses_tab_raw_notice">الإشعار الأصلي</string>
     <string name="licenses_search_placeholder">البحث في المكتبات أو التراخيص…</string>
