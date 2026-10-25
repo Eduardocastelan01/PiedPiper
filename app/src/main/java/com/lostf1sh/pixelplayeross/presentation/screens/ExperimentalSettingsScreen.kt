@@ -45,7 +45,6 @@ import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,6 +71,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
+import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -464,7 +464,7 @@ fun ExperimentalSettingsScreen(
                                                         }
                                                     }
 
-                                                    Slider(
+                                                    ValueSlider(
                                                         value = appearThresholdPercent.toFloat(),
                                                         onValueChange = { settingsViewModel.setFullPlayerAppearThreshold(it.roundToInt()) },
                                                         valueRange = 0f..100f,
@@ -539,7 +539,7 @@ fun ExperimentalSettingsScreen(
                                                             }
                                                         }
 
-                                                        Slider(
+                                                        ValueSlider(
                                                             value = closeThresholdPercent.toFloat(),
                                                             onValueChange = { settingsViewModel.setFullPlayerCloseThreshold(it.roundToInt()) },
                                                             valueRange = 0f..100f,
