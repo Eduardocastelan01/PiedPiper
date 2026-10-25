@@ -19,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.lerp
@@ -33,7 +35,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
  * [carouselStyle] picks the page width: [CarouselStyle.NO_PEEK] fills the carousel,
  * [CarouselStyle.ONE_PEEK] leaves the next page peeking at the end, and [CarouselStyle.TWO_PEEK]
  * centres a smaller page between both neighbours. Each page is as tall as it is wide when the
- * caller sizes the carousel height to match.
+ * caller sizes the carousel height to match. In RTL the pages run right to left and the mask follows.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,24 +49,18 @@ fun ParallaxAlbumPager(
     itemKey: ((page: Int) -> Any)? = null,
     content: @Composable (page: Int) -> Unit,
 ) {
-    val pageWidth = when (carouselStyle) {
-        CarouselStyle.NO_PEEK -> carouselWidth
-        CarouselStyle.TWO_PEEK -> carouselWidth * 0.6f
-        else -> carouselWidth * 0.8f
+    val layout = parallaxPageLayout(carouselStyle, carouselWidth)
+    val layoutDirection = LocalLayoutDirection.current
+    val parallaxState = remember(state, layoutDirection) {
+        PagerParallaxScrollEffectState(state, isRtl = layoutDirection == LayoutDirection.Rtl)
     }
-    val contentPadding = if (carouselStyle == CarouselStyle.TWO_PEEK) {
-        PaddingValues(horizontal = (carouselWidth - pageWidth) / 2)
-    } else {
-        PaddingValues(0.dp)
-    }
-    val parallaxState = remember(state) { PagerParallaxScrollEffectState(state) }
     val shape = remember(itemCornerRadius) { RoundedCornerShape(itemCornerRadius) }
 
     HorizontalPager(
         state = state,
         modifier = modifier.semantics { role = Role.Carousel },
-        contentPadding = contentPadding,
-        pageSize = if (carouselStyle == CarouselStyle.NO_PEEK) PageSize.Fill else PageSize.Fixed(pageWidth),
+        contentPadding = PaddingValues(horizontal = layout.sidePadding),
+        pageSize = layout.pageWidth?.let { PageSize.Fixed(it) } ?: PageSize.Fill,
         pageSpacing = itemSpacing,
         beyondViewportPageCount = 1,
         flingBehavior = PagerDefaults.flingBehavior(
@@ -83,16 +79,32 @@ fun ParallaxAlbumPager(
     }
 }
 
+/** Page width and the padding on each side; a null [pageWidth] means pages fill the carousel. */
+internal data class ParallaxPageLayout(val pageWidth: Dp?, val sidePadding: Dp)
+
 /**
- * Feeds [carouselParallaxScrollEffect] from a [PagerState], which Material 3 has no state for. The
- * parallax distance follows Material's lazy-list state. The mask differs: Material leaves its
- * rounded edge just past the viewport, which suits an edge-to-edge row, but the player's carousel
- * is inset, so the mask edge tracks the visible edge and pages keep their rounded corners as they
- * slide out.
+ * [CarouselStyle.NO_PEEK] pages fill the carousel, [CarouselStyle.ONE_PEEK] pages take 80% and
+ * leave the next one peeking at the end, and [CarouselStyle.TWO_PEEK] centres a 60% page between
+ * both neighbours.
+ */
+internal fun parallaxPageLayout(carouselStyle: String, carouselWidth: Dp): ParallaxPageLayout =
+    when (carouselStyle) {
+        CarouselStyle.NO_PEEK -> ParallaxPageLayout(pageWidth = null, sidePadding = 0.dp)
+        CarouselStyle.TWO_PEEK -> ParallaxPageLayout(
+            pageWidth = carouselWidth * 0.6f,
+            sidePadding = carouselWidth * 0.2f
+        )
+        else -> ParallaxPageLayout(pageWidth = carouselWidth * 0.8f, sidePadding = 0.dp)
+    }
+
+/**
+ * Feeds [carouselParallaxScrollEffect] from a [PagerState], which Material 3 has no state for.
+ * See [parallaxItemInfo] for how it differs from Material's lazy-list state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 private class PagerParallaxScrollEffectState(
     private val pagerState: PagerState,
+    private val isRtl: Boolean,
 ) : CarouselParallaxScrollEffectState {
 
     override val orientation: Orientation
@@ -101,51 +113,88 @@ private class PagerParallaxScrollEffectState(
     override fun calculateItemInfo(index: Int): CarouselParallaxScrollEffectItemInfo {
         val layoutInfo = pagerState.layoutInfo
         val page = layoutInfo.visiblePagesInfo.fastFirstOrNull { it.index == index }
-        val pageSize = layoutInfo.pageSize.toFloat()
-        if (page == null || pageSize == 0f) return UnmaskedItemInfo
-
-        val crossAxisSize = layoutInfo.viewportSize.height.toFloat()
-        val intensity = maskIntensity(pageSize, crossAxisSize)
-        val parallaxDistance = pageSize * intensity
-        val offset = page.offset.toFloat()
-        val viewportStart = layoutInfo.viewportStartOffset.toFloat()
-        val viewportEnd = layoutInfo.viewportEndOffset.toFloat()
-
-        return when {
-            // Leaving or entering past the start edge.
-            offset < viewportStart -> {
-                val hidden = (viewportStart - offset).coerceIn(0f, pageSize)
-                val progress = hidden / pageSize
-                CarouselParallaxScrollEffectItemInfo(
-                    maskStart = hidden,
-                    maskEnd = pageSize,
-                    parallax = lerp(0f, parallaxDistance, progress),
-                    maskProgress = progress,
-                )
-            }
-            // Leaving or entering past the end edge.
-            offset > viewportEnd - pageSize -> {
-                val hidden = (offset + pageSize - viewportEnd).coerceIn(0f, pageSize)
-                val progress = hidden / pageSize
-                CarouselParallaxScrollEffectItemInfo(
-                    maskStart = 0f,
-                    maskEnd = pageSize - hidden,
-                    parallax = -lerp(0f, parallaxDistance, progress),
-                    maskProgress = progress,
-                )
-            }
-            else -> CarouselParallaxScrollEffectItemInfo(
-                maskStart = 0f,
-                maskEnd = pageSize,
-                parallax = 0f,
-                maskProgress = 0f,
-            )
-        }
+            ?: return UnmaskedItemInfo
+        return parallaxItemInfo(
+            pageOffset = page.offset.toFloat(),
+            pageSize = layoutInfo.pageSize.toFloat(),
+            crossAxisSize = layoutInfo.viewportSize.height.toFloat(),
+            viewportStart = layoutInfo.viewportStartOffset.toFloat(),
+            viewportEnd = layoutInfo.viewportEndOffset.toFloat(),
+            isRtl = isRtl,
+        )
     }
 }
 
+/**
+ * Mask and parallax for a page at [pageOffset] from the start edge, the way lazy layouts measure
+ * it. The parallax distance follows Material's lazy-list state. The mask differs: Material leaves
+ * its rounded edge just past the viewport, which suits an edge-to-edge row, but the player's
+ * carousel is inset, so the mask edge tracks the visible edge and pages keep their rounded corners
+ * as they slide out.
+ *
+ * Offsets count from the start edge, but the mask and parallax are drawn left to right, so in RTL
+ * the result is mirrored onto the page's physical sides.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
-private val UnmaskedItemInfo = CarouselParallaxScrollEffectItemInfo(
+internal fun parallaxItemInfo(
+    pageOffset: Float,
+    pageSize: Float,
+    crossAxisSize: Float,
+    viewportStart: Float,
+    viewportEnd: Float,
+    isRtl: Boolean,
+): CarouselParallaxScrollEffectItemInfo {
+    if (pageSize == 0f) return UnmaskedItemInfo
+    val parallaxDistance = pageSize * maskIntensity(pageSize, crossAxisSize)
+
+    // Start-relative: how much of the page is past the start or end edge.
+    val hiddenAtStart = (viewportStart - pageOffset).coerceIn(0f, pageSize)
+    val hiddenAtEnd = (pageOffset + pageSize - viewportEnd).coerceIn(0f, pageSize)
+    val maskStart: Float
+    val maskEnd: Float
+    val parallax: Float
+    val progress: Float
+    when {
+        hiddenAtStart > 0f -> {
+            progress = hiddenAtStart / pageSize
+            maskStart = hiddenAtStart
+            maskEnd = pageSize
+            parallax = lerp(0f, parallaxDistance, progress)
+        }
+        hiddenAtEnd > 0f -> {
+            progress = hiddenAtEnd / pageSize
+            maskStart = 0f
+            maskEnd = pageSize - hiddenAtEnd
+            parallax = -lerp(0f, parallaxDistance, progress)
+        }
+        else -> {
+            progress = 0f
+            maskStart = 0f
+            maskEnd = pageSize
+            parallax = 0f
+        }
+    }
+
+    return if (isRtl) {
+        CarouselParallaxScrollEffectItemInfo(
+            maskStart = pageSize - maskEnd,
+            maskEnd = pageSize - maskStart,
+            parallax = -parallax,
+            maskProgress = progress,
+        )
+    } else {
+        CarouselParallaxScrollEffectItemInfo(
+            maskStart = maskStart,
+            maskEnd = maskEnd,
+            parallax = parallax,
+            maskProgress = progress,
+        )
+    }
+}
+
+/** Material's "no item info" value: an empty mask tells the effect to leave the page unclipped. */
+@OptIn(ExperimentalMaterial3Api::class)
+internal val UnmaskedItemInfo = CarouselParallaxScrollEffectItemInfo(
     maskStart = 0f,
     maskEnd = 0f,
     parallax = 0f,
