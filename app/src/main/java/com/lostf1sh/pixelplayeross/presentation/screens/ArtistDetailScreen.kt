@@ -9,6 +9,8 @@ import com.lostf1sh.pixelplayeross.presentation.components.DetailHeroPinnedActio
 import com.lostf1sh.pixelplayeross.presentation.components.DetailSongsSummary
 import com.lostf1sh.pixelplayeross.presentation.components.HeroPlayState
 import com.lostf1sh.pixelplayeross.presentation.components.MediaDetailHero
+import com.lostf1sh.pixelplayeross.presentation.components.DetailHeroMenuAction
+import com.lostf1sh.pixelplayeross.presentation.components.ExpressiveDropdownMenu
 import com.lostf1sh.pixelplayeross.presentation.components.rememberDetailHeroDock
 import com.lostf1sh.pixelplayeross.presentation.components.rememberSongCollectionMenuActions
 import com.lostf1sh.pixelplayeross.presentation.utils.getSegmentedItemShape
@@ -1084,33 +1086,15 @@ private fun SharedArtistTopBarProbe(
                         )
                     }
 
-                    DropdownMenu(
+                    ExpressiveDropdownMenu(
                         expanded = showImageMenu,
-                        onDismissRequest = { showImageMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.presentation_batch_d_change_photo)) },
-                            leadingIcon = {
-                                Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
-                            },
-                            onClick = {
-                                showImageMenu = false
-                                onChangeImage()
-                            }
+                        onDismissRequest = { showImageMenu = false },
+                        actions = artistImageMenuActions(
+                            hasCustomImage = hasCustomImage,
+                            onChangeImage = onChangeImage,
+                            onClearCustomImage = onClearCustomImage
                         )
-                        if (hasCustomImage) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.presentation_batch_d_reset_to_default)) },
-                                leadingIcon = {
-                                    Icon(Icons.Rounded.Delete, contentDescription = null)
-                                },
-                                onClick = {
-                                    showImageMenu = false
-                                    onClearCustomImage()
-                                }
-                            )
-                        }
-                    }
+                    )
                 }
             }
         )
@@ -1251,29 +1235,15 @@ private fun CustomCollapsingTopBar(
                         ) {
                             Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.presentation_batch_d_edit_artist_image_cd))
                         }
-                        DropdownMenu(
+                        ExpressiveDropdownMenu(
                             expanded = showImageMenu,
-                            onDismissRequest = { showImageMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.presentation_batch_d_change_photo)) },
-                                leadingIcon = { Icon(Icons.Rounded.AddAPhoto, contentDescription = null) },
-                                onClick = {
-                                    showImageMenu = false
-                                    onChangeImage()
-                                }
+                            onDismissRequest = { showImageMenu = false },
+                            actions = artistImageMenuActions(
+                                hasCustomImage = hasCustomImage,
+                                onChangeImage = onChangeImage,
+                                onClearCustomImage = onClearCustomImage
                             )
-                            if (hasCustomImage) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.presentation_batch_d_reset_to_default)) },
-                                    leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
-                                    onClick = {
-                                        showImageMenu = false
-                                        onClearCustomImage()
-                                    }
-                                )
-                            }
-                        }
+                        )
                     }
                 }
 
@@ -1404,5 +1374,23 @@ private fun MusicIconPattern(modifier: Modifier = Modifier) {
                 .size(45.dp)
                 .graphicsLayer { rotationZ = -8f }
         )
+    }
+}
+
+@Composable
+private fun artistImageMenuActions(
+    hasCustomImage: Boolean,
+    onChangeImage: () -> Unit,
+    onClearCustomImage: () -> Unit
+): List<DetailHeroMenuAction> {
+    val changePhoto = stringResource(R.string.presentation_batch_d_change_photo)
+    val resetToDefault = stringResource(R.string.presentation_batch_d_reset_to_default)
+    return remember(hasCustomImage, changePhoto, resetToDefault, onChangeImage, onClearCustomImage) {
+        buildList {
+            add(DetailHeroMenuAction(changePhoto, Icons.Rounded.AddAPhoto, onChangeImage))
+            if (hasCustomImage) {
+                add(DetailHeroMenuAction(resetToDefault, Icons.Rounded.Delete, onClearCustomImage))
+            }
+        }
     }
 }

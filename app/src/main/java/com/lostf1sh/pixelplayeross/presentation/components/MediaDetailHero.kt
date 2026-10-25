@@ -42,11 +42,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -755,24 +752,12 @@ private fun HeroActionGroup(
                             modifier = Modifier.graphicsLayer { rotationZ = rotation }
                         )
                     }
-                    DropdownMenu(
+                    ExpressiveDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        shape = RoundedCornerShape(22.dp),
-                        containerColor = colors.surfaceContainerHigh
-                    ) {
-                        menuActions.forEach { action ->
-                            DropdownMenuItem(
-                                text = { Text(action.label) },
-                                leadingIcon = { Icon(action.icon, contentDescription = null) },
-                                onClick = {
-                                    showMenu = false
-                                    action.onClick()
-                                },
-                                colors = MenuDefaults.itemColors()
-                            )
-                        }
-                    }
+                        actions = menuActions,
+                        vibrant = true
+                    )
                 }
             },
             menuContent = {}
