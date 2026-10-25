@@ -8,6 +8,7 @@
     <string name="licenses_tab_all">Alle</string>
     <string name="licenses_tab_libraries">Biblioteker</string>
     <string name="licenses_tab_fonts">Skrifttyper</string>
+    <string name="licenses_tab_contributors">Bidragsytere</string>
     <string name="licenses_tab_data">Data</string>
     <string name="licenses_tab_raw_notice">Rå merknad</string>
     <string name="licenses_search_placeholder">Søk i biblioteker eller lisenser…</string>

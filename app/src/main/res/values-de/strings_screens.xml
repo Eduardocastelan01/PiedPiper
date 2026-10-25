@@ -8,6 +8,7 @@
     <string name="licenses_tab_all">Alle</string>
     <string name="licenses_tab_libraries">Bibliotheken</string>
     <string name="licenses_tab_fonts">Schriftarten</string>
+    <string name="licenses_tab_contributors">Mitwirkende</string>
     <string name="licenses_tab_data">Daten</string>
     <string name="licenses_tab_raw_notice">Originaltext</string>
     <string name="licenses_search_placeholder">Bibliotheken oder Lizenzen suchen…</string>

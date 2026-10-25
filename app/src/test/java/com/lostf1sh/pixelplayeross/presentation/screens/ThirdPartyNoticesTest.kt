@@ -86,4 +86,48 @@ class ThirdPartyNoticesTest {
             assertTrue(notice.section.isNotBlank(), "section of $notice")
         }
     }
+
+    @Test
+    fun `license names resolve to their bundled full texts`() {
+        fun notice(license: String, category: LicenseCategory = LicenseCategory.LIBRARIES) =
+            LicenseNotice("id", "name", "", license, "section", category)
+
+        assertEquals("licenses/texts/Apache-2.0.txt", notice("Apache 2.0").licenseTextAssetPath())
+        assertEquals("licenses/texts/LGPL-2.1.txt", notice("LGPL-2.1").licenseTextAssetPath())
+        assertEquals("licenses/texts/GPL-3.0.txt", notice("GPL-3.0").licenseTextAssetPath())
+        assertEquals("licenses/texts/MIT.txt", notice("MIT License").licenseTextAssetPath())
+        assertEquals("licenses/texts/OFL-1.1.txt", notice("SIL Open Font License 1.1").licenseTextAssetPath())
+        assertEquals(
+            ContributorsNoticeAssetPath,
+            notice("MIT License", LicenseCategory.CONTRIBUTORS).licenseTextAssetPath(),
+        )
+        assertEquals(null, notice("Proprietary").licenseTextAssetPath())
+    }
+
+    @Test
+    fun `bundled notices lead with the PixelPlayer contributors and every license has its text`() {
+        val notices = parseThirdPartyNotices(File("src/main/assets/licenses/THIRD_PARTY_NOTICES.md").readText())
+
+        val first = notices.first()
+        assertEquals("PixelPlayer Contributors", first.name)
+        assertEquals(LicenseCategory.CONTRIBUTORS, first.category)
+        assertEquals("MIT License", first.licenseName)
+        assertTrue(File("src/main/assets/$ContributorsNoticeAssetPath").readText().contains("Theo Vilardo"))
+
+        notices.forEach { notice ->
+            val path = notice.licenseTextAssetPath()
+            assertTrue(path != null, "license text for ${notice.name} (${notice.licenseName})")
+            assertTrue(File("src/main/assets/$path").readText().isNotBlank(), "$path is bundled")
+        }
+    }
+
+    @Test
+    fun `reflow joins hard-wrapped lines but keeps paragraph breaks`() {
+        val text = "  MIT License\n\nPermission is hereby granted,\n   free of charge.\n \nTHE SOFTWARE\nIS PROVIDED\n"
+
+        assertEquals(
+            "MIT License\n\nPermission is hereby granted, free of charge.\n\nTHE SOFTWARE IS PROVIDED",
+            reflowLicenseText(text),
+        )
+    }
 }

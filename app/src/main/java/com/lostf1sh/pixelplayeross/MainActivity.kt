@@ -707,6 +707,7 @@ class MainActivity : ComponentActivity() {
                 Screen.DJSpace.route,
                 Screen.NavBarCrRad.route,
                 Screen.About.route,
+                Screen.Licenses.route,
                 Screen.Stats.route,
                 Screen.Recap.route,
                 Screen.EditTransition.route,
