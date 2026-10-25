@@ -1,15 +1,19 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
 import android.os.SystemClock
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuOpen
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailItem
+import androidx.compose.material3.WideNavigationRailValue
+import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -23,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.lostf1sh.pixelplayeross.BottomNavItem
+import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateToTopLevelSafely
 import kotlinx.collections.immutable.ImmutableList
@@ -30,10 +35,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Vertical navigation rail used instead of the bottom bar on medium/expanded
- * window widths (tablets, unfolded foldables, landscape phones). Mirrors the
- * navigation semantics of [PlayerInternalNavigationBar], including the
- * double-tap-on-Search shortcut.
+ * Material 3 wide navigation rail used instead of the bottom bar on medium/expanded
+ * window widths (tablets, unfolded foldables). The header button expands it to show
+ * labels beside the icons. Mirrors the navigation semantics of
+ * [PlayerInternalNavigationBar], including the double-tap-on-Search shortcut.
  */
 @Composable
 fun PlayerNavigationRail(
@@ -48,9 +53,27 @@ fun PlayerNavigationRail(
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
     val scope = rememberCoroutineScope()
     var lastSearchTapTimestamp by remember { mutableLongStateOf(0L) }
+    val railState = rememberWideNavigationRailState()
+    val isExpanded = railState.targetValue == WideNavigationRailValue.Expanded
 
-    NavigationRail(modifier = modifier.fillMaxHeight()) {
-        Spacer(Modifier.weight(1f))
+    WideNavigationRail(
+        modifier = modifier.fillMaxHeight(),
+        state = railState,
+        arrangement = Arrangement.Center,
+        header = {
+            IconButton(
+                onClick = { scope.launch { railState.toggle() } },
+                modifier = Modifier.padding(start = 24.dp)
+            ) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.AutoMirrored.Rounded.MenuOpen else Icons.Rounded.Menu,
+                    contentDescription = stringResource(
+                        if (isExpanded) R.string.navigation_rail_collapse else R.string.navigation_rail_expand
+                    )
+                )
+            }
+        }
+    ) {
         navItems.forEach { item ->
             val isSelected = currentRoute != null && currentRoute == item.screen.route
             val label = stringResource(item.labelResId)
@@ -101,27 +124,19 @@ fun PlayerNavigationRail(
                     }
                 }
             }
-            NavigationRailItem(
+            WideNavigationRailItem(
                 selected = isSelected,
                 onClick = onClickLambda,
                 enabled = currentRoute != null,
+                railExpanded = isExpanded,
                 icon = {
                     Icon(
                         painter = painterResource(id = iconPainterResId),
                         contentDescription = label
                     )
                 },
-                label = { Text(label) },
-                colors = NavigationRailItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
-                )
+                label = { Text(label) }
             )
-            Spacer(Modifier.height(4.dp))
         }
-        Spacer(Modifier.weight(1f))
     }
 }

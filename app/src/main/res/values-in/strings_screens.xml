@@ -9,6 +9,8 @@
     <string name="licenses_tab_libraries">Pustaka</string>
     <string name="licenses_tab_fonts">Font</string>
     <string name="licenses_tab_contributors">Kontributor</string>
+    <string name="navigation_rail_expand">Luaskan navigasi</string>
+    <string name="navigation_rail_collapse">Ciutkan navigasi</string>
     <string name="licenses_tab_data">Data</string>
     <string name="licenses_tab_raw_notice">Teks asli</string>
     <string name="licenses_search_placeholder">Cari pustaka atau lisensi…</string>

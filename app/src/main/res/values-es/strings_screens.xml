@@ -9,6 +9,8 @@
     <string name="licenses_tab_libraries">Bibliotecas</string>
     <string name="licenses_tab_fonts">Fuentes</string>
     <string name="licenses_tab_contributors">Colaboradores</string>
+    <string name="navigation_rail_expand">Expandir navegación</string>
+    <string name="navigation_rail_collapse">Contraer navegación</string>
     <string name="licenses_tab_data">Datos</string>
     <string name="licenses_tab_raw_notice">Aviso original</string>
     <string name="licenses_search_placeholder">Buscar bibliotecas o licencias…</string>

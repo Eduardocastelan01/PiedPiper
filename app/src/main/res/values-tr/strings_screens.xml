@@ -9,6 +9,8 @@
     <string name="licenses_tab_libraries">Kütüphaneler</string>
     <string name="licenses_tab_fonts">Yazı tipleri</string>
     <string name="licenses_tab_contributors">Katkıda bulunanlar</string>
+    <string name="navigation_rail_expand">Gezinmeyi genişlet</string>
+    <string name="navigation_rail_collapse">Gezinmeyi daralt</string>
     <string name="licenses_tab_data">Veriler</string>
     <string name="licenses_tab_raw_notice">Ham bildirim</string>
     <string name="licenses_search_placeholder">Kütüphane veya lisans ara…</string>

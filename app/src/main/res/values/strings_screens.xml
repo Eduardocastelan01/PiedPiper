@@ -227,6 +227,8 @@
     <string name="licenses_tab_libraries">Libraries</string>
     <string name="licenses_tab_fonts">Fonts</string>
     <string name="licenses_tab_contributors">Contributors</string>
+    <string name="navigation_rail_expand">Expand navigation</string>
+    <string name="navigation_rail_collapse">Collapse navigation</string>
     <string name="licenses_tab_data">Data</string>
     <string name="licenses_tab_raw_notice">Raw notice</string>
     <string name="licenses_search_placeholder">Search libraries or licenses…</string>
