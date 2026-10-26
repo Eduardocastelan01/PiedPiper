@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Slider
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -75,7 +76,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.core.view.HapticFeedbackConstantsCompat
 import com.lostf1sh.pixelplayeross.presentation.utils.LocalAppHapticsConfig
 import com.lostf1sh.pixelplayeross.presentation.utils.performAppCompatHapticFeedback
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 
 @Composable
 fun SettingsSection(title: String, icon: @Composable () -> Unit, content: @Composable () -> Unit) {
@@ -467,13 +468,14 @@ fun SliderSettingsItem(
                         softWrap = false
                 )
             }
-            ValueSlider(
-                value = value,
+            Slider(
+                state = rememberSyncedSliderState(
+                    value = value,
+                    steps = steps,
+                    valueRange = valueRange
+                ),
                 onValueChange = onValueChange,
-                onValueChangeFinished = onValueChangeFinished,
-                valueRange = valueRange,
-                steps = steps
-            )
+                onValueChangeFinished = onValueChangeFinished,)
         }
     }
 }

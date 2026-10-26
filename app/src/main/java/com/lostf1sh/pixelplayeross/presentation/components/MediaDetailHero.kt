@@ -42,11 +42,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,6 +100,8 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import kotlin.math.roundToInt
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /** How the hero's main button relates to what is playing right now. */
 enum class HeroPlayState {
@@ -268,7 +267,7 @@ fun MediaDetailHero(
     metaLine: String?,
     onShuffle: () -> Unit,
     onPlay: () -> Unit,
-    menuActions: List<DetailHeroMenuAction>,
+    menuActions: ImmutableList<DetailHeroMenuAction>,
     modifier: Modifier = Modifier,
     playState: HeroPlayState = HeroPlayState.Idle,
     chip: (@Composable () -> Unit)? = null,
@@ -406,7 +405,7 @@ fun BoxScope.DetailHeroFloatingLayer(
     listState: ScrollableState,
     onShuffle: () -> Unit,
     onPlay: () -> Unit,
-    menuActions: List<DetailHeroMenuAction>,
+    menuActions: ImmutableList<DetailHeroMenuAction>,
     playState: HeroPlayState,
     enabled: Boolean,
     titleStyle: TextStyle = heroTitleStyle(),
@@ -625,7 +624,7 @@ private fun HeroActionGroup(
     onShuffle: () -> Unit,
     onPlay: () -> Unit,
     playState: HeroPlayState,
-    menuActions: List<DetailHeroMenuAction>,
+    menuActions: ImmutableList<DetailHeroMenuAction>,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -755,24 +754,12 @@ private fun HeroActionGroup(
                             modifier = Modifier.graphicsLayer { rotationZ = rotation }
                         )
                     }
-                    DropdownMenu(
+                    ExpressiveDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        shape = RoundedCornerShape(22.dp),
-                        containerColor = colors.surfaceContainerHigh
-                    ) {
-                        menuActions.forEach { action ->
-                            DropdownMenuItem(
-                                text = { Text(action.label) },
-                                leadingIcon = { Icon(action.icon, contentDescription = null) },
-                                onClick = {
-                                    showMenu = false
-                                    action.onClick()
-                                },
-                                colors = MenuDefaults.itemColors()
-                            )
-                        }
-                    }
+                        actions = menuActions,
+                        vibrant = true
+                    )
                 }
             },
             menuContent = {}
@@ -951,12 +938,12 @@ fun rememberSongCollectionMenuActions(
     onAddToPlaylist: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
-): List<DetailHeroMenuAction> {
+): ImmutableList<DetailHeroMenuAction> {
     val addToPlaylist = stringResource(R.string.detail_hero_add_to_playlist)
     val playNext = stringResource(R.string.detail_hero_play_next)
     val addToQueue = stringResource(R.string.detail_hero_add_to_queue)
     return remember(addToPlaylist, playNext, addToQueue, onAddToPlaylist, onPlayNext, onAddToQueue) {
-        listOf(
+        persistentListOf(
             DetailHeroMenuAction(addToPlaylist, Icons.AutoMirrored.Rounded.PlaylistAdd, onAddToPlaylist),
             DetailHeroMenuAction(playNext, Icons.Rounded.SkipNext, onPlayNext),
             DetailHeroMenuAction(addToQueue, Icons.AutoMirrored.Rounded.QueueMusic, onAddToQueue),

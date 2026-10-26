@@ -2,11 +2,13 @@ package com.lostf1sh.pixelplayeross.presentation.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -22,10 +24,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
 import kotlinx.collections.immutable.toImmutableList
 import org.junit.Rule
 import org.junit.Test
@@ -56,23 +61,30 @@ class AlbumCarouselSectionTest {
     private var requestedIndex by mutableStateOf<Int?>(null)
     private val selections = mutableListOf<Int>()
 
-    private fun setCarousel(playerFollowsSelection: Boolean = false) {
+    private fun setCarousel(
+        playerFollowsSelection: Boolean = false,
+        carouselStyle: String = CarouselStyle.NO_PEEK,
+        layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+    ) {
         composeRule.setContent {
-            MaterialTheme {
-                AlbumCarouselSection(
-                    currentSong = queue[currentIndex],
-                    queue = queue,
-                    expansionFraction = 1f,
-                    currentMediaItemIndex = currentIndex,
-                    requestedScrollIndex = requestedIndex,
-                    onSongSelected = { _, index ->
-                        selections += index
-                        if (playerFollowsSelection) currentIndex = index
-                    },
-                    modifier = Modifier
-                        .size(320.dp)
-                        .testTag(CAROUSEL_TAG)
-                )
+            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                MaterialTheme {
+                    AlbumCarouselSection(
+                        currentSong = queue[currentIndex],
+                        queue = queue,
+                        expansionFraction = 1f,
+                        currentMediaItemIndex = currentIndex,
+                        requestedScrollIndex = requestedIndex,
+                        onSongSelected = { _, index ->
+                            selections += index
+                            if (playerFollowsSelection) currentIndex = index
+                        },
+                        carouselStyle = carouselStyle,
+                        modifier = Modifier
+                            .size(320.dp)
+                            .testTag(CAROUSEL_TAG)
+                    )
+                }
             }
         }
     }
@@ -210,6 +222,58 @@ class AlbumCarouselSectionTest {
 
         assertThat(selections).isEmpty()
         assertFocusedSong(0)
+    }
+
+    /** From the second-to-last song, one swipe lands on the last; another goes nowhere. */
+    private fun assertSwipesReachTheLastSongOnly(carouselStyle: String) {
+        currentIndex = queue.lastIndex - 1
+        setCarousel(playerFollowsSelection = true, carouselStyle = carouselStyle)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(CAROUSEL_TAG).performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(CAROUSEL_TAG).performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+
+        assertThat(selections).containsExactly(queue.lastIndex)
+        assertFocusedSong(queue.lastIndex)
+    }
+
+    /** On the first song, swiping back has nowhere to go. */
+    private fun assertFirstSongCannotScrollBack(carouselStyle: String) {
+        setCarousel(playerFollowsSelection = true, carouselStyle = carouselStyle)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(CAROUSEL_TAG).performTouchInput { swipeRight() }
+        composeRule.waitForIdle()
+
+        assertThat(selections).isEmpty()
+        assertFocusedSong(0)
+    }
+
+    @Test
+    fun onePeekSwipesReachTheLastSong() = assertSwipesReachTheLastSongOnly(CarouselStyle.ONE_PEEK)
+
+    @Test
+    fun twoPeekSwipesReachTheLastSong() = assertSwipesReachTheLastSongOnly(CarouselStyle.TWO_PEEK)
+
+    @Test
+    fun onePeekFirstSongCannotScrollBack() = assertFirstSongCannotScrollBack(CarouselStyle.ONE_PEEK)
+
+    @Test
+    fun twoPeekFirstSongCannotScrollBack() = assertFirstSongCannotScrollBack(CarouselStyle.TWO_PEEK)
+
+    @Test
+    fun rtlSwipeTowardsTheRightSelectsTheNextSong() {
+        // In RTL the next page sits to the left, so the user drags it in from there.
+        setCarousel(playerFollowsSelection = true, layoutDirection = LayoutDirection.Rtl)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(CAROUSEL_TAG).performTouchInput { swipeRight() }
+        composeRule.waitForIdle()
+
+        assertThat(selections).containsExactly(1)
+        assertFocusedSong(1)
     }
 
     private companion object {

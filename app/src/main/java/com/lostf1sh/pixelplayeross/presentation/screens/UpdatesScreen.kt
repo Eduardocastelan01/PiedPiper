@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.content.ActivityNotFoundException
@@ -22,9 +24,10 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -233,7 +236,7 @@ private fun UpdateStatusCard(
 
             when (val status = state.status) {
                 UpdateStatus.Idle -> PrimaryAction(stringResource(R.string.updates_action_check), onCheck)
-                UpdateStatus.Checking -> CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                UpdateStatus.Checking -> LoadingIndicator(modifier = Modifier.size(28.dp))
                 is UpdateStatus.UpToDate -> SecondaryAction(stringResource(R.string.updates_action_check_again), onCheck)
                 is UpdateStatus.Available -> {
                     if (status.requiresReinstall) {

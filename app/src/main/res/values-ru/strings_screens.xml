@@ -9,6 +9,8 @@
     <string name="licenses_tab_libraries">Библиотеки</string>
     <string name="licenses_tab_fonts">Шрифты</string>
     <string name="licenses_tab_contributors">Участники</string>
+    <string name="navigation_rail_expand">Развернуть навигацию</string>
+    <string name="navigation_rail_collapse">Свернуть навигацию</string>
     <string name="licenses_tab_data">Данные</string>
     <string name="licenses_tab_raw_notice">Текст уведомления</string>
     <string name="licenses_search_placeholder">Поиск библиотек или лицензий…</string>

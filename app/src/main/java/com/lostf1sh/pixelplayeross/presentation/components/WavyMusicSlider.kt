@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -157,8 +158,8 @@ fun WavyMusicSlider(
     BoxWithConstraints(modifier = modifier.clipToBounds()) {
         val lastHapticStep = remember { mutableIntStateOf(-1) }
 
-        ValueSlider(
-            value = clampedValue,
+        Slider(
+            state = rememberSyncedSliderState(value = clampedValue, valueRange = valueRange),
             onValueChange = { newValue ->
                 val normalizedNew = if (valueRange.endInclusive == valueRange.start) {
                     0f
@@ -194,7 +195,6 @@ fun WavyMusicSlider(
                     }
                 },
             enabled = enabled,
-            valueRange = valueRange,
             onValueChangeFinished = onValueChangeFinished,
             interactionSource = interactionSource,
             colors = SliderDefaults.colors(

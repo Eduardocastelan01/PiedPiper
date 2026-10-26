@@ -9,6 +9,8 @@
     <string name="licenses_tab_libraries">라이브러리</string>
     <string name="licenses_tab_fonts">글꼴</string>
     <string name="licenses_tab_contributors">기여자</string>
+    <string name="navigation_rail_expand">탐색 펼치기</string>
+    <string name="navigation_rail_collapse">탐색 접기</string>
     <string name="licenses_tab_data">데이터</string>
     <string name="licenses_tab_raw_notice">원문 고지</string>
     <string name="licenses_search_placeholder">라이브러리 또는 라이선스 검색…</string>

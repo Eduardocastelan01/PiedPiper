@@ -50,7 +50,8 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -581,16 +582,16 @@ private fun FileExplorerModeSwitcher(
                     }
                 },
                 menuContent = { menuState ->
-                    DropdownMenuItem(
-                        text = { Text(label) },
-                        leadingIcon = {
-                            if (selectedIndex == index) {
-                                Icon(imageVector = Icons.Rounded.Check, contentDescription = null)
-                            }
-                        },
+                    SelectableDropdownMenuItem(
+                        selected = selectedIndex == index,
                         onClick = {
                             onShowAllFoldersChange(index == 1)
                             menuState.dismiss()
+                        },
+                        text = { Text(label) },
+                        shapes = MenuDefaults.itemShape(index = index, count = tabs.size),
+                        selectedLeadingIcon = {
+                            Icon(imageVector = Icons.Rounded.Check, contentDescription = null)
                         }
                     )
                 }

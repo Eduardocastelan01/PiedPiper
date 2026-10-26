@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,7 +65,7 @@ import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtColorAccuracy
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtPaletteStyle
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
@@ -674,11 +675,15 @@ private fun PaletteAccuracySlider(
             }
         }
 
-        ValueSlider(
-            value = clampedValue.toFloat(),
+        Slider(
+            state = rememberSyncedSliderState(
+                value = clampedValue.toFloat(),
+                steps = AlbumArtColorAccuracy.STEPS,
+                valueRange = AlbumArtColorAccuracy.MIN.toFloat()..AlbumArtColorAccuracy.MAX.toFloat()
+            ),
             onValueChange = {
                 val nextValue = AlbumArtColorAccuracy.clamp(it.roundToInt())
-                if (nextValue == lastDispatchedValue) return@ValueSlider
+                if (nextValue == lastDispatchedValue) return@Slider
 
                 if (hapticsEnabled) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -686,8 +691,6 @@ private fun PaletteAccuracySlider(
                 lastDispatchedValue = nextValue
                 onValueChange(nextValue)
             },
-            valueRange = AlbumArtColorAccuracy.MIN.toFloat()..AlbumArtColorAccuracy.MAX.toFloat(),
-            steps = AlbumArtColorAccuracy.STEPS,
             colors = SliderDefaults.colors(
                 thumbColor = scheme.primary,
                 activeTrackColor = scheme.primary,

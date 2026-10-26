@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Rectangle
 import androidx.compose.material.icons.rounded.Title
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -71,7 +72,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
@@ -464,11 +465,13 @@ fun ExperimentalSettingsScreen(
                                                         }
                                                     }
 
-                                                    ValueSlider(
-                                                        value = appearThresholdPercent.toFloat(),
+                                                    Slider(
+                                                        state = rememberSyncedSliderState(
+                                                            value = appearThresholdPercent.toFloat(),
+                                                            steps = 99,
+                                                            valueRange = 0f..100f
+                                                        ),
                                                         onValueChange = { settingsViewModel.setFullPlayerAppearThreshold(it.roundToInt()) },
-                                                        valueRange = 0f..100f,
-                                                        steps = 99,
                                                         enabled = isAnyDelayEnabled
                                                     )
 
@@ -539,11 +542,13 @@ fun ExperimentalSettingsScreen(
                                                             }
                                                         }
 
-                                                        ValueSlider(
-                                                            value = closeThresholdPercent.toFloat(),
+                                                        Slider(
+                                                            state = rememberSyncedSliderState(
+                                                                value = closeThresholdPercent.toFloat(),
+                                                                steps = 99,
+                                                                valueRange = 0f..100f
+                                                            ),
                                                             onValueChange = { settingsViewModel.setFullPlayerCloseThreshold(it.roundToInt()) },
-                                                            valueRange = 0f..100f,
-                                                            steps = 99,
                                                             enabled = isAnyDelayEnabled
                                                         )
 

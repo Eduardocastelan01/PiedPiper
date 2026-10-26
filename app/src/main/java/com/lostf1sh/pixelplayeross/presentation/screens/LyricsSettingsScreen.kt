@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material3.Slider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,7 +72,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.MAX_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.data.preferences.MIN_LYRICS_FONT_SIZE_SP
 import com.lostf1sh.pixelplayeross.presentation.components.CollapsibleCommonTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.MiniPlayerHeight
-import com.lostf1sh.pixelplayeross.presentation.components.ValueSlider
+import com.lostf1sh.pixelplayeross.presentation.components.rememberSyncedSliderState
 import com.lostf1sh.pixelplayeross.presentation.settings.search.LocalSettingsHighlightTarget
 import com.lostf1sh.pixelplayeross.presentation.settings.search.settingHighlight
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
@@ -447,13 +448,14 @@ private fun LyricsSliderItem(
                     )
                 }
             }
-            ValueSlider(
-                value = value,
+            Slider(
+                state = rememberSyncedSliderState(
+                    value = value,
+                    steps = steps,
+                    valueRange = valueRange
+                ),
                 onValueChange = onValueChange,
-                onValueChangeFinished = onValueChangeFinished,
-                valueRange = valueRange,
-                steps = steps
-            )
+                onValueChangeFinished = onValueChangeFinished,)
         }
     }
 }
