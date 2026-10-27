@@ -40,6 +40,12 @@ enum class ExternalServiceAccount {
     LISTENBRAINZ
 }
 
+private data class GDriveAccountState(
+    val isConfigured: Boolean,
+    val songCount: Int,
+    val folderName: String
+)
+
 data class ExternalAccountUiModel(
     val service: ExternalServiceAccount,
     val title: String,
@@ -112,7 +118,7 @@ class AccountsViewModel @Inject constructor(
         googleDriveRepository.lastSyncSongCountFlow,
         googleDriveRepository.folderNameFlow
     ) { configured, songCount, folderName ->
-        Triple(configured, songCount, folderName)
+        GDriveAccountState(configured, songCount, folderName)
     }
 
     /**
@@ -190,7 +196,9 @@ class AccountsViewModel @Inject constructor(
     ) { states, gdriveState, listenBrainz, activeLogouts ->
         val (navidromeConnected, navidromePlaylistCount) = states[0]
         val (jellyfinConnected, jellyfinPlaylistCount) = states[1]
-        val (gdriveConnected, gdriveSongCount, gdriveFolderName) = gdriveState
+        val gdriveConnected = gdriveState.isConfigured
+        val gdriveSongCount = gdriveState.songCount
+        val gdriveFolderName = gdriveState.folderName
 
         val connectedAccounts = buildList {
             if (navidromeConnected) {
@@ -232,7 +240,7 @@ class AccountsViewModel @Inject constructor(
                     ExternalAccountUiModel(
                         service = ExternalServiceAccount.GDRIVE,
                         title = "Google Drive",
-                        accountLabel = gdriveFolderName.ifEmpty { "Drive Music" },
+                        accountLabel = if (gdriveFolderName.isNotBlank()) gdriveFolderName else "Drive Music",
                         syncedContentLabel = formatCount(
                             count = gdriveSongCount,
                             singular = "synced song",
