@@ -58,6 +58,7 @@ import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.service.player.FadingPlayer
 import com.lostf1sh.pixelplayeross.data.service.player.MappingPlayer
 import com.lostf1sh.pixelplayeross.data.service.player.PreviousButtonPlayer
+import com.lostf1sh.pixelplayeross.data.service.player.ShuffleHistoryManager
 import com.lostf1sh.pixelplayeross.data.service.player.TransitionController
 import com.lostf1sh.pixelplayeross.data.service.player.selectCanonicalCloudPlaybackUri
 import com.lostf1sh.pixelplayeross.ui.glancewidget.ControlWidget4x2
@@ -208,6 +209,8 @@ class MusicService : MediaSessionService() {
     @Inject
     lateinit var sleepTimerSession: SleepTimerSession
     @Inject
+    lateinit var shuffleHistoryManager: ShuffleHistoryManager
+    @Inject
     @AppScope
     lateinit var appScope: CoroutineScope
 
@@ -345,7 +348,8 @@ class MusicService : MediaSessionService() {
         )
         return PreviousButtonPlayer(
             innerPlayer = mappingPlayer,
-            behaviorProvider = { previousButtonBehavior }
+            behaviorProvider = { previousButtonBehavior },
+            shuffleHistoryManager = shuffleHistoryManager
         )
     }
 
@@ -1208,6 +1212,7 @@ class MusicService : MediaSessionService() {
                 mapOf("reason" to reason.toString())
             }
             mediaItem?.let(::grantArtworkUriPermissionsToConnectedControllers)
+            mediaItem?.let { shuffleHistoryManager.onTrackStarted(it) }
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
             if (isNavidromeMediaItem(mediaItem)) {
                 reportNavidromePlayback("starting")

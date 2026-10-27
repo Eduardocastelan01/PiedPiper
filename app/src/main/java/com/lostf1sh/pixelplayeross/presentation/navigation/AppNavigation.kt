@@ -42,6 +42,7 @@ import com.lostf1sh.pixelplayeross.presentation.model.SettingsCategory
 import com.lostf1sh.pixelplayeross.presentation.screens.AccountsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.ArtistDetailScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.ArtistSettingsScreen
+import com.lostf1sh.pixelplayeross.presentation.screens.AISettingsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.DailyMixScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.EditTransitionScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.EasterEggScreen
@@ -63,6 +64,7 @@ import com.lostf1sh.pixelplayeross.presentation.screens.StatsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.DuplicateSongsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.SettingsScreen
 import com.lostf1sh.pixelplayeross.presentation.screens.SettingsCategoryScreen
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.AIViewModel
 import com.lostf1sh.pixelplayeross.presentation.screens.EqualizerScreen
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
@@ -534,6 +536,22 @@ fun AppNavigation(
                         navController = navController,
                         viewModel = playerViewModel,
                         onNavigationIconClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                Screen.AISettings.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                val aiViewModel: AIViewModel = hiltViewModel()
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    AISettingsScreen(
+                        keyStore = aiViewModel.keyStore,
+                        aiClient = aiViewModel.aiClient,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

@@ -3,6 +3,7 @@ package com.lostf1sh.pixelplayeross.data.service.player
 import androidx.annotation.OptIn
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 
@@ -19,13 +20,38 @@ import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 class PreviousButtonPlayer(
     val innerPlayer: Player,
     private val behaviorProvider: () -> PreviousButtonBehavior,
+    private val shuffleHistoryManager: ShuffleHistoryManager? = null,
 ) : ForwardingPlayer(innerPlayer) {
 
     override fun seekToPrevious() {
-        if (behaviorProvider() == PreviousButtonBehavior.PREVIOUS_TRACK && hasPreviousMediaItem()) {
-            seekToPreviousMediaItem()
+        if (behaviorProvider() == PreviousButtonBehavior.PREVIOUS_TRACK) {
+            if (shuffleHistoryManager?.canGoBack == true && (innerPlayer.shuffleModeEnabled || !hasPreviousMediaItem())) {
+                val prev = shuffleHistoryManager.getPreviousAndRewind()
+                if (prev != null) {
+                    val timeline = innerPlayer.currentTimeline
+                    val window = Timeline.Window()
+                    var targetIndex = -1
+                    for (i in 0 until timeline.windowCount) {
+                        timeline.getWindow(i, window)
+                        if (window.mediaItem.mediaId == prev.mediaId) {
+                            targetIndex = i
+                            break
+                        }
+                    }
+                    if (targetIndex >= 0) {
+                        seekToDefaultPosition(targetIndex)
+                        return
+                    }
+                }
+            }
+            if (hasPreviousMediaItem()) {
+                seekToPreviousMediaItem()
+            } else {
+                super.seekToPrevious()
+            }
         } else {
             super.seekToPrevious()
         }
     }
 }
+

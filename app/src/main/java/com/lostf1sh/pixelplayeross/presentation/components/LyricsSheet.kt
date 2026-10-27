@@ -356,9 +356,9 @@ fun LyricsSheet(
     val showLyricsRomanization by showLyricsRomanizationFlow.collectAsStateWithLifecycle(initialValue = true)
 
     val useAnimatedLyricsFlow = remember(context) {
-        context.dataStore.data.map { it[booleanPreferencesKey("use_animated_lyrics")] ?: false }
+        context.dataStore.data.map { it[booleanPreferencesKey("use_animated_lyrics")] ?: true }
     }
-    val useAnimatedLyrics by useAnimatedLyricsFlow.collectAsStateWithLifecycle(initialValue = false)
+    val useAnimatedLyrics by useAnimatedLyricsFlow.collectAsStateWithLifecycle(initialValue = true)
 
     val playbackSpeedFlow = remember(context) {
         context.dataStore.data.map { it[floatPreferencesKey("playback_speed")] ?: 1f }

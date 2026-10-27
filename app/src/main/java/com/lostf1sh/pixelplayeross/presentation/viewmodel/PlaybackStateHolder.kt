@@ -7,7 +7,9 @@ import androidx.media3.session.MediaController
 import androidx.media3.common.Player
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Timeline
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
+import com.lostf1sh.pixelplayeross.data.service.player.ShuffleHistoryManager
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.shouldRestartCurrentTrack
@@ -39,7 +41,8 @@ class PlaybackStateHolder @Inject constructor(
     private val dualPlayerEngine: DualPlayerEngine,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val queueStateHolder: QueueStateHolder,
-    @param:ApplicationContext private val appContext: Context
+    @param:ApplicationContext private val appContext: Context,
+    private val shuffleHistoryManager: ShuffleHistoryManager
 ) {
     companion object {
         private const val TAG = "PlaybackStateHolder"
@@ -390,12 +393,36 @@ class PlaybackStateHolder @Inject constructor(
         val behavior = previousButtonBehavior
         val positionMs = controller.currentPosition
         val hasPrevious = controller.hasPreviousMediaItem()
+        val isShuffle = _stablePlayerState.value.isShuffleEnabled || controller.shuffleModeEnabled
         if (behavior.shouldRestartCurrentTrack(positionMs, hasPrevious)) {
             Timber.tag(TAG).d("Previous restarts the track (behavior=%s, position=%d ms)", behavior, positionMs)
             // Route the restart through seekTo() so the position override, the engine seek hint and
             // the UI position are updated together; a bare controller.seekTo(0) left a stale
             // override behind and the displayed position could lag the restart.
             seekTo(0L)
+        } else if (isShuffle && !hasPrevious && shuffleHistoryManager.canGoBack) {
+            val prev = shuffleHistoryManager.getPreviousAndRewind()
+            if (prev != null) {
+                val timeline = controller.currentTimeline
+                val window = Timeline.Window()
+                var targetIndex = -1
+                for (i in 0 until timeline.windowCount) {
+                    timeline.getWindow(i, window)
+                    if (window.mediaItem.mediaId == prev.mediaId) {
+                        targetIndex = i
+                        break
+                    }
+                }
+                if (targetIndex >= 0) {
+                    val wasPaused = !controller.playWhenReady
+                    controller.seekToDefaultPosition(targetIndex)
+                    resumeAfterSkip(controller, wasPaused)
+                    return
+                }
+            }
+            val wasPaused = !controller.playWhenReady
+            controller.seekToPreviousMediaItem()
+            resumeAfterSkip(controller, wasPaused)
         } else {
             // Not seekToPrevious(): Media3 restarts the track past its own 3 s
             // maxSeekToPreviousPosition, which made this 10 s rule behave like 3 s.
@@ -410,6 +437,27 @@ class PlaybackStateHolder @Inject constructor(
         val player = activeLocalPlayer()
         val wasPaused = !player.playWhenReady
         val hadPrevious = player.hasPreviousMediaItem()
+        val isShuffle = _stablePlayerState.value.isShuffleEnabled || player.shuffleModeEnabled
+        if (isShuffle && !hadPrevious && shuffleHistoryManager.canGoBack) {
+            val prev = shuffleHistoryManager.getPreviousAndRewind()
+            if (prev != null) {
+                val timeline = player.currentTimeline
+                val window = Timeline.Window()
+                var targetIndex = -1
+                for (i in 0 until timeline.windowCount) {
+                    timeline.getWindow(i, window)
+                    if (window.mediaItem.mediaId == prev.mediaId) {
+                        targetIndex = i
+                        break
+                    }
+                }
+                if (targetIndex >= 0) {
+                    player.seekToDefaultPosition(targetIndex)
+                    resumeAfterSkip(player, wasPaused)
+                    return
+                }
+            }
+        }
         player.seekToPreviousMediaItem()
         if (hadPrevious) resumeAfterSkip(player, wasPaused)
     }
@@ -962,6 +1010,7 @@ class PlaybackStateHolder @Inject constructor(
                             }
                         }
 
+                        shuffleHistoryManager.clear()
                         if (!queueStateHolder.hasOriginalQueue()) {
                             _stablePlayerState.update { it.copy(isShuffleEnabled = false) }
                             return@launch

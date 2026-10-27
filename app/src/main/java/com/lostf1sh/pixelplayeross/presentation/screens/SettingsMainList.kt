@@ -43,6 +43,7 @@ internal fun ColorScheme.settingsAccentColor(tone: SettingsIconTone): Color = wh
 internal val SettingsCategory.iconTone: SettingsIconTone
     get() = when (this) {
         SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
+        SettingsCategory.AI_SERVICES -> SettingsIconTone.PRIMARY
         SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
         SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
         SettingsCategory.BEHAVIOR -> SettingsIconTone.PRIMARY
@@ -65,6 +66,7 @@ internal sealed interface MainSettingsEntry {
 
         override val route: String
             get() = when (category) {
+                SettingsCategory.AI_SERVICES -> Screen.AISettings.route
                 SettingsCategory.EQUALIZER -> Screen.Equalizer.createRoute()
                 SettingsCategory.DEVICE_CAPABILITIES -> Screen.DeviceCapabilities.createRoute()
                 SettingsCategory.ABOUT -> Screen.About.route

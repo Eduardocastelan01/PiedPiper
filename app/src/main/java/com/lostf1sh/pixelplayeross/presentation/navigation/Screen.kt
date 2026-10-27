@@ -30,6 +30,7 @@ sealed class Screen(val route: String) {
         fun createRoute(highlightKey: String? = null) =
             if (highlightKey != null) "lyrics_settings?highlightKey=$highlightKey" else "lyrics_settings"
     }
+    object AISettings : Screen("ai_settings")
     object NavBarCrRad : Screen("nav_bar_corner_radius?highlightKey={highlightKey}") {
         fun createRoute(highlightKey: String? = null) =
             if (highlightKey != null) "nav_bar_corner_radius?highlightKey=$highlightKey" else "nav_bar_corner_radius"

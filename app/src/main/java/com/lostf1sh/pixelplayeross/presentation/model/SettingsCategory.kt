@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.presentation.model
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DeveloperBoard
 import androidx.compose.material.icons.rounded.DeveloperMode
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -36,6 +37,12 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_playback_title,
         subtitleRes = R.string.settings_category_playback_subtitle,
         icon = Icons.Rounded.MusicNote
+    ),
+    AI_SERVICES(
+        id = "ai_services",
+        titleRes = R.string.settings_category_ai_title,
+        subtitleRes = R.string.settings_category_ai_subtitle,
+        icon = Icons.Rounded.AutoAwesome
     ),
     BEHAVIOR(
         id = "behavior",

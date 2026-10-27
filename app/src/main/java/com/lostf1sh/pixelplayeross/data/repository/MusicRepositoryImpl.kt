@@ -44,6 +44,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.PlaylistPreferencesRepositor
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.ui.theme.GenreThemeUtils
 import com.lostf1sh.pixelplayeross.utils.DirectoryFilterUtils
+import com.lostf1sh.pixelplayeross.utils.GenreNormalizer
 import com.lostf1sh.pixelplayeross.utils.GenreParser
 import com.lostf1sh.pixelplayeross.utils.LogUtils
 import com.lostf1sh.pixelplayeross.utils.StorageType
@@ -855,7 +856,7 @@ class MusicRepositoryImpl @Inject constructor(
         val spellings = HashMap<String, LinkedHashMap<String, Int>>()
         var unknownSongCount = 0
         rows.forEach { row ->
-            val names = GenreParser.split(row.genre)
+            val names = GenreNormalizer.splitAndNormalize(row.genre)
             if (names.isEmpty()) {
                 unknownSongCount += row.songCount
                 return@forEach

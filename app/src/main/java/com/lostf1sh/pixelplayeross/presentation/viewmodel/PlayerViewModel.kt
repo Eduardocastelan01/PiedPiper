@@ -3702,15 +3702,23 @@ class PlayerViewModel @Inject constructor(
 
     fun deleteSelectedFromDevice(activity: Activity, songs: List<Song>, onComplete: () -> Unit) {
         viewModelScope.launch {
-            val currentSongId = playbackStateHolder.stablePlayerState.value.currentSong?.id
-            val deletableSongs = songs.filter { it.id != currentSongId }
+                        val currentSongId = playbackStateHolder.stablePlayerState.value.currentSong?.id
+            val currentSongInSelection = songs.any { it.id == currentSongId }
 
-            if (deletableSongs.isEmpty()) {
-                _toastEvents.emit(context.getString(R.string.player_cannot_delete_currently_playing))
-                return@launch
+            // Bug Fix (Pied Piper): If the current song is in the batch, skip to next first
+            if (currentSongInSelection) {
+                val controller = mediaController
+                if (controller != null && controller.hasNextMediaItem()) {
+                    controller.seekToNextMediaItem()
+                } else if (controller != null) {
+                    controller.pause()
+                    controller.seekTo(0)
+                }
+                kotlinx.coroutines.delay(150)
             }
 
-            val skippedCount = songs.size - deletableSongs.size
+            val deletableSongs = songs.toList()
+            val skippedCount = 0
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                 val deleteRequests = withContext(dispatchers.io) {
@@ -3829,12 +3837,20 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun deleteFromDevice(activity: Activity, song: Song, onResult: (Boolean) -> Unit = {}){
+    fun deleteFromDevice(activity: Activity, song: Song, onResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
+            // Bug Fix (Pied Piper): If the song is currently playing, skip to next track first so
+            // ExoPlayer releases the file descriptor before we attempt to delete the file from disk.
             if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
-                _toastEvents.emit(context.getString(R.string.player_cannot_delete_currently_playing))
-                onResult(false)
-                return@launch
+                val controller = mediaController
+                if (controller != null && controller.hasNextMediaItem()) {
+                    controller.seekToNextMediaItem()
+                } else if (controller != null) {
+                    controller.pause()
+                    controller.seekTo(0)
+                }
+                // Give ExoPlayer a moment to release the file handle before deletion
+                kotlinx.coroutines.delay(150)
             }
 
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {

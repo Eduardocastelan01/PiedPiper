@@ -1606,7 +1606,7 @@ constructor(
 
     val useAnimatedLyricsFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.USE_ANIMATED_LYRICS] ?: false
+            preferences[PreferencesKeys.USE_ANIMATED_LYRICS] ?: true
         }
 
     suspend fun setUseAnimatedLyrics(enabled: Boolean) {
