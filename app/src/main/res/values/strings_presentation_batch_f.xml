@@ -41,6 +41,13 @@
     <string name="presentation_batch_f_adjust_cover_hint">Use pinch and drag gestures to find the perfect framing</string>
     <string name="presentation_batch_f_creation_mode_manual">Manual</string>
     <string name="presentation_batch_f_creation_mode_smart">Smart</string>
+    <string name="presentation_batch_f_creation_mode_ai">AI Mix</string>
+    <string name="presentation_batch_f_new_ai_playlist">AI Curated Mix</string>
+    <string name="presentation_batch_f_ai_prompt_label">Mood, Vibe or Concept</string>
+    <string name="presentation_batch_f_ai_prompt_placeholder">e.g. Late night synthwave drive, 90s rock workout</string>
+    <string name="presentation_batch_f_ai_generate_button">Curate with AI</string>
+    <string name="presentation_batch_f_ai_generating">Curating your mix with AI…</string>
+    <string name="presentation_batch_f_ai_quick_suggestions">Inspiration</string>
     <string name="presentation_batch_f_smart_rule">Smart Rule</string>
     <string name="presentation_batch_f_tab_default">Default</string>
     <string name="presentation_batch_f_tab_image">Image</string>

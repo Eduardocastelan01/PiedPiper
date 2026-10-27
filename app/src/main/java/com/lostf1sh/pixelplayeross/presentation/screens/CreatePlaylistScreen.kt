@@ -170,6 +170,10 @@ import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.screens.TabAnimation
 import kotlinx.collections.immutable.persistentListOf
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.AIViewModel
+import androidx.compose.material3.CircularProgressIndicator
+
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
 @Composable
@@ -196,7 +200,8 @@ private fun smartPlaylistRuleSubtitle(rule: SmartPlaylistRule): String =
 
 private enum class PlaylistCreationMode {
     MANUAL,
-    SMART
+    SMART,
+    AI_PROMPT
 }
 
 @Composable
@@ -286,7 +291,8 @@ fun EditPlaylistDialog(
 private fun CreatePlaylistContent(
     onDismiss: () -> Unit,
     onCreate: (String, String?, Int?, String?, List<String>, Float, Float, Float, String?, Float?, Float?, Float?, Float?, String?) -> Unit,
-    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel(),
+    aiViewModel: AIViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
@@ -296,6 +302,11 @@ private fun CreatePlaylistContent(
     var selectedTab by remember { mutableStateOf(0) }
     var creationMode by remember { mutableStateOf(PlaylistCreationMode.MANUAL) }
     var selectedSmartRule by remember { mutableStateOf(SmartPlaylistRule.TOP_PLAYED) }
+
+    val isAiGenerating by aiViewModel.isGenerating.collectAsStateWithLifecycle()
+    val aiErrorMessage by aiViewModel.errorMessage.collectAsStateWithLifecycle()
+    val aiResult by aiViewModel.lastResult.collectAsStateWithLifecycle()
+    var aiPromptText by remember { mutableStateOf("") }
     
     val selectedSongIds = remember { mutableStateMapOf<String, Boolean>() }
     
@@ -351,7 +362,7 @@ private fun CreatePlaylistContent(
         }
     }
     
-    BackHandler(enabled = showCropUi || (currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL)) {
+    BackHandler(enabled = showCropUi || (currentStep == 1 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT))) {
         when {
             showCropUi -> showCropUi = false
             currentStep == 1 -> currentStep = 0
@@ -367,10 +378,10 @@ private fun CreatePlaylistContent(
                             when (displayStep) {
                                 2 -> stringResource(R.string.presentation_batch_f_edit_cover_title)
                                 0 -> {
-                                    if (creationMode == PlaylistCreationMode.SMART) {
-                                        stringResource(R.string.presentation_batch_f_new_smart_playlist)
-                                    } else {
-                                        stringResource(R.string.presentation_batch_f_new_playlist)
+                                    when (creationMode) {
+                                        PlaylistCreationMode.SMART -> stringResource(R.string.presentation_batch_f_new_smart_playlist)
+                                        PlaylistCreationMode.AI_PROMPT -> stringResource(R.string.presentation_batch_f_new_ai_playlist)
+                                        else -> stringResource(R.string.presentation_batch_f_new_playlist)
                                     }
                                 }
                                 else -> stringResource(R.string.presentation_batch_f_add_songs)
@@ -394,13 +405,13 @@ private fun CreatePlaylistContent(
                         onClick = {
                             when {
                                 showCropUi -> showCropUi = false
-                                currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL -> currentStep = 0
+                                currentStep == 1 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT) -> currentStep = 0
                                 else -> onDismiss()
                             }
                         }
                     ) {
                         Icon(
-                            if (showCropUi || (currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL)) {
+                            if (showCropUi || (currentStep == 1 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT))) {
                                 Icons.AutoMirrored.Rounded.ArrowBack
                             } else {
                                 Icons.Rounded.Close
@@ -415,11 +426,11 @@ private fun CreatePlaylistContent(
             )
         },
         floatingActionButton = {
-            if (!showCropUi && !(currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL)) {
+            if (!showCropUi && !(currentStep == 1 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT))) {
                 MediumExtendedFloatingActionButton(
                     text = {
                         Text(
-                            if (currentStep == 0 && creationMode == PlaylistCreationMode.MANUAL) {
+                            if (currentStep == 0 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT)) {
                                 stringResource(R.string.presentation_batch_f_next)
                             } else {
                                 stringResource(R.string.presentation_batch_f_create)
@@ -428,7 +439,7 @@ private fun CreatePlaylistContent(
                     },
                     icon = { 
                         Icon(
-                            if (currentStep == 0 && creationMode == PlaylistCreationMode.MANUAL) {
+                            if (currentStep == 0 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT)) {
                                 Icons.AutoMirrored.Rounded.ArrowForward
                             } else {
                                 Icons.Rounded.Check
@@ -439,7 +450,7 @@ private fun CreatePlaylistContent(
                     onClick = {
                         if (currentStep == 0) {
                             if (playlistName.isNotBlank()) {
-                                if (creationMode == PlaylistCreationMode.MANUAL) {
+                                if (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT) {
                                     currentStep = 1
                                 } else {
                                     val imageUriString = if(selectedTab == 1) selectedImageUri?.toString() else null
@@ -518,7 +529,7 @@ private fun CreatePlaylistContent(
             }
         },
         bottomBar = {
-            if (currentStep == 1 && creationMode == PlaylistCreationMode.MANUAL) {
+            if (currentStep == 1 && (creationMode == PlaylistCreationMode.MANUAL || creationMode == PlaylistCreationMode.AI_PROMPT)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -684,17 +695,72 @@ private fun CreatePlaylistContent(
                      onCreationModeChange = { creationMode = it },
                      selectedSmartRule = selectedSmartRule,
                      onSmartRuleChange = { selectedSmartRule = it },
-                     onImageUriChange = { selectedImageUri = it }
+                     onImageUriChange = { selectedImageUri = it },
+                     aiPromptText = aiPromptText,
+                     onAiPromptChange = { aiPromptText = it },
+                     isAiGenerating = isAiGenerating,
+                     aiErrorMessage = aiErrorMessage,
+                     onGenerateAiPlaylist = {
+                         aiViewModel.generatePlaylist(prompt = aiPromptText) { result ->
+                             playlistName = result.name
+                             selectedSongIds.clear()
+                             result.matchedSongIds.forEach { id ->
+                                 selectedSongIds[id] = true
+                             }
+                             currentStep = 1
+                         }
+                     }
                  )
             } else {
-                SongPickerSelectionPane(
-                    selectedSongIds = selectedSongIds,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .imePadding(),
-                    contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-                    playerViewModel = playerViewModel
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (creationMode == PlaylistCreationMode.AI_PROMPT && aiResult != null) {
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = aiResult?.name.orEmpty(),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = aiResult?.rationale.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    SongPickerSelectionPane(
+                        selectedSongIds = selectedSongIds,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .imePadding(),
+                        contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
+                        playerViewModel = playerViewModel
+                    )
+                }
             }
         }
     }
@@ -953,7 +1019,12 @@ private fun PlaylistFormContent(
     onCreationModeChange: (PlaylistCreationMode) -> Unit,
     selectedSmartRule: SmartPlaylistRule,
     onSmartRuleChange: (SmartPlaylistRule) -> Unit,
-    onImageUriChange: (Uri?) -> Unit
+    onImageUriChange: (Uri?) -> Unit,
+    aiPromptText: String = "",
+    onAiPromptChange: (String) -> Unit = {},
+    isAiGenerating: Boolean = false,
+    aiErrorMessage: String? = null,
+    onGenerateAiPlaylist: () -> Unit = {}
 ) {
     if (showCropUi) {
          Box(
@@ -1241,14 +1312,23 @@ private fun PlaylistFormContent(
             if (showCreationModeSelector) {
                 val creationModes = persistentListOf(
                     stringResource(R.string.presentation_batch_f_creation_mode_manual),
-                    stringResource(R.string.presentation_batch_f_creation_mode_smart)
+                    stringResource(R.string.presentation_batch_f_creation_mode_smart),
+                    stringResource(R.string.presentation_batch_f_creation_mode_ai)
                 )
                 ConnectedToggleButtonRow(
                     labels = creationModes,
-                    selectedIndex = if (creationMode == PlaylistCreationMode.SMART) 1 else 0,
+                    selectedIndex = when (creationMode) {
+                        PlaylistCreationMode.MANUAL -> 0
+                        PlaylistCreationMode.SMART -> 1
+                        PlaylistCreationMode.AI_PROMPT -> 2
+                    },
                     onSelect = { index ->
                         onCreationModeChange(
-                            if (index == 1) PlaylistCreationMode.SMART else PlaylistCreationMode.MANUAL
+                            when (index) {
+                                1 -> PlaylistCreationMode.SMART
+                                2 -> PlaylistCreationMode.AI_PROMPT
+                                else -> PlaylistCreationMode.MANUAL
+                            }
                         )
                     },
                     modifier = Modifier
@@ -1289,6 +1369,156 @@ private fun PlaylistFormContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            AnimatedVisibility(visible = creationMode == PlaylistCreationMode.AI_PROMPT) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = "Pied Piper AI Curator",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Text(
+                                text = stringResource(R.string.presentation_batch_f_ai_prompt_label),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            OutlinedTextField(
+                                value = aiPromptText,
+                                onValueChange = onAiPromptChange,
+                                placeholder = {
+                                    Text(
+                                        stringResource(R.string.presentation_batch_f_ai_prompt_placeholder),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = false,
+                                maxLines = 3,
+                                trailingIcon = {
+                                    if (aiPromptText.isNotBlank()) {
+                                        IconButton(onClick = { onAiPromptChange("") }) {
+                                            Icon(Icons.Rounded.Clear, contentDescription = "Clear")
+                                        }
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = Color.Transparent
+                                )
+                            )
+
+                            Text(
+                                text = stringResource(R.string.presentation_batch_f_ai_quick_suggestions),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            val suggestions = listOf(
+                                "🌙 Late Night Chill",
+                                "⚡ Workout Hype",
+                                "🎸 90s & 2000s Rock",
+                                "🚗 Road Trip Energy",
+                                "☕ Acoustic Focus",
+                                "🎧 Synthwave & Beats"
+                            )
+
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                suggestions.forEach { suggestion ->
+                                    val queryText = suggestion.drop(2).trim()
+                                    FilterChip(
+                                        selected = aiPromptText.contains(queryText, ignoreCase = true),
+                                        onClick = { onAiPromptChange(queryText) },
+                                        label = { Text(suggestion, fontSize = 12.sp) },
+                                        shape = CircleShape
+                                    )
+                                }
+                            }
+
+                            if (aiErrorMessage != null) {
+                                Text(
+                                    text = aiErrorMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+
+                            Button(
+                                onClick = onGenerateAiPlaylist,
+                                enabled = aiPromptText.isNotBlank() && !isAiGenerating,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                if (isAiGenerating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = stringResource(R.string.presentation_batch_f_ai_generating),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.AutoAwesome,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.presentation_batch_f_ai_generate_button),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

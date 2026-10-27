@@ -29,6 +29,13 @@
     <string name="presentation_batch_f_create">Crear</string>
     <string name="presentation_batch_f_creation_mode_manual">Manual</string>
     <string name="presentation_batch_f_creation_mode_smart">Inteligente</string>
+    <string name="presentation_batch_f_creation_mode_ai">Mix IA</string>
+    <string name="presentation_batch_f_new_ai_playlist">Mix curado con IA</string>
+    <string name="presentation_batch_f_ai_prompt_label">Estilo, estado de ánimo o concepto</string>
+    <string name="presentation_batch_f_ai_prompt_placeholder">Ej. Noche tranquila en carretera, rock para entrenar</string>
+    <string name="presentation_batch_f_ai_generate_button">Curar con IA</string>
+    <string name="presentation_batch_f_ai_generating">Curando canciones con IA…</string>
+    <string name="presentation_batch_f_ai_quick_suggestions">Inspiración</string>
     <string name="presentation_batch_f_curve">Curvatura</string>
     <string name="presentation_batch_f_done">Hecho</string>
     <string name="presentation_batch_f_dot_space_suffix"> · %1$s</string>
