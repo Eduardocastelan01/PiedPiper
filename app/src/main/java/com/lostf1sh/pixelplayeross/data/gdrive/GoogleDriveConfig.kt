@@ -2,6 +2,11 @@ package com.lostf1sh.pixelplayeross.data.gdrive
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +28,14 @@ class GoogleDriveConfig @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private val _accountFlow = MutableStateFlow(getAccount())
+    val accountFlow: StateFlow<GoogleDriveAccount> = _accountFlow.asStateFlow()
+
+    val apiKeyFlow: Flow<String> = _accountFlow.map { it.apiKey }
+    val oauthTokenFlow: Flow<String> = _accountFlow.map { it.accessToken }
+    val folderIdFlow: Flow<String> = _accountFlow.map { it.folderId }
+    val folderNameFlow: Flow<String> = _accountFlow.map { it.folderName }
 
     fun getAccount(): GoogleDriveAccount {
         return GoogleDriveAccount(
@@ -46,6 +59,7 @@ class GoogleDriveConfig @Inject constructor(
             .putLong(KEY_LAST_SYNC, account.lastSyncTimestamp)
             .putInt(KEY_SYNCED_COUNT, account.syncedTrackCount)
             .apply()
+        _accountFlow.value = account
     }
 
     fun updateSyncStats(count: Int, timestamp: Long = System.currentTimeMillis()) {
@@ -53,10 +67,12 @@ class GoogleDriveConfig @Inject constructor(
             .putInt(KEY_SYNCED_COUNT, count)
             .putLong(KEY_LAST_SYNC, timestamp)
             .apply()
+        _accountFlow.value = getAccount()
     }
 
     fun clear() {
         prefs.edit().clear().apply()
+        _accountFlow.value = GoogleDriveAccount()
     }
 
     companion object {

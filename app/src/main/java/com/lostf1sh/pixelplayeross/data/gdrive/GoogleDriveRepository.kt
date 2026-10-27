@@ -18,6 +18,8 @@ import timber.log.Timber
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.absoluteValue
@@ -33,6 +35,15 @@ class GoogleDriveRepository @Inject constructor(
 
     val isConnected: Boolean
         get() = account.isConnected
+
+    val isConfigured: Boolean
+        get() = isConnected
+
+    val isConfiguredFlow: Flow<Boolean> = config.accountFlow.map { it.isConnected }
+    val lastSyncTimestampFlow: Flow<Long> = config.accountFlow.map { it.lastSyncTimestamp }
+    val lastSyncSongCountFlow: Flow<Int> = config.accountFlow.map { it.syncedTrackCount }
+    val folderIdFlow: Flow<String> = config.folderIdFlow
+    val folderNameFlow: Flow<String> = config.folderNameFlow
 
     val serverUrl: String = "https://www.googleapis.com"
 
@@ -54,38 +65,39 @@ class GoogleDriveRepository @Inject constructor(
         return "gdrive_cover://$fileId"
     }
 
-    suspend fun testConnection(): Result<String> = withContext(Dispatchers.IO) {
+    fun saveConfig(apiKey: String, oauthToken: String, folderId: String, folderName: String) {
+        val current = config.getAccount()
+        config.saveAccount(
+            current.copy(
+                apiKey = apiKey,
+                accessToken = oauthToken,
+                folderId = folderId,
+                folderName = folderName
+            )
+        )
+    }
+
+    suspend fun syncAllSongs(onProgress: (Int, Int) -> Unit = { _, _ -> }): Result<Int> {
+        return syncGoogleDriveSongs(onProgress)
+    }
+
+    suspend fun clearAllSongs() = withContext(Dispatchers.IO) {
+        musicDao.clearAllGDriveSongs()
+        config.updateSyncStats(0)
+    }
+
+    suspend fun testConnection(): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val acc = config.getAccount()
             if (!acc.isConnected) {
                 return@withContext Result.failure(IllegalStateException("No Google Drive API Key or Access Token configured"))
             }
 
-            val urlBuilder = "https://www.googleapis.com/drive/v3/files".toHttpUrlOrNull()?.newBuilder()
-                ?: return@withContext Result.failure(IllegalStateException("Invalid URL"))
-
-            urlBuilder.addQueryParameter("pageSize", "1")
-            urlBuilder.addQueryParameter("fields", "files(id,name)")
-            if (acc.apiKey.isNotBlank()) {
-                urlBuilder.addQueryParameter("key", acc.apiKey)
+            val fetchResult = fetchAudioFiles()
+            if (fetchResult.isFailure) {
+                return@withContext Result.failure(fetchResult.exceptionOrNull() ?: IOException("Connection test failed"))
             }
-
-            val requestBuilder = Request.Builder().url(urlBuilder.build())
-            val authHeader = getAuthorizationHeader()
-            if (authHeader != null) {
-                requestBuilder.header("Authorization", authHeader)
-            }
-
-            okHttpClient.newCall(requestBuilder.build()).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val body = response.body.string()
-                    val errorMsg = runCatching {
-                        JSONObject(body).getJSONObject("error").getString("message")
-                    }.getOrDefault("HTTP ${response.code}")
-                    return@withContext Result.failure(IOException("Google Drive connection failed: $errorMsg"))
-                }
-                Result.success("Connected to Google Drive successfully")
-            }
+            Result.success(fetchResult.getOrThrow().size)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.tag(TAG).e(e, "testConnection error")

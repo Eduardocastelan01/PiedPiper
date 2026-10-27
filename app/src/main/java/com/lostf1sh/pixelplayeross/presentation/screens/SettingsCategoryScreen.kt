@@ -1324,6 +1324,8 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.DEVICE_CAPABILITIES -> {
                         }
+                        SettingsCategory.AI_SERVICES -> {
+                        }
 
                     }
                }

@@ -12,6 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -113,7 +114,7 @@ class AccountsViewModel @Inject constructor(
         connected to playlistCount
     }
 
-    private val gdriveStateFlow = combine(
+    private val gdriveStateFlow: Flow<GDriveAccountState> = combine(
         googleDriveRepository.isConfiguredFlow,
         googleDriveRepository.lastSyncSongCountFlow,
         googleDriveRepository.folderNameFlow
@@ -184,18 +185,14 @@ class AccountsViewModel @Inject constructor(
         _listenBrainzConnectState.asStateFlow()
 
     val uiState: StateFlow<AccountsUiState> = combine(
-        combine(
-            listOf(
-                navidromeStateFlow,
-                jellyfinStateFlow
-            )
-        ) { it.toList() },
+        navidromeStateFlow,
+        jellyfinStateFlow,
         gdriveStateFlow,
         listenBrainzStateFlow,
         loggingOutServices
-    ) { states, gdriveState, listenBrainz, activeLogouts ->
-        val (navidromeConnected, navidromePlaylistCount) = states[0]
-        val (jellyfinConnected, jellyfinPlaylistCount) = states[1]
+    ) { navidrome, jellyfin, gdriveState, listenBrainz, activeLogouts ->
+        val (navidromeConnected, navidromePlaylistCount) = navidrome
+        val (jellyfinConnected, jellyfinPlaylistCount) = jellyfin
         val gdriveConnected = gdriveState.isConfigured
         val gdriveSongCount = gdriveState.songCount
         val gdriveFolderName = gdriveState.folderName
