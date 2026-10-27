@@ -182,7 +182,7 @@ class SharedArtworkContentProvider : ContentProvider() {
         private const val PATH_SONG = "song"
         private const val PATH_CLOUD = "cloud"
         private const val DEFAULT_CONTENT_TYPE = "image/jpeg"
-        private val CLOUD_ARTWORK_SCHEMES = setOf("navidrome_cover", "jellyfin_cover")
+        private val CLOUD_ARTWORK_SCHEMES = setOf("navidrome_cover", "jellyfin_cover", "gdrive_cover")
         private val cloudArtworkScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val cloudArtworkWarmups: MutableSet<String> = ConcurrentHashMap.newKeySet()
 

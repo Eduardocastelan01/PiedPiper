@@ -587,6 +587,9 @@ class MusicRepositoryImpl @Inject constructor(
     override fun searchAll(query: String, filterType: SearchFilterType): Flow<List<SearchResultItem>> {
         if (query.isBlank()) return flowOf(emptyList())
         val playlistsFlow = flow { emit(searchPlaylists(query)) }
+        val genresFlow = getGenres().map { list ->
+            list.filter { it.name.contains(query, ignoreCase = true) }
+        }
 
         return combine(
             userPreferencesRepository.minTracksPerAlbumFlow
@@ -599,13 +602,15 @@ class MusicRepositoryImpl @Inject constructor(
                         searchSongs(query),
                         searchAlbums(query, minTracks),
                         searchArtists(query),
-                        playlistsFlow
-                    ) { songs, albums, artists, playlists ->
+                        playlistsFlow,
+                        genresFlow
+                    ) { songs, albums, artists, playlists, genres ->
                         mutableListOf<SearchResultItem>().apply {
                             songs.forEach { add(SearchResultItem.SongItem(it)) }
                             albums.forEach { add(SearchResultItem.AlbumItem(it)) }
                             artists.forEach { add(SearchResultItem.ArtistItem(it)) }
                             playlists.forEach { add(SearchResultItem.PlaylistItem(it)) }
+                            genres.forEach { add(SearchResultItem.GenreItem(it)) }
                         }
                     }
                 }
@@ -615,6 +620,7 @@ class MusicRepositoryImpl @Inject constructor(
                 SearchFilterType.ALBUMS -> searchAlbums(query, minTracks).map { albums -> albums.map { SearchResultItem.AlbumItem(it) } }
                 SearchFilterType.ARTISTS -> searchArtists(query).map { artists -> artists.map { SearchResultItem.ArtistItem(it) } }
                 SearchFilterType.PLAYLISTS -> playlistsFlow.map { playlists -> playlists.map { SearchResultItem.PlaylistItem(it) } }
+                SearchFilterType.GENRES -> genresFlow.map { genres -> genres.map { SearchResultItem.GenreItem(it) } }
             }
         }.flowOn(Dispatchers.Default)
     }

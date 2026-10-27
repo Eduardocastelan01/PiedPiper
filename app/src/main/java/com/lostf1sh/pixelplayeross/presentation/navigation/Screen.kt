@@ -87,6 +87,7 @@ sealed class Screen(val route: String) {
     }
     object NavidromeDashboard : Screen("navidrome_dashboard")
     object JellyfinDashboard : Screen("jellyfin_dashboard")
+    object GDriveDashboard : Screen("gdrive_dashboard")
     object CloudDownloads : Screen("cloud_downloads")
     object Updates : Screen("updates")
 

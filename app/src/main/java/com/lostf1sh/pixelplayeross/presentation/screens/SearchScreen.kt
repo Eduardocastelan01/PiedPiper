@@ -35,8 +35,10 @@ import com.lostf1sh.pixelplayeross.ui.theme.ShapeCache
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
+import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
@@ -547,6 +549,7 @@ fun SearchScreen(
                                     SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.GENRES, currentFilter, playerViewModel)
                                 }
                             }
                         ) {
@@ -1171,6 +1174,7 @@ fun SearchResultsList(
                 is SearchResultItem.AlbumItem -> SearchFilterType.ALBUMS
                 is SearchResultItem.ArtistItem -> SearchFilterType.ARTISTS
                 is SearchResultItem.PlaylistItem -> SearchFilterType.PLAYLISTS
+                is SearchResultItem.GenreItem -> SearchFilterType.GENRES
             }
         }
     }
@@ -1215,7 +1219,8 @@ fun SearchResultsList(
         SearchFilterType.SONGS,
         SearchFilterType.ALBUMS,
         SearchFilterType.ARTISTS,
-        SearchFilterType.PLAYLISTS
+        SearchFilterType.PLAYLISTS,
+        SearchFilterType.GENRES
     )
 
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
@@ -1419,6 +1424,17 @@ fun SearchResultsList(
                                     isSelectionMode = isPlaylistSelectionMode,
                                     onLongPress = { onPlaylistLongPress(item.playlist) },
                                     onSelectionToggle = { onPlaylistSelectionToggle(item.playlist) }
+                                )
+                            }
+
+                            is SearchResultItem.GenreItem -> {
+                                SearchResultGenreItem(
+                                    genre = item.genre,
+                                    onClick = {
+                                        val encodedGenreId = java.net.URLEncoder.encode(item.genre.id, "UTF-8")
+                                        navController.navigateSafely(Screen.GenreDetail.createRoute(encodedGenreId))
+                                        onItemSelected()
+                                    }
                                 )
                             }
                         }
@@ -1845,4 +1861,65 @@ private fun searchFilterLabelRes(filterType: SearchFilterType): Int = when (filt
     SearchFilterType.ALBUMS -> R.string.library_tab_albums
     SearchFilterType.ARTISTS -> R.string.library_tab_artists
     SearchFilterType.PLAYLISTS -> R.string.library_tab_playlists
+    SearchFilterType.GENRES -> R.string.library_tab_genres
 }
+
+@Composable
+fun SearchResultGenreItem(
+    genre: com.lostf1sh.pixelplayeross.data.model.Genre,
+    onClick: () -> Unit
+) {
+    val shape = remember {
+        AbsoluteSmoothCornerShape(
+            cornerRadiusTL = 20.dp, smoothnessAsPercentTR = 60,
+            cornerRadiusTR = 20.dp, smoothnessAsPercentBR = 60,
+            cornerRadiusBR = 20.dp, smoothnessAsPercentBL = 60,
+            cornerRadiusBL = 20.dp, smoothnessAsPercentTL = 60
+        )
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.LibraryMusic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = genre.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${genre.songCount} songs",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+

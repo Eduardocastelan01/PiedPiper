@@ -88,6 +88,7 @@ import com.lostf1sh.pixelplayeross.presentation.components.BetaInfoBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.ChangelogBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.jellyfin.dashboard.JellyfinDashboardViewModel
 import com.lostf1sh.pixelplayeross.presentation.navidrome.dashboard.NavidromeDashboardViewModel
+import com.lostf1sh.pixelplayeross.presentation.gdrive.dashboard.GDriveDashboardViewModel
 import com.lostf1sh.pixelplayeross.presentation.components.DailyMixSection
 import com.lostf1sh.pixelplayeross.presentation.components.HomeGradientTopBar
 import com.lostf1sh.pixelplayeross.presentation.components.HomeOptionsBottomSheet
@@ -138,6 +139,7 @@ fun HomeScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     navidromeViewModel: NavidromeDashboardViewModel = hiltViewModel(),
     jellyfinViewModel: JellyfinDashboardViewModel = hiltViewModel(),
+    gdriveViewModel: GDriveDashboardViewModel = hiltViewModel(),
     onOpenSidebar: () -> Unit
 ) {
     val context = LocalContext.current
@@ -595,6 +597,7 @@ fun HomeScreen(
     if (showStreamingProviderSheet) {
         val isNavidromeLoggedIn by navidromeViewModel.isLoggedIn.collectAsStateWithLifecycle()
         val isJellyfinLoggedIn by jellyfinViewModel.isLoggedIn.collectAsStateWithLifecycle()
+        val isGDriveLoggedIn by gdriveViewModel.isConfigured.collectAsStateWithLifecycle()
         StreamingProviderSheet(
             onDismissRequest = { showStreamingProviderSheet = false },
             isNavidromeLoggedIn = isNavidromeLoggedIn,
@@ -604,6 +607,10 @@ fun HomeScreen(
             isJellyfinLoggedIn = isJellyfinLoggedIn,
             onNavigateToJellyfinDashboard = {
                 navController.navigateSafely(Screen.JellyfinDashboard.route)
+            },
+            isGDriveLoggedIn = isGDriveLoggedIn,
+            onNavigateToGDriveDashboard = {
+                navController.navigateSafely(Screen.GDriveDashboard.route)
             }
         )
     }

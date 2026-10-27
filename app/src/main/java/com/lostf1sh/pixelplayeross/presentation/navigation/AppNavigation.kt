@@ -250,6 +250,9 @@ fun AppNavigation(
                         },
                         onOpenJellyfinDashboard = {
                             navController.navigateSafely(Screen.JellyfinDashboard.route)
+                        },
+                        onOpenGDriveDashboard = {
+                            navController.navigateSafely(Screen.GDriveDashboard.route)
                         }
                     )
                 }
@@ -698,6 +701,19 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     com.lostf1sh.pixelplayeross.presentation.jellyfin.dashboard.JellyfinDashboardScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                Screen.GDriveDashboard.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    com.lostf1sh.pixelplayeross.presentation.gdrive.dashboard.GDriveDashboardScreen(
                         onBack = { navController.popBackStack() }
                     )
                 }

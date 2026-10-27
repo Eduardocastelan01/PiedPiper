@@ -42,6 +42,8 @@ fun StreamingProviderSheet(
     onNavigateToNavidromeDashboard: () -> Unit = {},
     isJellyfinLoggedIn: Boolean = false,
     onNavigateToJellyfinDashboard: () -> Unit = {},
+    isGDriveLoggedIn: Boolean = false,
+    onNavigateToGDriveDashboard: () -> Unit = {},
     sheetState: SheetState = rememberModalSheetState(
         skipPartiallyExpanded = true
     )
@@ -127,6 +129,19 @@ fun StreamingProviderSheet(
                             } else {
                                 context.startActivity(Intent(context, JellyfinLoginActivity::class.java))
                             }
+                            onDismissRequest()
+                        }
+                    )
+
+                    ProviderRow(
+                        iconPainter = painterResource(R.drawable.ic_google_drive),
+                        iconTint = Color.Unspecified,
+                        title = "Google Drive",
+                        subtitle = if (isGDriveLoggedIn) "Connected · Cloud Streaming" else "Stream music directly from Drive",
+                        shape = providerSegmentItemShape,
+                        isConnected = isGDriveLoggedIn,
+                        onClick = {
+                            onNavigateToGDriveDashboard()
                             onDismissRequest()
                         }
                     )

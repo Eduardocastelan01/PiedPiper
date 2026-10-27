@@ -70,6 +70,7 @@ object MediaItemBuilder {
     private val CLOUD_ARTWORK_SCHEMES = setOf(
         "navidrome_cover",
         "jellyfin_cover",
+        "gdrive_cover",
     )
     private val SUPPORTED_INTERNAL_ARTWORK_SCHEMES = setOf(
         LocalArtworkUri.SCHEME,

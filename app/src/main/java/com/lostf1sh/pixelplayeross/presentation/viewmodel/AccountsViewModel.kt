@@ -29,11 +29,14 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
+import com.lostf1sh.pixelplayeross.data.gdrive.GoogleDriveRepository
+
 private const val PROFILE_STATS_POLL_MS = 20_000L
 
 enum class ExternalServiceAccount {
     NAVIDROME,
     JELLYFIN,
+    GDRIVE,
     LISTENBRAINZ
 }
 
@@ -83,6 +86,7 @@ data class AccountsUiState(
 class AccountsViewModel @Inject constructor(
     private val navidromeRepository: NavidromeRepository,
     private val jellyfinRepository: JellyfinRepository,
+    private val googleDriveRepository: GoogleDriveRepository,
     private val listenBrainzRepository: ListenBrainzRepository,
     private val listenBrainzPreferences: ListenBrainzPreferencesRepository
 ) : ViewModel() {
@@ -101,6 +105,14 @@ class AccountsViewModel @Inject constructor(
         jellyfinRepository.getPlaylists().map { it.size }
     ) { connected, playlistCount ->
         connected to playlistCount
+    }
+
+    private val gdriveStateFlow = combine(
+        googleDriveRepository.isConfiguredFlow,
+        googleDriveRepository.lastSyncSongCountFlow,
+        googleDriveRepository.folderNameFlow
+    ) { configured, songCount, folderName ->
+        Triple(configured, songCount, folderName)
     }
 
     /**
@@ -172,11 +184,13 @@ class AccountsViewModel @Inject constructor(
                 jellyfinStateFlow
             )
         ) { it.toList() },
+        gdriveStateFlow,
         listenBrainzStateFlow,
         loggingOutServices
-    ) { states, listenBrainz, activeLogouts ->
+    ) { states, gdriveState, listenBrainz, activeLogouts ->
         val (navidromeConnected, navidromePlaylistCount) = states[0]
         val (jellyfinConnected, jellyfinPlaylistCount) = states[1]
+        val (gdriveConnected, gdriveSongCount, gdriveFolderName) = gdriveState
 
         val connectedAccounts = buildList {
             if (navidromeConnected) {
@@ -213,6 +227,21 @@ class AccountsViewModel @Inject constructor(
                     )
                 )
             }
+            if (gdriveConnected) {
+                add(
+                    ExternalAccountUiModel(
+                        service = ExternalServiceAccount.GDRIVE,
+                        title = "Google Drive",
+                        accountLabel = gdriveFolderName.ifEmpty { "Drive Music" },
+                        syncedContentLabel = formatCount(
+                            count = gdriveSongCount,
+                            singular = "synced song",
+                            plural = "synced songs"
+                        ),
+                        isLoggingOut = ExternalServiceAccount.GDRIVE in activeLogouts
+                    )
+                )
+            }
             if (listenBrainz != null) {
                 add(
                     ExternalAccountUiModel(
@@ -239,6 +268,7 @@ class AccountsViewModel @Inject constructor(
         val disconnectedServices = buildList {
             if (!navidromeConnected) add(ExternalServiceAccount.NAVIDROME)
             if (!jellyfinConnected) add(ExternalServiceAccount.JELLYFIN)
+            if (!gdriveConnected) add(ExternalServiceAccount.GDRIVE)
             if (listenBrainz == null) add(ExternalServiceAccount.LISTENBRAINZ)
         }
 
@@ -259,6 +289,7 @@ class AccountsViewModel @Inject constructor(
                     when (service) {
                         ExternalServiceAccount.NAVIDROME -> navidromeRepository.logout()
                         ExternalServiceAccount.JELLYFIN -> jellyfinRepository.logout()
+                        ExternalServiceAccount.GDRIVE -> googleDriveRepository.disconnect()
                         ExternalServiceAccount.LISTENBRAINZ -> listenBrainzRepository.disconnect()
                     }
                 }

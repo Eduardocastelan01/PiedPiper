@@ -116,6 +116,7 @@ fun AccountsScreen(
     onBackClick: () -> Unit,
     onOpenNavidromeDashboard: () -> Unit = {},
     onOpenJellyfinDashboard: () -> Unit = {},
+    onOpenGDriveDashboard: () -> Unit = {},
     viewModel: AccountsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -203,6 +204,7 @@ fun AccountsScreen(
                 service = service,
                 onOpenNavidromeDashboard = onOpenNavidromeDashboard,
                 onOpenJellyfinDashboard = onOpenJellyfinDashboard,
+                onOpenGDriveDashboard = onOpenGDriveDashboard,
                 preferDashboard = false
             )
         }
@@ -245,6 +247,7 @@ fun AccountsScreen(
                                 service = account.service,
                                 onOpenNavidromeDashboard = onOpenNavidromeDashboard,
                                 onOpenJellyfinDashboard = onOpenJellyfinDashboard,
+                                onOpenGDriveDashboard = onOpenGDriveDashboard,
                                 preferDashboard = true
                             )
                         },
@@ -253,6 +256,8 @@ fun AccountsScreen(
                             painterResource(R.drawable.ic_jellyfin)
                         } else if (account.service == ExternalServiceAccount.NAVIDROME) {
                             painterResource(R.drawable.ic_navidrome_md3)
+                        } else if (account.service == ExternalServiceAccount.GDRIVE) {
+                            painterResource(R.drawable.ic_google_drive)
                         } else null,
                         extraContent = if (account.service == ExternalServiceAccount.LISTENBRAINZ) {
                             {
@@ -595,6 +600,14 @@ private fun servicePalette(service: ExternalServiceAccount): ServicePalette {
             primaryActionContainer = Color(0xFFFFE3D3),
             primaryActionTint = Color(0xFFA84A17)
         )
+        ExternalServiceAccount.GDRIVE -> ServicePalette(
+            iconContainer = Color.White,
+            iconTint = Color.Unspecified,
+            statusContainer = Color(0xFFE8F0FE),
+            statusTint = Color(0xFF1A73E8),
+            primaryActionContainer = Color(0xFFE8F0FE),
+            primaryActionTint = Color(0xFF1A73E8)
+        )
     }
 }
 
@@ -602,6 +615,7 @@ private fun accountIcon(service: ExternalServiceAccount): ImageVector {
     return when (service) {
         ExternalServiceAccount.NAVIDROME -> Icons.Rounded.CloudQueue
         ExternalServiceAccount.JELLYFIN -> Icons.Rounded.CloudQueue
+        ExternalServiceAccount.GDRIVE -> Icons.Rounded.CloudQueue
         ExternalServiceAccount.LISTENBRAINZ -> Icons.Rounded.GraphicEq
     }
 }
@@ -637,6 +651,13 @@ private fun ServiceIcon(service: ExternalServiceAccount, tint: Color, modifier: 
             tint = tint,
             modifier = modifier
         )
+    } else if (service == ExternalServiceAccount.GDRIVE) {
+        Icon(
+            painter = painterResource(R.drawable.ic_google_drive),
+            contentDescription = null,
+            tint = Color.Unspecified,
+            modifier = modifier
+        )
     } else {
         Icon(
             imageVector = accountIcon(service),
@@ -652,6 +673,7 @@ private fun serviceDisplayName(service: ExternalServiceAccount): String {
     return when (service) {
         ExternalServiceAccount.NAVIDROME -> stringResource(R.string.cd_subsonic_logo)
         ExternalServiceAccount.JELLYFIN -> stringResource(R.string.auth_jellyfin_title)
+        ExternalServiceAccount.GDRIVE -> "Google Drive"
         ExternalServiceAccount.LISTENBRAINZ -> stringResource(R.string.accounts_listenbrainz_title)
     }
 }
@@ -661,6 +683,7 @@ private fun openService(
     service: ExternalServiceAccount,
     onOpenNavidromeDashboard: () -> Unit,
     onOpenJellyfinDashboard: () -> Unit,
+    onOpenGDriveDashboard: () -> Unit,
     preferDashboard: Boolean
 ) {
     when (service) {
@@ -683,6 +706,9 @@ private fun openService(
                     intent = Intent(context, JellyfinLoginActivity::class.java)
                 )
             }
+        }
+        ExternalServiceAccount.GDRIVE -> {
+            onOpenGDriveDashboard()
         }
         ExternalServiceAccount.LISTENBRAINZ -> {
             safeStartActivity(
@@ -749,6 +775,12 @@ private fun ConnectServiceButton(
             ExternalServiceAccount.NAVIDROME -> Icon(
                 painter = painterResource(R.drawable.ic_navidrome_md3),
                 contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            ExternalServiceAccount.GDRIVE -> Icon(
+                painter = painterResource(R.drawable.ic_google_drive),
+                contentDescription = null,
+                tint = Color.Unspecified,
                 modifier = Modifier.size(18.dp)
             )
             ExternalServiceAccount.LISTENBRAINZ -> Icon(
