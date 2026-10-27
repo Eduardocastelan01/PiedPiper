@@ -81,17 +81,16 @@ class AIPlaylistClient @Inject constructor(
      * Validates an API key with a fast, lightweight ping to the provider.
      */
     suspend fun validateKey(provider: AIProvider, key: String): Result<Boolean> = withContext(Dispatchers.IO) {
-        if (key.isBlank()) return@withContext Result.success(false)
+        val cleanKey = key.trim()
+        if (cleanKey.isBlank()) return@withContext Result.failure(AIException.NoKeyConfigured(provider))
         try {
             val pingPrompt = "Respond with JSON: {\"status\": \"ok\"}"
             when (provider) {
-                AIProvider.GEMINI -> callGemini(key, pingPrompt)
-                AIProvider.OPENAI -> callOpenAI(key, pingPrompt, maxTokens = 15)
-                AIProvider.GROQ -> callGroq(key, pingPrompt, maxTokens = 15)
+                AIProvider.GEMINI -> callGemini(cleanKey, pingPrompt)
+                AIProvider.OPENAI -> callOpenAI(cleanKey, pingPrompt, maxTokens = 15)
+                AIProvider.GROQ -> callGroq(cleanKey, pingPrompt, maxTokens = 15)
             }
             Result.success(true)
-        } catch (e: AIException.InvalidKey) {
-            Result.success(false)
         } catch (e: Exception) {
             Timber.tag(TAG).w(e, "Key validation error")
             Result.failure(e)
@@ -99,7 +98,8 @@ class AIPlaylistClient @Inject constructor(
     }
 
     private fun callGemini(apiKey: String, prompt: String): String {
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+        val cleanKey = apiKey.trim()
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey"
         val bodyJson = JsonObject().apply {
             val contentsArray = com.google.gson.JsonArray().apply {
                 add(JsonObject().apply {
@@ -116,6 +116,7 @@ class AIPlaylistClient @Inject constructor(
 
         val httpRequest = Request.Builder()
             .url(url)
+            .header("x-goog-api-key", cleanKey)
             .post(bodyJson.toString().toRequestBody(jsonMediaType))
             .build()
 
@@ -130,6 +131,7 @@ class AIPlaylistClient @Inject constructor(
     }
 
     private fun callOpenAI(apiKey: String, prompt: String, maxTokens: Int = 1500): String {
+        val cleanKey = apiKey.trim()
         val url = "https://api.openai.com/v1/chat/completions"
         val bodyJson = JsonObject().apply {
             addProperty("model", AIProvider.OPENAI.defaultModel)
@@ -145,7 +147,7 @@ class AIPlaylistClient @Inject constructor(
 
         val httpRequest = Request.Builder()
             .url(url)
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $cleanKey")
             .post(bodyJson.toString().toRequestBody(jsonMediaType))
             .build()
 
@@ -159,6 +161,7 @@ class AIPlaylistClient @Inject constructor(
     }
 
     private fun callGroq(apiKey: String, prompt: String, maxTokens: Int = 1500): String {
+        val cleanKey = apiKey.trim()
         val url = "https://api.groq.com/openai/v1/chat/completions"
         val bodyJson = JsonObject().apply {
             addProperty("model", AIProvider.GROQ.defaultModel)
@@ -174,7 +177,7 @@ class AIPlaylistClient @Inject constructor(
 
         val httpRequest = Request.Builder()
             .url(url)
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $cleanKey")
             .post(bodyJson.toString().toRequestBody(jsonMediaType))
             .build()
 
@@ -192,21 +195,55 @@ class AIPlaylistClient @Inject constructor(
         provider: AIProvider,
         extractor: (String) -> String
     ): String {
-        return try {
-            val response = httpClient.newCall(request).execute()
-            val code = response.code
-            val bodyString = response.body?.string().orEmpty()
-
-            when (code) {
-                200 -> extractor(bodyString)
-                401, 403 -> throw AIException.InvalidKey(provider)
-                429 -> throw AIException.RateLimited(provider)
-                else -> throw IOException("HTTP $code from ${provider.displayName}: $bodyString")
-            }
-        } catch (e: AIException) {
-            throw e
-        } catch (e: Exception) {
+        val response = try {
+            httpClient.newCall(request).execute()
+        } catch (e: java.io.IOException) {
             throw AIException.NetworkError(provider, e)
+        }
+
+        val code = response.code
+        val bodyString = response.body?.string().orEmpty()
+
+        if (code == 200) {
+            return extractor(bodyString)
+        }
+
+        // Try extracting specific error message from provider's JSON response
+        val parsedErrorMessage = runCatching {
+            val root = gson.fromJson(bodyString, JsonObject::class.java)
+            when (provider) {
+                AIProvider.GEMINI -> {
+                    val err = root.getAsJsonObject("error")
+                    err?.get("message")?.asString ?: err?.get("status")?.asString
+                }
+                AIProvider.OPENAI, AIProvider.GROQ -> {
+                    val err = root.getAsJsonObject("error")
+                    err?.get("message")?.asString
+                }
+            }
+        }.getOrNull()
+
+        when (code) {
+            400 -> {
+                if (parsedErrorMessage?.contains("API_KEY_INVALID", ignoreCase = true) == true ||
+                    parsedErrorMessage?.contains("API key not valid", ignoreCase = true) == true ||
+                    bodyString.contains("API_KEY_INVALID", ignoreCase = true) ||
+                    bodyString.contains("API key not valid", ignoreCase = true)
+                ) {
+                    throw AIException.InvalidKey(provider, parsedErrorMessage ?: "Clave de API no válida para ${provider.displayName}.")
+                }
+                val details = parsedErrorMessage ?: "Solicitud incorrecta (HTTP 400): $bodyString"
+                throw AIException.ApiError(provider, details)
+            }
+            401, 403 -> {
+                val details = parsedErrorMessage ?: "Clave no autorizada o sin permisos (HTTP $code)"
+                throw AIException.InvalidKey(provider, "${provider.displayName}: $details")
+            }
+            429 -> throw AIException.RateLimited(provider)
+            else -> {
+                val details = parsedErrorMessage ?: "HTTP $code: $bodyString"
+                throw AIException.ApiError(provider, details)
+            }
         }
     }
 

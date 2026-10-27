@@ -240,7 +240,8 @@ fun AISettingsScreen(
                             testResult = null
                             testErrorMessage = null
 
-                            val result = aiClient.validateKey(activeProvider, apiKey)
+                            val trimmedKey = apiKey.trim()
+                            val result = aiClient.validateKey(activeProvider, trimmedKey)
                             isTestingConnection = false
                             if (result.isSuccess && result.getOrNull() == true) {
                                 testResult = true
@@ -263,7 +264,8 @@ fun AISettingsScreen(
 
                 Button(
                     onClick = {
-                        keyStore.saveKey(activeProvider, apiKey)
+                        val trimmedKey = apiKey.trim()
+                        keyStore.saveKey(activeProvider, trimmedKey)
                         Toast.makeText(context, "API Key saved securely", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f),
