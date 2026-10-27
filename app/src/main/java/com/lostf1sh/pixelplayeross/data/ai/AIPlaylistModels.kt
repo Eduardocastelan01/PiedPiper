@@ -21,5 +21,5 @@ data class AIPlaylistResult(
     val isOfflineFallback: Boolean = false
 ) {
     val name: String get() = playlistName
-    val matchedSongIds: List<Long> get() = songs.map { it.id }
+    val matchedSongIds: List<String> get() = songs.map { it.id }
 }
