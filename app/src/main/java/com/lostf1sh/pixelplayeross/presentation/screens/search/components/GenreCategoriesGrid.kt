@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewList
@@ -34,7 +35,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -56,7 +60,6 @@ import com.lostf1sh.pixelplayeross.presentation.components.getNavigationBarHeigh
 import com.lostf1sh.pixelplayeross.presentation.components.resolveNavBarOccupiedHeight
 import com.lostf1sh.pixelplayeross.presentation.utils.GenreIconProvider
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
-import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
 import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import androidx.compose.ui.res.stringResource
 import com.lostf1sh.pixelplayeross.R
@@ -180,6 +183,20 @@ fun GenreCategoriesGrid(
     }
 }
 
+private val GenreGradientPalettes = listOf(
+    listOf(Color(0xFF4F46E5), Color(0xFF7C3AED)),
+    listOf(Color(0xFFE11D48), Color(0xFFBE123C)),
+    listOf(Color(0xFF0284C7), Color(0xFF0369A1)),
+    listOf(Color(0xFF7C3AED), Color(0xFF9333EA)),
+    listOf(Color(0xFF059669), Color(0xFF047857)),
+    listOf(Color(0xFFD97706), Color(0xFFB45309)),
+    listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)),
+    listOf(Color(0xFF0D9488), Color(0xFF0F766E)),
+    listOf(Color(0xFFEA580C), Color(0xFFC2410C)),
+    listOf(Color(0xFF9333EA), Color(0xFFC026D3))
+)
+
+@OptIn(UnstableApi::class)
 @Composable
 private fun GenreCard(
     genre: Genre,
@@ -193,16 +210,17 @@ private fun GenreCard(
     onSelectionToggle: () -> Unit,
     showSongCount: Boolean
 ) {
-    val isDark = LocalPixelPlayerDarkTheme.current
-    val themeColor = remember(genre, isDark) {
-        com.lostf1sh.pixelplayeross.ui.theme.GenreThemeUtils.getGenreThemeColor(
-            genre = genre,
-            isDark = isDark,
-            fallbackGenreId = genre.id
+    val palette = remember(genre.id, genre.name) {
+        val hash = (genre.id.hashCode() xor genre.name.hashCode()).let { if (it < 0) -it else it }
+        GenreGradientPalettes[hash % GenreGradientPalettes.size]
+    }
+    val gradientBrush = remember(palette) {
+        Brush.linearGradient(
+            colors = palette,
+            start = androidx.compose.ui.geometry.Offset.Zero,
+            end = androidx.compose.ui.geometry.Offset.Infinite
         )
     }
-    val backgroundColor = themeColor.container
-    val onBackgroundColor = themeColor.onContainer
 
     val shape = RoundedCornerShape(20.dp)
     val selectionScale by animateFloatAsState(
@@ -242,43 +260,45 @@ private fun GenreCard(
                 onLongClick = onLongPress
             ),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(20.dp))
-                .background(backgroundColor)
+                .clip(shape)
+                .background(gradientBrush)
         ) {
-            val titleStartPadding = 14.dp
-            val titleEndPadding = if (isGridView) 14.dp else 96.dp
-            val titlePresentation = remember(
-                genre.id,
-                genre.name,
-                isGridView,
-            ) {
-                GenreTypography.resolveTitlePresentationFast(
-                    genreId = genre.id,
-                    genreName = genre.name,
-                    isGridView = isGridView,
-                )
-            }
-
+            // Subtle dark overlay gradient for readability
             Box(
                 modifier = Modifier
-                    .size(90.dp) 
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.05f),
+                                Color.Black.copy(alpha = 0.35f)
+                            )
+                        )
+                    )
+            )
+
+            // Musical icon floating circular badge
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
                     .align(Alignment.BottomEnd)
-                    .offset(x = 16.dp, y = 16.dp) 
+                    .padding(end = 12.dp, bottom = 12.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
             ) {
                 SmartImage(
                     model = GenreIconProvider.getGenreImageResource(genre.name, customIcons),
                     contentDescription = stringResource(R.string.cd_genre_illustration),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(0.55f),
-                    colorFilter = ColorFilter.tint(onBackgroundColor),
-                    contentScale = ContentScale.Crop
+                    modifier = Modifier.size(26.dp),
+                    colorFilter = ColorFilter.tint(Color.White),
+                    contentScale = ContentScale.Fit
                 )
             }
 
@@ -286,30 +306,31 @@ private fun GenreCard(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
-                    .padding(start = titleStartPadding, top = 14.dp, end = titleEndPadding),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                    .padding(start = 14.dp, top = 14.dp, end = if (isGridView) 14.dp else 72.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Shrinks within bounds and wraps between words to fit the tile; ellipsizes
-                // only when the name still does not fit at the smallest size.
                 Text(
-                    text = titlePresentation.text,
-                    style = titlePresentation.style,
-                    color = onBackgroundColor,
-                    autoSize = titlePresentation.autoSize,
-                    maxLines = titlePresentation.maxLines,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    text = genre.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
 
                 if (showSongCount && genre.songCount > 0) {
-                    Text(
-                        text = formatSongCount(genre.songCount),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = onBackgroundColor.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.25f)
+                    ) {
+                        Text(
+                            text = formatSongCount(genre.songCount),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.92f),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 
@@ -317,7 +338,7 @@ private fun GenreCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (selectionIndex != null && selectionIndex >= 0) {
