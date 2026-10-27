@@ -19,4 +19,7 @@ data class AIPlaylistResult(
     val songs: List<Song>,
     val rationale: String = "",
     val isOfflineFallback: Boolean = false
-)
+) {
+    val name: String get() = playlistName
+    val matchedSongIds: List<Long> get() = songs.map { it.id }
+}

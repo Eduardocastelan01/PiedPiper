@@ -702,10 +702,10 @@ private fun CreatePlaylistContent(
                      aiErrorMessage = aiErrorMessage,
                      onGenerateAiPlaylist = {
                          aiViewModel.generatePlaylist(prompt = aiPromptText) { result ->
-                             playlistName = result.name
+                             playlistName = result.playlistName
                              selectedSongIds.clear()
-                             result.matchedSongIds.forEach { id ->
-                                 selectedSongIds[id] = true
+                             result.songs.forEach { song ->
+                                 selectedSongIds[song.id] = true
                              }
                              currentStep = 1
                          }
@@ -736,7 +736,7 @@ private fun CreatePlaylistContent(
                                 )
                                 Column {
                                     Text(
-                                        text = aiResult?.name.orEmpty(),
+                                        text = aiResult?.playlistName.orEmpty(),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
