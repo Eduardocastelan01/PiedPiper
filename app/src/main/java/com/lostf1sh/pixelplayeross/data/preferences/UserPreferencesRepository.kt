@@ -969,7 +969,7 @@ constructor(
 
     val showQueueHistoryFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
-                preferences[PreferencesKeys.SHOW_QUEUE_HISTORY] ?: false
+                preferences[PreferencesKeys.SHOW_QUEUE_HISTORY] ?: true
             }
 
     suspend fun setShowQueueHistory(show: Boolean) {

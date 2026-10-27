@@ -838,6 +838,7 @@ fun QueueBottomSheet(
                                         label = "scaleAnimation"
                                     )
 
+                                    val isPlayed = index < currentSongDisplayIndex
                                     QueuePlaylistSongItem(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -845,6 +846,7 @@ fun QueueBottomSheet(
                                             .graphicsLayer {
                                                 scaleX = scale
                                                 scaleY = scale
+                                                alpha = if (isPlayed) 0.62f else 1f
                                             },
                                         onClick = { onPlaySong(song, queueIndex) },
                                         song = song,
