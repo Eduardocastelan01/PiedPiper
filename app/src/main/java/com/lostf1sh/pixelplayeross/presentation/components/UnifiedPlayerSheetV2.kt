@@ -161,6 +161,15 @@ fun UnifiedPlayerSheetV2(
         }
     }
 
+    val songPendingDelete by playerViewModel.songPendingDeleteConfirmation.collectAsStateWithLifecycle()
+    songPendingDelete?.let { song ->
+        DeleteSongDialog(
+            song = song,
+            onConfirm = { playerViewModel.confirmDeleteSong() },
+            onDismiss = { playerViewModel.dismissDeleteConfirmation() }
+        )
+    }
+
     val infrequentPlayerStateReference = playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val infrequentPlayerState = infrequentPlayerStateReference.value
     val currentBackStackEntry by navController.currentBackStackEntryAsState()

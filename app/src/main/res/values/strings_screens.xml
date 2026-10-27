@@ -149,6 +149,7 @@
 
     <string name="dialog_delete_song_title">Delete song?</string>
     <string name="dialog_delete_song_message">\"%1$s\" by %2$s\n\nThis song will be permanently deleted from your device and cannot be recovered.</string>
+    <string name="dialog_delete_song_warning">This file will be permanently deleted from your device storage. This action cannot be undone.</string>
 
     <string name="home_your_mix_title">Your\nMix</string>
     <string name="home_empty_placeholder_title">No data to show yet</string>

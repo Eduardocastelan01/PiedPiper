@@ -171,6 +171,7 @@
     <string name="delimiter_toast_invalid">El delimitador ya existe o no es válido</string>
     <string name="delimiter_toast_reset">Delimitadores restablecidos a los predeterminados</string>
     <string name="dialog_delete_song_message">\"%1$s\" de %2$s\n\nEsta canción se eliminará permanentemente de tu dispositivo y no se podrá recuperar.</string>
+    <string name="dialog_delete_song_warning">Este archivo se eliminará permanentemente del almacenamiento de tu dispositivo. Esta acción no se puede deshacer.</string>
     <string name="dialog_delete_song_title">¿Eliminar canción?</string>
     <string name="error_share_song_format">No se pudo compartir la canción: %1$s</string>
     <string name="genre_quick_fill">Rellenar género rápido</string>

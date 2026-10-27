@@ -585,6 +585,8 @@ class PlayerViewModel @Inject constructor(
     private val answeredWriteRequests = MutableStateFlow(0)
     private var pendingDeleteSong: Song? = null
     private var pendingDeleteCallback: ((Boolean) -> Unit)? = null
+    private var pendingDeleteActivity: Activity? = null
+    val songPendingDeleteConfirmation = MutableStateFlow<Song?>(null)
 
     private val _albumNavigationRequests = MutableSharedFlow<Long>(extraBufferCapacity = 1)
     val albumNavigationRequests = _albumNavigationRequests.asSharedFlow()
@@ -3838,8 +3840,29 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun deleteFromDevice(activity: Activity, song: Song, onResult: (Boolean) -> Unit = {}) {
+        pendingDeleteSong = song
+        pendingDeleteCallback = onResult
+        pendingDeleteActivity = activity
+        songPendingDeleteConfirmation.value = song
+    }
+
+    fun dismissDeleteConfirmation() {
+        val callback = pendingDeleteCallback
+        pendingDeleteSong = null
+        pendingDeleteCallback = null
+        pendingDeleteActivity = null
+        songPendingDeleteConfirmation.value = null
+        callback?.invoke(false)
+    }
+
+    fun confirmDeleteSong() {
+        val song = songPendingDeleteConfirmation.value ?: pendingDeleteSong ?: return
+        val activity = pendingDeleteActivity ?: return
+        val onResult = pendingDeleteCallback ?: {}
+        songPendingDeleteConfirmation.value = null
+
         viewModelScope.launch {
-            // Bug Fix (Pied Piper): If the song is currently playing, skip to next track first so
+            // If the song is currently playing, skip to next track first so
             // ExoPlayer releases the file descriptor before we attempt to delete the file from disk.
             if (playbackStateHolder.stablePlayerState.value.currentSong?.id == song.id) {
                 val controller = mediaController
@@ -3872,12 +3895,6 @@ class PlayerViewModel @Inject constructor(
                     _deletePermissionRequest.emit(intentSender)
                     return@launch
                 }
-            }
-
-            val userConfirmed = songRemovalStateHolder.showDeleteConfirmation(activity, song)
-            if (!userConfirmed) {
-                onResult(false)
-                return@launch
             }
 
             val success = songRemovalStateHolder.deleteSongFile(song)
