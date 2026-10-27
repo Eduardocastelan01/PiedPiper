@@ -17,6 +17,7 @@ object CloudStreamSecurity {
 
     private val NAVIDROME_SONG_ID_REGEX = Regex("^[A-Za-z0-9_-]{1,100}$")
     private val JELLYFIN_ITEM_ID_REGEX = Regex("^[A-Za-z0-9]{1,100}$")
+    private val GDRIVE_FILE_ID_REGEX = Regex("^[A-Za-z0-9_-]{1,120}$")
     private val FORBIDDEN_HOSTS = setOf("localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]")
     private val LOCAL_SERVER_DNS_SUFFIXES =
         listOf(".local", ".lan", ".home", ".internal", ".home.arpa", ".ts.net")
@@ -47,6 +48,8 @@ object CloudStreamSecurity {
     fun validateNavidromeSongId(songId: String): Boolean = NAVIDROME_SONG_ID_REGEX.matches(songId)
 
     fun validateJellyfinItemId(itemId: String): Boolean = JELLYFIN_ITEM_ID_REGEX.matches(itemId)
+
+    fun validateGDriveFileId(fileId: String): Boolean = GDRIVE_FILE_ID_REGEX.matches(fileId)
 
     fun validateRangeHeader(rawHeader: String?): RangeHeaderValidation {
         if (rawHeader.isNullOrBlank()) {

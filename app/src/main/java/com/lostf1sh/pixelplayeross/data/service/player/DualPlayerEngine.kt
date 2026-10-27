@@ -234,6 +234,7 @@ class DualPlayerEngine @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val navidromeStreamProxy: NavidromeStreamProxy,
     private val jellyfinStreamProxy: com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinStreamProxy,
+    private val gDriveStreamProxy: com.lostf1sh.pixelplayeross.data.gdrive.GDriveStreamProxy,
     private val cloudOfflineRepository: CloudOfflineRepository
 ) {
     private companion object {
@@ -246,8 +247,8 @@ class DualPlayerEngine @Inject constructor(
         private const val POST_TRANSITION_OFFLOAD_GUARD_MS = 2_000L
         private const val MAX_AUXILIARY_TIMELINE_ITEMS = QueueWindowPolicy.MAX_AUXILIARY_TIMELINE_ITEMS
         private val LOCAL_MEDIA_SCHEMES = setOf("content", "file", "android.resource")
-        private val REMOTE_MEDIA_SCHEMES = setOf("http", "https", "navidrome", "jellyfin")
-        private val CLOUD_PROXY_SCHEMES = setOf("navidrome", "jellyfin")
+        private val REMOTE_MEDIA_SCHEMES = setOf("http", "https", "navidrome", "jellyfin", "gdrive")
+        private val CLOUD_PROXY_SCHEMES = setOf("navidrome", "jellyfin", "gdrive")
     }
 
     data class TransitionTarget(
@@ -1356,6 +1357,7 @@ class DualPlayerEngine @Inject constructor(
                 when (uri.scheme) {
                     "navidrome" -> resolveNavidromeUriAsync(uriString)
                     "jellyfin" -> resolveJellyfinUriAsync(uriString)
+                    "gdrive" -> resolveGDriveUriAsync(uriString)
                     else -> null
                 }
             },
@@ -1373,6 +1375,12 @@ class DualPlayerEngine @Inject constructor(
         if (!jellyfinStreamProxy.ensureReady(5_000L)) return@withContext null
         jellyfinStreamProxy.warmUpStreamUrl(uriString)
         jellyfinStreamProxy.resolveJellyfinUri(uriString)?.let { Uri.parse(it) }
+    }
+
+    private suspend fun resolveGDriveUriAsync(uriString: String): Uri? = withContext(Dispatchers.IO) {
+        if (!gDriveStreamProxy.ensureReady(5_000L)) return@withContext null
+        gDriveStreamProxy.warmUpStreamUrl(uriString)
+        gDriveStreamProxy.resolveGDriveUri(uriString)?.let { Uri.parse(it) }
     }
 
     suspend fun resolveMediaItem(mediaItem: MediaItem): MediaItem {

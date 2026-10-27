@@ -34,6 +34,7 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
     private val dao: OfflineTrackDao,
     private val navidromeRepository: NavidromeRepository,
     private val jellyfinRepository: JellyfinRepository,
+    private val googleDriveRepository: com.lostf1sh.pixelplayeross.data.gdrive.GoogleDriveRepository,
     baseOkHttpClient: OkHttpClient
 ) : CoroutineWorker(appContext, workerParams) {
     private val client = baseOkHttpClient.newBuilder()
@@ -229,6 +230,18 @@ class CloudTrackDownloadWorker @AssistedInject constructor(
                         ?.let { mapOf("Authorization" to it) }
                         .orEmpty(),
                     allowedHost = jellyfinRepository.serverUrl
+                )
+            }
+            "gdrive" -> {
+                if (!CloudStreamSecurity.validateGDriveFileId(id)) {
+                    throw IOException("Invalid Google Drive track identifier")
+                }
+                DownloadSource(
+                    url = googleDriveRepository.getStreamUrl(id),
+                    headers = googleDriveRepository.getAuthorizationHeader()
+                        ?.let { mapOf("Authorization" to it) }
+                        .orEmpty(),
+                    allowedHost = googleDriveRepository.serverUrl
                 )
             }
             else -> throw IOException("Unsupported cloud provider")
