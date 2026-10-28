@@ -91,7 +91,7 @@ class GoogleDriveRepository @Inject constructor(
             if (!acc.isConnected) {
                 return@withContext Result.failure(IllegalStateException("No Google Drive API Key or Access Token configured"))
             }
-            if (acc.apiKey.isNotBlank() && acc.oauthToken.isBlank() && acc.folderId.isBlank()) {
+            if (acc.apiKey.isNotBlank() && acc.accessToken.isBlank() && acc.folderId.isBlank()) {
                 return@withContext Result.failure(IllegalStateException("Al usar una Clave de API, debes especificar el ID o enlace de la carpeta de Drive pública."))
             }
 
