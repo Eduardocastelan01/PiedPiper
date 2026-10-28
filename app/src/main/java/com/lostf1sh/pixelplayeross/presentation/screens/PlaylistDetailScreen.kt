@@ -751,9 +751,6 @@ fun PlaylistDetailScreen(
                     ) {
                         LazyColumn(
                             state = listState,
-                            contentPadding = PaddingValues(
-                                bottom = if (hasCurrentSong) MiniPlayerHeight + 110.dp else 110.dp
-                            ),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(
@@ -772,9 +769,10 @@ fun PlaylistDetailScreen(
                                     24.dp,
                                     0.dp
                                 )
+                                val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                                 PaddingValues(
                                     top = 12.dp,
-                                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
+                                    bottom = if (hasCurrentSong) MiniPlayerHeight + bottomInset + 110.dp else bottomInset + 110.dp,
                                     end = scrollbarEnd
                                 )
                             }

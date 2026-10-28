@@ -581,12 +581,12 @@ class MusicRepositoryImpl @Inject constructor(
     override fun searchAlbums(query: String, minTracks: Int): Flow<List<Album>> {
         if (query.isBlank()) return flowOf(emptyList())
         val cleanQuery = query.trim()
-        return getAlbums(minTracks).map { allAlbums ->
+        return getAlbums(storageFilter = StorageFilter.ALL, minTracks = minTracks).map { allAlbums ->
             allAlbums.mapNotNull { album ->
-                val nameScore = SearchNormalizer.matchScore(album.name, cleanQuery)
+                val nameScore = SearchNormalizer.matchScore(album.title, cleanQuery)
                 val artistScore = SearchNormalizer.matchScore(album.artist, cleanQuery)
                 val maxScore = maxOf(nameScore, artistScore)
-                val matchesNormalized = SearchNormalizer.containsNormalized(album.name, cleanQuery) ||
+                val matchesNormalized = SearchNormalizer.containsNormalized(album.title, cleanQuery) ||
                     SearchNormalizer.containsNormalized(album.artist, cleanQuery)
                 if (maxScore >= 0.55f || matchesNormalized) {
                     val finalScore = if (matchesNormalized) maxOf(maxScore, 0.85f) else maxScore
