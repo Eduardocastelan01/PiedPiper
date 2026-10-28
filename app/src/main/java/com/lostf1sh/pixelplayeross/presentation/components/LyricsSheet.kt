@@ -1949,7 +1949,10 @@ internal fun buildSyntheticWords(line: SyncedLine, lineEndTimeMs: Long, sanitize
     val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
     if (tokens.isEmpty()) return null
     val startMs = line.time.toLong()
-    val endMs = if (lineEndTimeMs > startMs) lineEndTimeMs else (startMs + 3_000L)
+    val rawEndMs = if (lineEndTimeMs > startMs) lineEndTimeMs else (startMs + 3_000L)
+    // Avoid dragging synthetic words across 15+ seconds of instrumental breaks or Int.MAX_VALUE:
+    val maxExpectedDuration = maxOf(2_500L, tokens.size * 520L)
+    val endMs = minOf(rawEndMs, startMs + maxExpectedDuration)
     val totalDuration = (endMs - startMs).coerceAtLeast(600L)
     val totalChars = tokens.sumOf { maxOf(1, it.length) }
     var currentMs = startMs
@@ -2052,7 +2055,8 @@ internal fun resolveLineEndTimeMs(
     val words = line.words.orEmpty()
     val backgroundWords = if (includeBackground) line.background?.words.orEmpty() else emptyList()
     if (words.isEmpty() && backgroundWords.isEmpty()) {
-        return maxOf(nextLineStartMs.toLong(), line.time + 1L)
+        val safeNext = if (nextLineStartMs != Int.MAX_VALUE) nextLineStartMs.toLong() else (line.time + 4_000L)
+        return maxOf(safeNext, line.time + 1L)
     }
     var lastWordStart = Long.MIN_VALUE
     var lastWordEnd = Long.MIN_VALUE
@@ -2064,7 +2068,8 @@ internal fun resolveLineEndTimeMs(
         lastWordStart = maxOf(lastWordStart, word.time.toLong())
         lastWordEnd = maxOf(lastWordEnd, (word.endTime ?: word.time).toLong())
     }
-    return maxOf(nextLineStartMs.toLong(), lastWordStart + 1L, lastWordEnd)
+    val safeNext = if (nextLineStartMs != Int.MAX_VALUE) nextLineStartMs.toLong() else (lastWordEnd + 1_500L)
+    return maxOf(safeNext, lastWordStart + 1L, lastWordEnd)
 }
 
 /**

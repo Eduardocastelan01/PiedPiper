@@ -660,7 +660,7 @@ object LyricsUtils {
         RegexOption.IGNORE_CASE
     )
     private val LRC_NAMED_SINGER_PREFIX_REGEX = Regex(
-        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[([^\\]]+)\\]|([A-Za-z0-9_ÁÉÍÓÚáéíóúñÑ -]{2,24}))\\s*:\\s*"
+        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[([^\\]]+)\\]|([A-Za-z0-9_ÁÉÍÓÚáéíóúñÑäëïöüÄËÏÖÜ\s&'.-]{2,32}))\\s*:\\s*"
     )
     private val LRC_INLINE_BACKGROUND_REGEX = Regex(
         "^(.*?)[ \\t]*\\(([^\\)]+)\\)[ \\t]*$"
@@ -759,7 +759,7 @@ object LyricsUtils {
                 val fraction = lineMatcher.group(3)?.toLong() ?: 0
                 val textWithTags = stripFormatCharacters(lineMatcher.group(4)?.trim() ?: "")
                 val (voice, text) = splitVoicePrefix(
-                    stripLrcTimestamps(textWithTags),
+                    textWithTags,
                     singerVoiceMap = singerVoiceMap,
                     nextVoiceProvider = { nextDynamicVoice++ },
                     groupKeywords = groupKeywords
@@ -777,12 +777,13 @@ object LyricsUtils {
                     val mainPart = parenMatch.groupValues[1].trim()
                     val bgPart = parenMatch.groupValues[2].trim()
                     if (bgPart.isNotEmpty()) {
+                        val parsedBg = parseBackgroundVocals("($bgPart)", lineTimestamp)
                         if (mainPart.isNotEmpty()) {
                             lineBody = mainPart
-                            inlineBackground = BackgroundVocals(text = "($bgPart)")
+                            inlineBackground = parsedBg ?: BackgroundVocals(text = "($bgPart)")
                         } else {
                             lineBody = "($bgPart)"
-                            inlineBackground = BackgroundVocals(text = "($bgPart)")
+                            inlineBackground = parsedBg ?: BackgroundVocals(text = "($bgPart)")
                             if (finalVoice == null && singerVoiceMap.isNotEmpty()) {
                                 finalVoice = 2
                             }

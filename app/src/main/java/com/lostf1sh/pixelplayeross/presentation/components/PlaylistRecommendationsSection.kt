@@ -72,53 +72,98 @@ fun PlaylistRecommendationsSection(
             if (candidatePool.isEmpty()) return@derivedStateOf emptyList()
 
             if (playlistSongs.isEmpty()) {
-                // If playlist is currently empty, recommend diverse tracks from the library
-                return@derivedStateOf candidatePool.shuffled()
+                // If playlist is empty, recommend tracks from diverse artists in the library
+                val byArtist = candidatePool.groupBy { it.artist.lowercase().trim() }
+                return@derivedStateOf byArtist.values.mapNotNull { it.shuffled().firstOrNull() }.shuffled()
             }
 
-            // Frequency maps for playlist artists and genres
-            val artistFrequencies = mutableMapOf<String, Int>()
+            // Frequency maps for playlist artists, specific genres, and macro styles/moods
+            val specificGenreFrequencies = mutableMapOf<String, Int>()
+            val macroGenreFrequencies = mutableMapOf<String, Int>()
+            val playlistArtists = mutableSetOf<String>()
+
             playlistSongs.forEach { s ->
                 val normArtist = s.artist.lowercase().trim()
                 if (normArtist.isNotBlank()) {
-                    artistFrequencies[normArtist] = (artistFrequencies[normArtist] ?: 0) + 1
+                    playlistArtists.add(normArtist)
                 }
-            }
-
-            val genreFrequencies = mutableMapOf<String, Int>()
-            playlistSongs.forEach { s ->
                 val genres = GenreNormalizer.splitAndNormalize(s.genre, s.artist, s.title)
                 genres.forEach { g ->
-                    val normGenre = g.lowercase().trim()
-                    if (normGenre.isNotBlank()) {
-                        genreFrequencies[normGenre] = (genreFrequencies[normGenre] ?: 0) + 1
+                    val normG = g.lowercase().trim()
+                    if (normG.isNotBlank()) {
+                        specificGenreFrequencies[normG] = (specificGenreFrequencies[normG] ?: 0) + 1
+                        val macro = GenreNormalizer.toMacroCategory(normG).lowercase().trim()
+                        if (macro.isNotBlank() && macro != "other" && macro != "unknown") {
+                            macroGenreFrequencies[macro] = (macroGenreFrequencies[macro] ?: 0) + 1
+                        }
                     }
                 }
             }
 
-            // Score each candidate track
+            // Score each candidate track based on mood & genre coherence
             val scored = candidatePool.map { candidate ->
                 var score = 0
                 val candidateArtist = candidate.artist.lowercase().trim()
-                val artistMatches = artistFrequencies[candidateArtist] ?: 0
-                score += artistMatches * 10
+                val isSameArtist = candidateArtist in playlistArtists
 
                 val candidateGenres = GenreNormalizer.splitAndNormalize(candidate.genre, candidate.artist, candidate.title)
+                var genreMatchScore = 0
                 candidateGenres.forEach { cg ->
                     val normG = cg.lowercase().trim()
-                    score += (genreFrequencies[normG] ?: 0) * 5
+                    val specificHits = specificGenreFrequencies[normG] ?: 0
+                    if (specificHits > 0) {
+                        genreMatchScore += specificHits * 20
+                    }
+                    val macro = GenreNormalizer.toMacroCategory(normG).lowercase().trim()
+                    val macroHits = macroGenreFrequencies[macro] ?: 0
+                    if (macroHits > 0) {
+                        genreMatchScore += macroHits * 10
+                    }
+                }
+                score += genreMatchScore
+
+                // Moderate bonus for familiar artist, never overpowering mood/genre
+                if (isSameArtist) {
+                    score += 6
+                }
+
+                // If playlist has clear genres and this candidate doesn't match the style, drop score
+                if (macroGenreFrequencies.isNotEmpty() && genreMatchScore == 0 && !isSameArtist) {
+                    score = 0
                 }
 
                 candidate to score
             }
 
-            // Return candidates sorted by relevance, with fallback to diverse library sampling
-            val (matched, unmatched) = scored.partition { it.second > 0 }
-            val prioritized = matched.sortedByDescending { it.second }.map { it.first }
-            if (prioritized.size >= 12) {
-                prioritized
+            // ARTIST DIVERSITY ENFORCEMENT (Spotify-style):
+            // Group candidate matches by artist so that no single artist monopolizes the recommendations.
+            // Interleave artist tracks: 1 song per artist in round 0, 1 song per artist in round 1.
+            val matched = scored.filter { it.second > 0 }.sortedByDescending { it.second }
+            val byArtist = linkedMapOf<String, MutableList<Pair<Song, Int>>>()
+            for ((candidate, score) in matched) {
+                val artistKey = candidate.artist.lowercase().trim()
+                byArtist.getOrPut(artistKey) { mutableListOf() }.add(candidate to score)
+            }
+
+            val diversePrioritized = mutableListOf<Song>()
+            val maxRounds = 2
+            for (round in 0 until maxRounds) {
+                for ((_, songList) in byArtist) {
+                    if (round < songList.size) {
+                        diversePrioritized.add(songList[round].first)
+                    }
+                }
+            }
+
+            // Diverse fallback from varied artists if match pool is small
+            val unmatchedPool = scored.filter { it.second <= 0 }.map { it.first }
+            val unmatchedDiverse = unmatchedPool.groupBy { it.artist.lowercase().trim() }
+                .values.mapNotNull { it.shuffled().firstOrNull() }.shuffled()
+
+            if (diversePrioritized.size >= 18) {
+                diversePrioritized
             } else {
-                prioritized + unmatched.shuffled().map { it.first }
+                diversePrioritized + unmatchedDiverse
             }
         }
     }

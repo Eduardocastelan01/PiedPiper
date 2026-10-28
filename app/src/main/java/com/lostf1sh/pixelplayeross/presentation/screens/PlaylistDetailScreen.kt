@@ -833,6 +833,15 @@ fun PlaylistDetailScreen(
                                         isReorderModeEnabled = isReorderModeEnabled,
                                         isDragHandleVisible = isReorderModeEnabled && isEditablePlaylist,
                                         isRemoveButtonVisible = isRemoveModeEnabled && isEditablePlaylist,
+                                        enableSwipeToDismiss = isEditablePlaylist && !isReorderModeEnabled,
+                                        swipeStateIdentity = entry.index.toLong(),
+                                        onDismissSong = {
+                                            if (isEditablePlaylist) {
+                                                currentPlaylist.let {
+                                                    playlistViewModel.removeSongFromPlaylist(it.id, song.id)
+                                                }
+                                            }
+                                        },
                                         onMoreOptionsClick = stableOnMoreOptionsClick,
                                         dragHandle = {
                                             IconButton(
