@@ -199,8 +199,7 @@ class MetadataEditStateHolder @Inject constructor(
         when {
             // Already gone from disk: nothing to delete, let the caller drop it from the library.
             !fileInfo.exists -> true
-            fileInfo.canWrite -> FileDeletionUtils.deleteFile(context, song.path)
-            else -> false
+            else -> FileDeletionUtils.deleteFile(context, song.path)
         }
     }
 

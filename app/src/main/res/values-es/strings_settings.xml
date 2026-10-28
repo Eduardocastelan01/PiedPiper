@@ -142,6 +142,10 @@
     <string name="setcat_headphones">Auriculares</string>
     <string name="setcat_headphones_resume_subtitle">Si la reproducción se pausó al quitar los auriculares, reanudar al volver a conectarlos.</string>
     <string name="setcat_headphones_resume_title">Reanudar al reconectar auriculares</string>
+    <string name="setcat_pause_on_mute_title">Pausar al silenciar</string>
+    <string name="setcat_pause_on_mute_subtitle">Pausa la reproducción cuando el volumen llega a 0 y la reanuda al subirlo.</string>
+    <string name="artist_settings_manual_rescan_title">Re-analizar y fusionar artistas</string>
+    <string name="artist_settings_manual_rescan_subtitle">Escanea la biblioteca para separar colaboraciones y unificar variantes como Carín León y Carin leon.</string>
     <string name="setcat_home_collage">Collage de inicio</string>
     <string name="setcat_immersive_lyrics_subtitle">Ocultar controles automáticamente y agrandar el texto.</string>
     <string name="setcat_immersive_lyrics_title">Letras inmersivas</string>

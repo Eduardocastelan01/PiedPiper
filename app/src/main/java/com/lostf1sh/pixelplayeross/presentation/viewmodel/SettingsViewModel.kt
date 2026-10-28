@@ -82,6 +82,7 @@ data class SettingsUiState(
     val keepPlayingInBackground: Boolean = true,
     val keepScreenAwakeWhilePlaying: Boolean = false,
     val resumeOnHeadsetReconnect: Boolean = false,
+    val pauseOnMuteEnabled: Boolean = false,
     val showQueueHistory: Boolean = true,
     val isCrossfadeEnabled: Boolean = false,
     val smartCrossfadeEnabled: Boolean = false,
@@ -406,6 +407,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.smartCrossfadeEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(smartCrossfadeEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.pauseOnMuteEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(pauseOnMuteEnabled = enabled) }
             }
         }
 
@@ -738,6 +745,12 @@ class SettingsViewModel @Inject constructor(
     fun setResumeOnHeadsetReconnect(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setResumeOnHeadsetReconnect(enabled)
+        }
+    }
+
+    fun setPauseOnMuteEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setPauseOnMuteEnabled(enabled)
         }
     }
 

@@ -39,6 +39,8 @@ import com.lostf1sh.pixelplayeross.utils.LocalArtworkUri
 import com.lostf1sh.pixelplayeross.utils.buildLocalAudioSelection
 import com.lostf1sh.pixelplayeross.utils.normalizeMetadataTextOrEmpty
 import com.lostf1sh.pixelplayeross.utils.splitArtistsByDelimiters
+import com.lostf1sh.pixelplayeross.utils.toCanonicalArtistKey
+import com.lostf1sh.pixelplayeross.utils.getArtistDisplayNameScore
 import com.lostf1sh.pixelplayeross.utils.traceAsyncSection
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -578,6 +580,57 @@ constructor(
         
         val nextArtistId = AtomicLong(initialMaxArtistId + 1)
         val artistNameToId = existingArtistIdMap
+
+        // Canonical mapping to deduplicate artists differing by accents, case, and whitespace
+        val canonicalToArtistId = mutableMapOf<String, Long>()
+        val artistIdToBestDisplayName = mutableMapOf<Long, String>()
+        val artistIdToBestScore = mutableMapOf<Long, Int>()
+
+        existingArtistIdMap.forEach { (name, id) ->
+            val canonicalKey = name.toCanonicalArtistKey()
+            if (canonicalKey.isNotEmpty()) {
+                val existingId = canonicalToArtistId[canonicalKey]
+                val score = getArtistDisplayNameScore(name)
+                if (existingId == null) {
+                    canonicalToArtistId[canonicalKey] = id
+                    artistIdToBestDisplayName[id] = name
+                    artistIdToBestScore[id] = score
+                } else {
+                    val currentScore = artistIdToBestScore[existingId] ?: -100
+                    if (score > currentScore) {
+                        artistIdToBestDisplayName[existingId] = name
+                        artistIdToBestScore[existingId] = score
+                    }
+                }
+            }
+        }
+
+        fun resolveOrCreateArtist(name: String): Long {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) return 0L
+            val canonicalKey = trimmed.toCanonicalArtistKey()
+            if (canonicalKey.isEmpty()) return 0L
+
+            val existingId = canonicalToArtistId[canonicalKey]
+            val score = getArtistDisplayNameScore(trimmed)
+
+            return if (existingId != null) {
+                val currentScore = artistIdToBestScore[existingId] ?: -100
+                if (score > currentScore) {
+                    artistIdToBestDisplayName[existingId] = trimmed
+                    artistIdToBestScore[existingId] = score
+                }
+                artistNameToId[trimmed] = existingId
+                existingId
+            } else {
+                val newId = nextArtistId.getAndIncrement()
+                canonicalToArtistId[canonicalKey] = newId
+                artistIdToBestDisplayName[newId] = trimmed
+                artistIdToBestScore[newId] = score
+                artistNameToId[trimmed] = newId
+                newId
+            }
+        }
         
         val allCrossRefs = mutableListOf<SongArtistCrossRef>()
         val artistTrackCounts = mutableMapOf<Long, Int>()
@@ -612,31 +665,27 @@ constructor(
                     }
 
             allArtistsForSong.forEach { artistName ->
-                val normalizedName = artistName.trim()
-                if (normalizedName.isNotEmpty() && !artistNameToId.containsKey(normalizedName)) {
-                     val id = nextArtistId.getAndIncrement()
-                     artistNameToId[normalizedName] = id
-                }
+                resolveOrCreateArtist(artistName)
             }
 
             val primaryArtistName =
                     allArtistsForSong.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
                             ?: songArtistNameTrimmed
-            val primaryArtistId = artistNameToId[primaryArtistName] ?: song.artistId
+            val primaryArtistId = resolveOrCreateArtist(primaryArtistName).takeIf { it != 0L } ?: song.artistId
 
             val effectiveAlbumArtistName = song.albumArtist
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", ignoreCase = true) }
                     ?: primaryArtistName
-            if (effectiveAlbumArtistName.isNotEmpty() && !artistNameToId.containsKey(effectiveAlbumArtistName)) {
-                artistNameToId[effectiveAlbumArtistName] = nextArtistId.getAndIncrement()
+            val albumArtistId = if (effectiveAlbumArtistName.isNotEmpty()) {
+                resolveOrCreateArtist(effectiveAlbumArtistName).takeIf { it != 0L } ?: primaryArtistId
+            } else {
+                primaryArtistId
             }
-            val albumArtistId = artistNameToId[effectiveAlbumArtistName] ?: primaryArtistId
 
             allArtistsForSong.forEachIndexed { index, artistName ->
-                val normalizedName = artistName.trim()
-                val artistId = artistNameToId[normalizedName]
-                if (artistId != null) {
+                val artistId = resolveOrCreateArtist(artistName)
+                if (artistId != 0L) {
                     val isPrimary = (index == 0)
                     allCrossRefs.add(
                             SongArtistCrossRef(
@@ -653,10 +702,10 @@ constructor(
             val finalAlbumId = albumMap.getOrPut(albumKey) { song.albumId }
 
             val artistRefsForJson = allArtistsForSong.mapIndexed { index, name ->
-                val normalizedName = name.trim()
-                val artistId = artistNameToId[normalizedName] ?: 0L
-                ArtistRef(id = artistId, name = normalizedName, isPrimary = index == 0)
-            }.filter { it.name.isNotEmpty() }
+                val artistId = resolveOrCreateArtist(name)
+                val displayName = artistIdToBestDisplayName[artistId] ?: name.trim()
+                ArtistRef(id = artistId, name = displayName, isPrimary = index == 0)
+            }.filter { it.name.isNotEmpty() }.distinctBy { it.id }
 
             correctedSongs.add(
                     song.copy(
@@ -669,12 +718,12 @@ constructor(
             )
         }
 
-        val artistEntities = artistNameToId.map { (name, id) ->
+        val artistEntities = artistIdToBestDisplayName.map { (id, bestName) ->
             val count = artistTrackCounts[id] ?: 0
             val metadata = existingArtistMetadata[id]
             ArtistEntity(
                 id = id,
-                name = name,
+                name = bestName,
                 trackCount = count,
                 imageUrl = metadata?.first,
                 customImageUri = metadata?.second

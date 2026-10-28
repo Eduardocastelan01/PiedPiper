@@ -184,6 +184,10 @@
     <string name="setcat_headphones">Headphones</string>
     <string name="setcat_headphones_resume_title">Resume when headphones reconnect</string>
     <string name="setcat_headphones_resume_subtitle">If playback paused because headphones were removed, resume automatically when they connect again.</string>
+    <string name="setcat_pause_on_mute_title">Pause on mute</string>
+    <string name="setcat_pause_on_mute_subtitle">Pause playback when volume reaches 0 and resume when increased.</string>
+    <string name="artist_settings_manual_rescan_title">Re-analyze and deduplicate artists</string>
+    <string name="artist_settings_manual_rescan_subtitle">Scans library to split collaborations and merge variations like Carín León and Carin leon.</string>
     <string name="setcat_queue_transitions">Queue and Transitions</string>
     <string name="setcat_crossfade_label">Crossfade</string>
     <string name="setcat_crossfade_desc">Enable smooth transition between songs.</string>
@@ -382,7 +386,7 @@
     <string name="updates_switch_dialog_title">Reinstall required</string>
     <string name="updates_switch_dialog_body">Stable builds come from F-Droid and alpha builds from GitHub. They are signed with different keys, so Android can\'t update one with the other. Uninstalling deletes the app\'s data, so back up first.</string>
     <string name="updates_switch_step_backup">1. Create a backup and save the file outside the app.</string>
-    <string name="updates_switch_step_download_stable">2. Install F-Droid if you don\'t have it, and open PixelPlayerOSS there.</string>
+    <string name="updates_switch_step_download_stable">2. Install F-Droid if you don\'t have it, and open Pied Piper there.</string>
     <string name="updates_switch_step_download_alpha">2. Download the %1$s APK.</string>
     <string name="updates_switch_step_uninstall">3. Uninstall this app, install the new build, and restore your backup.</string>
     <string name="updates_switch_action_backup">Back up</string>
@@ -392,7 +396,7 @@
     <string name="updates_switch_action_close">Close</string>
     <string name="updates_notification_channel">App updates</string>
     <string name="updates_notification_title">Update available</string>
-    <string name="updates_notification_text">PixelPlayerOSS %1$s is ready to install.</string>
-    <string name="updates_notification_confirm_title">Finish updating PixelPlayerOSS</string>
+    <string name="updates_notification_text">Pied Piper %1$s is ready to install.</string>
+    <string name="updates_notification_confirm_title">Finish updating Pied Piper</string>
     <string name="updates_notification_confirm_text">Tap to confirm the installation.</string>
 </resources>

@@ -91,6 +91,9 @@ class GoogleDriveRepository @Inject constructor(
             if (!acc.isConnected) {
                 return@withContext Result.failure(IllegalStateException("No Google Drive API Key or Access Token configured"))
             }
+            if (acc.apiKey.isNotBlank() && acc.oauthToken.isBlank() && acc.folderId.isBlank()) {
+                return@withContext Result.failure(IllegalStateException("Al usar una Clave de API, debes especificar el ID o enlace de la carpeta de Drive pública."))
+            }
 
             val fetchResult = fetchAudioFiles()
             if (fetchResult.isFailure) {
@@ -111,8 +114,14 @@ class GoogleDriveRepository @Inject constructor(
 
         try {
             var query = "trashed = false and (mimeType contains 'audio/' or name contains '.mp3' or name contains '.flac' or name contains '.m4a' or name contains '.ogg' or name contains '.wav')"
-            if (acc.folderId.isNotBlank()) {
-                query = "'${acc.folderId.trim()}' in parents and $query"
+            val rawFolderId = acc.folderId.trim()
+            val cleanFolderId = when {
+                rawFolderId.contains("folders/") -> Regex("""folders/([a-zA-Z0-9_-]+)""").find(rawFolderId)?.groupValues?.get(1) ?: rawFolderId
+                rawFolderId.contains("id=") -> Regex("""id=([a-zA-Z0-9_-]+)""").find(rawFolderId)?.groupValues?.get(1) ?: rawFolderId
+                else -> rawFolderId
+            }
+            if (cleanFolderId.isNotBlank()) {
+                query = "'$cleanFolderId' in parents and $query"
             }
 
             do {
@@ -122,6 +131,8 @@ class GoogleDriveRepository @Inject constructor(
                 urlBuilder.addQueryParameter("pageSize", "100")
                 urlBuilder.addQueryParameter("q", query)
                 urlBuilder.addQueryParameter("fields", "nextPageToken,files(id,name,mimeType,size,createdTime,modifiedTime,thumbnailLink)")
+                urlBuilder.addQueryParameter("supportsAllDrives", "true")
+                urlBuilder.addQueryParameter("includeItemsFromAllDrives", "true")
                 if (acc.apiKey.isNotBlank()) {
                     urlBuilder.addQueryParameter("key", acc.apiKey)
                 }

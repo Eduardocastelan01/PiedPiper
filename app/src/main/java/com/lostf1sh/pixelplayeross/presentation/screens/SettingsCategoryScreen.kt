@@ -992,6 +992,14 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_headphones_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_playback_headset_resume", highlightKey)
                                 )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_pause_on_mute_title),
+                                    subtitle = stringResource(R.string.setcat_pause_on_mute_subtitle),
+                                    checked = uiState.pauseOnMuteEnabled,
+                                    onCheckedChange = { settingsViewModel.setPauseOnMuteEnabled(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_volume_down_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_playback_pause_on_mute", highlightKey)
+                                )
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_queue_transitions)) {

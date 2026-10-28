@@ -631,6 +631,18 @@ object SettingsRegistry {
                 onToggle = { viewModel, checked -> viewModel.setResumeOnHeadsetReconnect(checked) }
             ),
             SettingSpec(
+                id = "playback_pause_on_mute",
+                itemKey = "item_playback_pause_on_mute",
+                titleRes = R.string.setcat_pause_on_mute_title,
+                subtitleRes = R.string.setcat_pause_on_mute_subtitle,
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.SettingsCategory.createRoute("playback"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("mute", "volume", "pause", "resume", "silence", "silenciar", "volumen", "pausar"),
+                getValue = { it.pauseOnMuteEnabled },
+                onToggle = { viewModel, checked -> viewModel.setPauseOnMuteEnabled(checked) }
+            ),
+            SettingSpec(
                 id = "playback_crossfade",
                 itemKey = "item_playback_crossfade",
                 titleRes = R.string.setcat_crossfade_label,

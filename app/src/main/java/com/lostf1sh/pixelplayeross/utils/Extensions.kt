@@ -83,7 +83,65 @@ private const val ESCAPE_PLACEHOLDER = "\u0000ESCAPED\u0000"
  * Default word-based delimiters for splitting multi-artist strings.
  * These are matched case-insensitively with word boundaries.
  */
-val DEFAULT_WORD_DELIMITERS = listOf("featuring", "feat.", "feat", "ft.", "ft", "vs.", "vs", "versus", "with", "prod.", "prod")
+val DEFAULT_WORD_DELIMITERS = listOf(
+    "featuring", "feat.", "feat",
+    "ft.", "ft",
+    "vs.", "vs", "versus",
+    "with", "con",
+    "prod.", "prod",
+    "x", "X",
+    "&", "y"
+)
+
+/**
+ * Normalizes an artist name to a canonical lookup key by:
+ * - Stripping leading/trailing whitespace
+ * - Removing diacritical marks (accents: á -> a, é -> e, í -> i, ó -> o, ú -> u, ñ -> n, etc.)
+ * - Converting to lowercase using the root locale
+ * - Collapsing multiple consecutive spaces
+ *
+ * Example:
+ * "Carín León".toCanonicalArtistKey() -> "carin leon"
+ * "Carin Leon".toCanonicalArtistKey() -> "carin leon"
+ * "Carin leon".toCanonicalArtistKey() -> "carin leon"
+ */
+fun String.toCanonicalArtistKey(): String {
+    val trimmed = this.trim()
+    if (trimmed.isEmpty()) return ""
+    val deaccented = java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
+        .replace(Regex("""\p{M}"""), "")
+    return deaccented.lowercase(java.util.Locale.ROOT)
+        .replace(Regex("""\s+"""), " ")
+}
+
+/**
+ * Calculates a quality score for an artist display name to select the best
+ * formatted candidate (preferring accented and Title Cased variations).
+ */
+fun getArtistDisplayNameScore(name: String): Int {
+    var score = 0
+    val trimmed = name.trim()
+    if (trimmed.isEmpty()) return score
+
+    val deaccented = java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
+        .replace(Regex("""\p{M}"""), "")
+    if (trimmed != deaccented) {
+        score += 10
+    }
+
+    val words = trimmed.split(" ")
+    if (words.all { it.isNotEmpty() && it.first().isUpperCase() }) {
+        score += 6
+    } else if (trimmed.any { it.isUpperCase() }) {
+        score += 3
+    }
+
+    if (trimmed.length > 3 && trimmed == trimmed.uppercase(java.util.Locale.ROOT)) {
+        score -= 2
+    }
+
+    return score
+}
 
 /**
  * Splits an artist string by the given character delimiters and word delimiters,

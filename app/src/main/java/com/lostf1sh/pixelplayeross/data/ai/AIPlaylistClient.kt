@@ -77,6 +77,62 @@ class AIPlaylistClient @Inject constructor(
         }
     }
 
+    @Volatile
+    private var cachedGeminiModel: String? = null
+
+    /**
+     * Resolves an active Gemini model supporting generateContent for the given key.
+     * Queries Google's ModelService.ListModels (GET /v1beta/models) dynamically.
+     */
+    fun resolveActiveGeminiModel(apiKey: String): String {
+        cachedGeminiModel?.let { return it }
+
+        val cleanKey = apiKey.trim()
+        val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$cleanKey"
+        val request = Request.Builder()
+            .url(url)
+            .header("x-goog-api-key", cleanKey)
+            .get()
+            .build()
+
+        try {
+            val responseBody = executeRequest(request, AIProvider.GEMINI) { it }
+            val root = gson.fromJson(responseBody, JsonObject::class.java)
+            val modelsArray = root.getAsJsonArray("models")
+            if (modelsArray != null) {
+                val availableModels = mutableListOf<String>()
+                for (elem in modelsArray) {
+                    val obj = elem.asJsonObject
+                    val name = obj.get("name")?.asString.orEmpty().removePrefix("models/")
+                    val methods = obj.getAsJsonArray("supportedGenerationMethods")?.mapNotNull { it.asString }.orEmpty()
+                    if (methods.contains("generateContent")) {
+                        availableModels.add(name)
+                    }
+                }
+
+                // Prioritize models: modern Flash models first
+                val bestModel = availableModels.firstOrNull { it.contains("3.5-flash-lite", ignoreCase = true) }
+                    ?: availableModels.firstOrNull { it.contains("3.6-flash", ignoreCase = true) }
+                    ?: availableModels.firstOrNull { it.contains("3.8-flash", ignoreCase = true) }
+                    ?: availableModels.firstOrNull { it.contains("2.5-flash-lite", ignoreCase = true) }
+                    ?: availableModels.firstOrNull { it.contains("2.5-flash", ignoreCase = true) }
+                    ?: availableModels.firstOrNull { it.contains("flash", ignoreCase = true) }
+                    ?: availableModels.firstOrNull()
+
+                if (bestModel != null) {
+                    cachedGeminiModel = bestModel
+                    Timber.tag(TAG).i("Discovered active Gemini model: %s", bestModel)
+                    return bestModel
+                }
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).w(e, "Dynamic Gemini model resolution failed; using modern fallbacks")
+            if (e is AIException.InvalidKey || e is AIException.RateLimited) throw e
+        }
+
+        return "gemini-2.5-flash"
+    }
+
     /**
      * Validates an API key with a fast, lightweight ping to the provider.
      */
@@ -84,11 +140,19 @@ class AIPlaylistClient @Inject constructor(
         val cleanKey = key.trim()
         if (cleanKey.isBlank()) return@withContext Result.failure(AIException.NoKeyConfigured(provider))
         try {
-            val pingPrompt = "Respond with JSON: {\"status\": \"ok\"}"
             when (provider) {
-                AIProvider.GEMINI -> callGemini(cleanKey, pingPrompt)
-                AIProvider.OPENAI -> callOpenAI(cleanKey, pingPrompt, maxTokens = 15)
-                AIProvider.GROQ -> callGroq(cleanKey, pingPrompt, maxTokens = 15)
+                AIProvider.GEMINI -> {
+                    // Validates directly with Google's ListModels endpoint
+                    resolveActiveGeminiModel(cleanKey)
+                }
+                AIProvider.OPENAI -> {
+                    val pingPrompt = "Respond with JSON: {\"status\": \"ok\"}"
+                    callOpenAI(cleanKey, pingPrompt, maxTokens = 15)
+                }
+                AIProvider.GROQ -> {
+                    val pingPrompt = "Respond with JSON: {\"status\": \"ok\"}"
+                    callGroq(cleanKey, pingPrompt, maxTokens = 15)
+                }
             }
             Result.success(true)
         } catch (e: Exception) {
@@ -98,14 +162,24 @@ class AIPlaylistClient @Inject constructor(
     }
 
     private val geminiCandidateModels = listOf(
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.8-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash-lite",
         "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash"
+        "gemini-2.5-pro"
     )
 
     private fun callGemini(apiKey: String, prompt: String): String {
         val cleanKey = apiKey.trim()
+        val resolvedModel = runCatching { resolveActiveGeminiModel(cleanKey) }.getOrNull()
+        val candidateModels = if (!resolvedModel.isNullOrBlank()) {
+            listOf(resolvedModel) + geminiCandidateModels.filter { it != resolvedModel }
+        } else {
+            geminiCandidateModels
+        }
+
         val bodyJson = JsonObject().apply {
             val contentsArray = com.google.gson.JsonArray().apply {
                 add(JsonObject().apply {
@@ -122,7 +196,7 @@ class AIPlaylistClient @Inject constructor(
 
         var lastException: Exception? = null
 
-        for (model in geminiCandidateModels) {
+        for (model in candidateModels) {
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$cleanKey"
             val httpRequest = Request.Builder()
                 .url(url)
@@ -141,7 +215,8 @@ class AIPlaylistClient @Inject constructor(
                 }
             } catch (e: AIException.ApiError) {
                 if (e.errorDetails.contains("not found", ignoreCase = true) ||
-                    e.errorDetails.contains("not supported", ignoreCase = true)
+                    e.errorDetails.contains("not supported", ignoreCase = true) ||
+                    e.errorDetails.contains("restricted", ignoreCase = true)
                 ) {
                     lastException = e
                     continue

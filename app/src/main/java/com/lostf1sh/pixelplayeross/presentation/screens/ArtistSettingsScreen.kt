@@ -304,6 +304,37 @@ fun ArtistSettingsScreen(
                             },
                             modifier = Modifier.settingHighlight("item_artist_extract_from_title", highlightKey)
                         )
+
+                        SettingsItem(
+                            title = stringResource(R.string.artist_settings_manual_rescan_title),
+                            subtitle = stringResource(R.string.artist_settings_manual_rescan_subtitle),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.RestartAlt,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                            },
+                            trailingIcon = {
+                                if (uiState.isResyncing) {
+                                    LoadingIndicator(
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChevronRight,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            modifier = Modifier.settingHighlight("item_artist_manual_rescan", highlightKey),
+                            onClick = {
+                                if (!uiState.isResyncing) {
+                                    viewModel.rescanLibrary()
+                                }
+                            }
+                        )
                     }
                 }
             }

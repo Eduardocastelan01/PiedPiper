@@ -258,6 +258,9 @@ class MusicService : MediaSessionService() {
     private var shouldResumeAfterHeadsetReconnect = false
     private var lastNoisyPauseRealtimeMs = 0L
     private var resumeOnHeadsetReconnectEnabled = false
+    private var pauseOnZeroVolumeEnabled = false
+    private var wasPausedByZeroVolume = false
+    private var volumeChangeReceiver: android.content.BroadcastReceiver? = null
     private var temporaryForegroundStartedInOnCreate = false
     private var temporaryForegroundNotificationVisible = false
 
@@ -457,6 +460,7 @@ class MusicService : MediaSessionService() {
         controller.initialize()
         sleepTimerController.attach()
         registerHeadsetReconnectMonitor()
+        registerVolumeChangeMonitor()
 
         serviceScope.launch {
             val eqEnabled = equalizerPreferencesRepository.equalizerEnabledFlow.first()
@@ -511,6 +515,15 @@ class MusicService : MediaSessionService() {
                 resumeOnHeadsetReconnectEnabled = enabled
                 if (!enabled) {
                     clearHeadsetReconnectResume()
+                }
+            }
+        }
+
+        serviceScope.launch {
+            userPreferencesRepository.pauseOnMuteEnabledFlow.collect { enabled ->
+                pauseOnZeroVolumeEnabled = enabled
+                if (!enabled) {
+                    wasPausedByZeroVolume = false
                 }
             }
         }
@@ -994,6 +1007,7 @@ class MusicService : MediaSessionService() {
         followUpMediaSessionUiRefreshJob?.cancel()
         debouncedWidgetUpdateJob?.cancel()
         unregisterHeadsetReconnectMonitor()
+        unregisterVolumeChangeMonitor()
         replayGainProcessor.cancel()
 
         sleepTimerController.release()
@@ -1106,14 +1120,28 @@ class MusicService : MediaSessionService() {
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             when {
-                playWhenReady -> clearHeadsetReconnectResume()
-                !resumeOnHeadsetReconnectEnabled -> clearHeadsetReconnectResume()
+                playWhenReady -> {
+                    clearHeadsetReconnectResume()
+                    wasPausedByZeroVolume = false
+                }
+                !resumeOnHeadsetReconnectEnabled -> {
+                    clearHeadsetReconnectResume()
+                    if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0) {
+                        wasPausedByZeroVolume = false
+                    }
+                }
                 reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY -> {
                     shouldResumeAfterHeadsetReconnect = true
                     lastNoisyPauseRealtimeMs = SystemClock.elapsedRealtime()
                     Timber.tag(TAG).d("Marked playback for headset reconnect resume")
+                    wasPausedByZeroVolume = false
                 }
-                else -> clearHeadsetReconnectResume()
+                else -> {
+                    clearHeadsetReconnectResume()
+                    if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0) {
+                        wasPausedByZeroVolume = false
+                    }
+                }
             }
             requestWidgetFullUpdate(force = true)
             mediaSession?.let { refreshMediaSessionUi(it) }
@@ -1397,6 +1425,52 @@ class MusicService : MediaSessionService() {
     private fun clearHeadsetReconnectResume() {
         shouldResumeAfterHeadsetReconnect = false
         lastNoisyPauseRealtimeMs = 0L
+    }
+
+    private fun registerVolumeChangeMonitor() {
+        if (volumeChangeReceiver != null) return
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (!pauseOnZeroVolumeEnabled) return
+                if (intent?.action != "android.media.VOLUME_CHANGED_ACTION") return
+
+                val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val player = mediaSession?.player ?: engine.masterPlayer
+
+                    if (currentVolume == 0) {
+                        if (player.playWhenReady && player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE) {
+                            Timber.tag(TAG).d("Volume reached 0; auto-pausing playback")
+                            wasPausedByZeroVolume = true
+                            player.pause()
+                        }
+                    } else if (currentVolume > 0 && wasPausedByZeroVolume) {
+                        Timber.tag(TAG).d("Volume increased to %d; auto-resuming playback", currentVolume)
+                        wasPausedByZeroVolume = false
+                        if (!player.playWhenReady && player.playbackState != Player.STATE_ENDED && player.playbackState != Player.STATE_IDLE) {
+                            player.play()
+                        }
+                    }
+                }
+            }
+        }
+        val filter = android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            receiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+        )
+        volumeChangeReceiver = receiver
+    }
+
+    private fun unregisterVolumeChangeMonitor() {
+        volumeChangeReceiver?.let {
+            runCatching { unregisterReceiver(it) }
+        }
+        volumeChangeReceiver = null
+        wasPausedByZeroVolume = false
     }
 
     private fun schedulePlaybackSnapshotPersist(immediate: Boolean = false) {

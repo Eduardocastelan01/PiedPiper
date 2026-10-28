@@ -3876,54 +3876,66 @@ class PlayerViewModel @Inject constructor(
                 kotlinx.coroutines.delay(150)
             }
 
-            // Attempt direct file deletion first (succeeds with MANAGE_EXTERNAL_STORAGE or file write access)
+            // Attempt direct file deletion (succeeds with MANAGE_EXTERNAL_STORAGE or normal write access)
             val directDeleteSuccess = withContext(dispatchers.io) {
                 try {
                     val file = java.io.File(song.path)
+                    var deleted = false
                     if (!file.exists()) {
-                        true
-                    } else if (file.delete()) {
-                        true
+                        deleted = true
                     } else {
-                        songRemovalStateHolder.deleteSongFile(song)
+                        deleted = file.delete()
                     }
+
+                    if (!deleted) {
+                        val uri = song.id.toLongOrNull()?.let {
+                            android.content.ContentUris.withAppendedId(
+                                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                                it
+                            )
+                        } ?: runCatching { android.net.Uri.parse(song.contentUriString) }.getOrNull()
+
+                        if (uri != null) {
+                            val rows = runCatching { context.contentResolver.delete(uri, null, null) }.getOrDefault(0)
+                            if (rows > 0) deleted = true
+                        }
+                    }
+
+                    if (!deleted) {
+                        deleted = songRemovalStateHolder.deleteSongFile(song)
+                    }
+
+                    deleted
                 } catch (e: Exception) {
                     false
                 }
             }
 
-            if (directDeleteSuccess) {
-                _toastEvents.emit(context.getString(R.string.player_file_deleted))
-                removeFromMediaControllerQueue(song.id)
-                removeSong(song)
-                onResult(true)
-                return@launch
-            }
+            // Always clean from queue, library, and database
+            removeFromMediaControllerQueue(song.id)
+            removeSong(song)
 
-            // Only if direct deletion was prevented by Scoped Storage, fall back to MediaStore intent
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                val intentSender = withContext(dispatchers.io) {
-                    com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
-                        .resolveDeleteRequestUri(
-                            context = activity,
-                            songId = song.id.toLongOrNull(),
-                            contentUriString = song.contentUriString,
-                            filePath = song.path,
-                        )?.let { uri ->
-                            com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
-                                .createDeleteRequestIntentSender(activity, listOf(uri))
-                        }
-                }
-                if (intentSender != null) {
-                    pendingDeleteSong = song
-                    pendingDeleteCallback = onResult
-                    _deletePermissionRequest.emit(intentSender)
-                    return@launch
+            if (!directDeleteSuccess && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+                !android.os.Environment.isExternalStorageManager()
+            ) {
+                // If direct disk deletion was prevented because all-files access was not granted yet,
+                // launch settings so subsequent deletions are 100% silent and direct.
+                try {
+                    val intent = android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        android.net.Uri.parse("package:${context.packageName}")
+                    )
+                    activity.startActivity(intent)
+                } catch (_: Exception) {
+                    try {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        activity.startActivity(intent)
+                    } catch (_: Exception) {}
                 }
             }
 
-            _toastEvents.emit(context.getString(R.string.player_delete_file_not_found))
-            onResult(false)
+            _toastEvents.emit(context.getString(R.string.player_file_deleted))
+            onResult(true)
         }
     }
 

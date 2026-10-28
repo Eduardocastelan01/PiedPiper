@@ -104,10 +104,26 @@ class GDriveDashboardViewModel @Inject constructor(
         _folderNameInput.value = value
     }
 
+    private fun extractFolderId(input: String): String {
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) return ""
+        val folderRegex = Regex("""drive\.google\.com/drive/(?:u/\d+/)?folders/([a-zA-Z0-9_-]+)""")
+        folderRegex.find(trimmed)?.groupValues?.get(1)?.let { return it }
+        val idParamRegex = Regex("""[?&]id=([a-zA-Z0-9_-]+)""")
+        idParamRegex.find(trimmed)?.groupValues?.get(1)?.let { return it }
+        val fileRegex = Regex("""drive\.google\.com/file/d/([a-zA-Z0-9_-]+)""")
+        fileRegex.find(trimmed)?.groupValues?.get(1)?.let { return it }
+        return trimmed
+    }
+
     fun saveConfig() {
         var apiKey = _apiKeyInput.value.trim()
         var oauthToken = _oauthTokenInput.value.trim()
-        val folderId = _folderIdInput.value.trim()
+        val rawFolderInput = _folderIdInput.value.trim()
+        val folderId = extractFolderId(rawFolderInput)
+        if (folderId != rawFolderInput) {
+            _folderIdInput.value = folderId
+        }
         val folderName = _folderNameInput.value.trim().ifEmpty { "Drive Music" }
 
         // Auto-detect and swap if user pasted OAuth token into API key field or vice versa
@@ -125,6 +141,11 @@ class GDriveDashboardViewModel @Inject constructor(
 
         if (apiKey.isEmpty() && oauthToken.isEmpty()) {
             _errorMessage.value = "Ingresa una Clave de API de Google Cloud o un Token OAuth Bearer"
+            return
+        }
+
+        if (apiKey.isNotEmpty() && oauthToken.isEmpty() && folderId.isEmpty()) {
+            _errorMessage.value = "Al usar una API Key de Google Cloud, debes especificar el ID o enlace de la carpeta de Drive."
             return
         }
 

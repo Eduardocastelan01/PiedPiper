@@ -41,6 +41,7 @@ object FileDeletionUtils {
             try {
                 val file = File(filePath)
                 if (!file.exists()) return@withContext true
+                if (file.delete()) return@withContext true
 
                 val uri = MediaStorePermissionHelper.getMediaStoreUri(context, filePath)
                 if (uri != null) {
