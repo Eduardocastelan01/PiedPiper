@@ -64,6 +64,14 @@ data class ChangelogVersion(
 @Composable
 private fun changelogVersions(): List<ChangelogVersion> = listOf(
     ChangelogVersion(
+        version = "0.4.0-alpha.11",
+        date = "2026-10-28",
+        sections = listOf(
+            ChangelogSection(R.string.presentation_batch_g_changelog_sec_whats_new, R.array.presentation_batch_g_changelog_v040_whats_new),
+            ChangelogSection(R.string.presentation_batch_g_changelog_sec_improvements, R.array.presentation_batch_g_changelog_v040_improvements)
+        )
+    ),
+    ChangelogVersion(
         version = "0.2.0",
         date = "2026-07-12",
         sections = listOf(
@@ -90,7 +98,7 @@ fun ChangelogBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val changelogUrl = "https://github.com/lostf1sh/PixelPlayerOSS"
+    val changelogUrl = "https://github.com/Eduardocastelan01/PiedPiper"
     val changelog = changelogVersions()
 
     val fabCornerRadius = 16.dp

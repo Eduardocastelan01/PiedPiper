@@ -789,25 +789,35 @@ fun SettingsCategoryScreen(
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_home_collage)) {
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_collage_pattern_label),
-                                    description = stringResource(R.string.setcat_collage_pattern_desc),
-                                    options = CollagePattern.entries.associate { it.storageKey to stringResource(it.labelRes) },
-                                    selectedKey = uiState.collagePattern.storageKey,
-                                    onSelectionChanged = { key ->
-                                        settingsViewModel.setCollagePattern(CollagePattern.fromStorageKey(key))
-                                    },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_view_column_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_collage_pattern", highlightKey)
-                                )
                                 SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_auto_rotate_patterns_title),
-                                    subtitle = stringResource(R.string.setcat_auto_rotate_patterns_subtitle),
-                                    checked = uiState.collageAutoRotate,
-                                    onCheckedChange = { settingsViewModel.setCollageAutoRotate(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_shuffle_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_collage_auto_rotate", highlightKey)
+                                    title = stringResource(R.string.setcat_show_home_collage_title),
+                                    subtitle = stringResource(R.string.setcat_show_home_collage_subtitle),
+                                    checked = uiState.showHomeCollage,
+                                    onCheckedChange = { settingsViewModel.setShowHomeCollage(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_view_column_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_show_home_collage", highlightKey)
                                 )
+                                if (uiState.showHomeCollage) {
+                                    ThemeSelectorItem(
+                                        label = stringResource(R.string.setcat_collage_pattern_label),
+                                        description = stringResource(R.string.setcat_collage_pattern_desc),
+                                        options = CollagePattern.entries.associate { it.storageKey to stringResource(it.labelRes) },
+                                        selectedKey = uiState.collagePattern.storageKey,
+                                        onSelectionChanged = { key ->
+                                            settingsViewModel.setCollagePattern(CollagePattern.fromStorageKey(key))
+                                        },
+                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_view_column_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                        modifier = Modifier.settingHighlight("item_appearance_collage_pattern", highlightKey)
+                                    )
+                                    SwitchSettingItem(
+                                        title = stringResource(R.string.setcat_auto_rotate_patterns_title),
+                                        subtitle = stringResource(R.string.setcat_auto_rotate_patterns_subtitle),
+                                        checked = uiState.collageAutoRotate,
+                                        onCheckedChange = { settingsViewModel.setCollageAutoRotate(it) },
+                                        leadingIcon = { Icon(painterResource(R.drawable.rounded_shuffle_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                        modifier = Modifier.settingHighlight("item_appearance_collage_auto_rotate", highlightKey)
+                                    )
+                                }
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_navigation_bar)) {

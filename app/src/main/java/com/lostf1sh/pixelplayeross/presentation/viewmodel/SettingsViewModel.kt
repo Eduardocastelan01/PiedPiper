@@ -127,6 +127,7 @@ data class SettingsUiState(
     val wrongBackupPassword: Boolean = false,
     val collagePattern: CollagePattern = CollagePattern.default,
     val collageAutoRotate: Boolean = false,
+    val showHomeCollage: Boolean = true,
     val minSongDuration: Int = 10000,
     val minTracksPerAlbum: Int = 1,
     val replayGainEnabled: Boolean = false,
@@ -259,6 +260,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.collageAutoRotateFlow.collect { autoRotate ->
                 _uiState.update { it.copy(collageAutoRotate = autoRotate) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.showHomeCollageFlow.collect { show ->
+                _uiState.update { it.copy(showHomeCollage = show) }
             }
         }
 
@@ -673,6 +680,12 @@ class SettingsViewModel @Inject constructor(
     fun setCollageAutoRotate(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setCollageAutoRotate(enabled)
+        }
+    }
+
+    fun setShowHomeCollage(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setShowHomeCollage(show)
         }
     }
 

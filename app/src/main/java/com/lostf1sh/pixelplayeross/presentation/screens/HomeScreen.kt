@@ -26,6 +26,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
@@ -401,6 +403,10 @@ fun HomeScreen(
                         YourMixHeader(
                             song = yourMixSubtitle,
                             isShuffleEnabled = isShuffleEnabled,
+                            showCollage = settingsUiState.showHomeCollage,
+                            onToggleCollage = {
+                                settingsViewModel.setShowHomeCollage(!settingsUiState.showHomeCollage)
+                            },
                             onPlayShuffled = {
                                 if (usesFallbackHomeMix) {
                                     playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
@@ -416,7 +422,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (yourMixSongs.isNotEmpty()) {
+                if (yourMixSongs.isNotEmpty() && settingsUiState.showHomeCollage) {
                     item(
                         key = "album_art_collage",
                         contentType = "album_art_collage"
@@ -744,6 +750,8 @@ private fun YourMixEmptyPlaceholder(
 fun YourMixHeader(
     song: String,
     isShuffleEnabled: Boolean = false,
+    showCollage: Boolean = true,
+    onToggleCollage: (() -> Unit)? = null,
     onPlayShuffled: () -> Unit
 ) {
     val buttonCorners = 68.dp
@@ -775,6 +783,21 @@ fun YourMixHeader(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(start = 8.dp)
             )
+        }
+
+        if (onToggleCollage != null) {
+            IconButton(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 12.dp),
+                onClick = onToggleCollage
+            ) {
+                Icon(
+                    imageVector = if (showCollage) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = if (showCollage) "Ocultar collage" else "Mostrar collage",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         LargeExtendedFloatingActionButton(
             modifier = Modifier

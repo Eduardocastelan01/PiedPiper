@@ -261,6 +261,7 @@ constructor(
 
         val COLLAGE_PATTERN = stringPreferencesKey("collage_pattern")
         val COLLAGE_AUTO_ROTATE = booleanPreferencesKey("collage_auto_rotate")
+        val SHOW_HOME_COLLAGE = booleanPreferencesKey("show_home_collage")
         val SIDEBAR_SHORTCUTS = stringSetPreferencesKey("sidebar_shortcuts")
 
         val LAST_PLAYLIST_ID = stringPreferencesKey("last_playlist_id")
@@ -2211,6 +2212,17 @@ constructor(
     suspend fun setCollageAutoRotate(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.COLLAGE_AUTO_ROTATE] = enabled
+        }
+    }
+
+    val showHomeCollageFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SHOW_HOME_COLLAGE] ?: true
+        }
+
+    suspend fun setShowHomeCollage(show: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SHOW_HOME_COLLAGE] = show
         }
     }
 

@@ -124,35 +124,23 @@ private data class Contributor(
 )
 
 private val CoreMaintainer = Contributor(
-    id = "lostf1sh",
-    displayName = "@lostf1sh",
-    role = "FOSS Maintainer",
-    detail = "Maintains PixelPlayerOSS. GitHub and Telegram: @lostf1sh.",
-    avatarUrl = "https://github.com/lostf1sh.png",
+    id = "piedpiper",
+    displayName = "Pied Piper Project",
+    role = "Lead Maintainer",
+    detail = "Reproductor de audio de alta fidelidad, de código abierto y centrado en la privacidad.",
+    avatarUrl = null,
     iconRes = R.drawable.round_developer_board_24,
-    githubUrl = "https://github.com/lostf1sh",
-    telegramUrl = "https://t.me/lostf1sh",
-)
-
-private val NonFossMaintainer = Contributor(
-    id = "theovilardo",
-    displayName = "@theovilardo",
-    role = "Author / Non-FOSS Maintainer",
-    detail = "Author and maintainer of the original Google Play / non-FOSS PixelPlayer release.",
-    badge = "Original app",
-    avatarUrl = "https://github.com/theovilardo.png",
-    iconRes = R.drawable.round_developer_board_24,
-    githubUrl = "https://github.com/theovilardo",
+    githubUrl = "https://github.com/Eduardocastelan01/PiedPiper",
+    telegramUrl = null,
 )
 
 private val AboutMaintainers = listOf(
     CoreMaintainer,
-    NonFossMaintainer,
 )
 
-private const val SourceRepoUrl = "https://github.com/lostf1sh/PixelPlayerOSS"
-private const val FDroidUrl = "https://f-droid.org/packages/com.lostf1sh.pixelplayeross/"
-private const val SponsorUrl = "https://github.com/sponsors/lostf1sh"
+private const val SourceRepoUrl = "https://github.com/Eduardocastelan01/PiedPiper"
+private const val FDroidUrl = "https://f-droid.org"
+private const val SponsorUrl = "https://github.com"
 
 private data class ProjectLink(
     val id: String,

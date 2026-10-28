@@ -325,7 +325,7 @@ Backslash (\) can be used to escape character delimiters.</string>
     <string name="presentation_batch_g_album_sel_selected">selected</string>
     <string name="presentation_batch_g_album_sel_queue_hint">Queue + play respects your selection order.</string>
     <string name="presentation_batch_g_album_sel_limit">Limit: %1$d albums per selection.</string>
-    <string name="presentation_batch_g_app_name" translatable="false">PixelPlayerOSS</string>
+    <string name="presentation_batch_g_app_name" translatable="false">Pied Piper</string>
     <string name="presentation_batch_g_app_tagline">Music Player</string>
     <string name="sidebar_edit_shortcuts">Edit shortcuts</string>
     <string name="sidebar_shortcuts_dialog_title">Sidebar shortcuts</string>
@@ -501,5 +501,18 @@ Backslash (\) can be used to escape character delimiters.</string>
         <item>More reliable cloud playback: cancelled Navidrome/Jellyfin requests are no longer misreported as network errors when skipping tracks quickly.</item>
         <item>Backup, restore, and setup events can no longer be lost during screen rotation.</item>
         <item>Spring cleaning: dead code removed, deprecated APIs migrated, and dependencies updated.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v040_whats_new">
+        <item>Búsqueda inteligente con tolerancia a acentos y similitud tipográfica estilo Spotify.</item>
+        <item>Limpieza inteligente de pistas duplicadas conservando el archivo de mayor fidelidad de audio.</item>
+        <item>Generador de listas de reproducción con IA enriquecido para estados de ánimo, actividades y consultas bilingües.</item>
+        <item>Recomendaciones de canciones afines al final de cada lista de reproducción con adición en 1 toque.</item>
+        <item>Acceso directo para agregar canciones a listas de reproducción desde los controles del reproductor.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v040_improvements">
+        <item>Efecto translúcido estilo glassmorphic en la barra de navegación inferior.</item>
+        <item>Opción de visualización en Inicio para colapsar u ocultar el collage de álbumes.</item>
+        <item>Normalización y reclasificación de macro-géneros musicales (eliminación de etiquetas aisladas).</item>
+        <item>Actualización de identidad y marca a Pied Piper en barra lateral, pantalla Acerca de y ajustes.</item>
     </string-array>
 </resources>

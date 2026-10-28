@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.utils.SearchNormalizer
 import com.lostf1sh.pixelplayeross.data.repository.ArtistImageRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -564,23 +565,50 @@ class MusicRepositoryImpl @Inject constructor(
 
     override fun searchAlbums(query: String, minTracks: Int): Flow<List<Album>> {
         if (query.isBlank()) return flowOf(emptyList())
-        return musicDao.searchAlbums(query, emptyList(), false, minTracks).map { entities ->
+        val cleanQuery = query.trim()
+        val dbResultsFlow = musicDao.searchAlbums(cleanQuery, emptyList(), false, minTracks).map { entities ->
             entities.map { it.toAlbum() }
-        }.flowOn(Dispatchers.IO)
+        }
+        val normQuery = SearchNormalizer.normalize(cleanQuery)
+        val normFlow = if (normQuery.isNotBlank() && normQuery != cleanQuery.lowercase()) {
+            musicDao.searchAlbums(normQuery, emptyList(), false, minTracks).map { entities ->
+                entities.map { it.toAlbum() }
+            }
+        } else null
+
+        return if (normFlow != null) {
+            dbResultsFlow.combine(normFlow) { r1, r2 ->
+                val seen = LinkedHashMap<Long, Album>(r1.size + r2.size)
+                r1.forEach { seen.putIfAbsent(it.id, it) }
+                r2.forEach { seen.putIfAbsent(it.id, it) }
+                seen.values.toList()
+            }.flowOn(Dispatchers.IO)
+        } else {
+            dbResultsFlow.flowOn(Dispatchers.IO)
+        }
     }
 
     override fun searchArtists(query: String): Flow<List<Artist>> {
         if (query.isBlank()) return flowOf(emptyList())
-        return musicDao.searchArtists(query, emptyList(), false).map { entities ->
-            entities.map { it.toArtist() }
-        }.withFolderArtwork().flowOn(Dispatchers.IO)
+        val cleanQuery = query.trim()
+        return getArtists().map { allArtists ->
+            allArtists.mapNotNull { artist ->
+                val score = SearchNormalizer.matchScore(artist.name, cleanQuery)
+                if (score >= 0.55f || SearchNormalizer.containsNormalized(artist.name, cleanQuery)) {
+                    artist to score
+                } else null
+            }.sortedByDescending { it.second }
+            .map { it.first }
+        }.withFolderArtwork().flowOn(Dispatchers.Default)
     }
 
     override suspend fun searchPlaylists(query: String): List<Playlist> {
         if (query.isBlank()) return emptyList()
+        val cleanQuery = query.trim()
         return playlistPreferencesRepository.userPlaylistsFlow.first()
             .filter { playlist ->
-                playlist.name.contains(query, ignoreCase = true)
+                SearchNormalizer.containsNormalized(playlist.name, cleanQuery) ||
+                    SearchNormalizer.matchScore(playlist.name, cleanQuery) >= 0.6f
             }
     }
 

@@ -147,6 +147,8 @@
     <string name="artist_settings_manual_rescan_title">Re-analizar y fusionar artistas</string>
     <string name="artist_settings_manual_rescan_subtitle">Escanea la biblioteca para separar colaboraciones y unificar variantes como Carín León y Carin leon.</string>
     <string name="setcat_home_collage">Collage de inicio</string>
+    <string name="setcat_show_home_collage_title">Mostrar collage de Inicio</string>
+    <string name="setcat_show_home_collage_subtitle">Muestra el collage de álbumes en la sección Tu Mix.</string>
     <string name="setcat_immersive_lyrics_subtitle">Ocultar controles automáticamente y agrandar el texto.</string>
     <string name="setcat_immersive_lyrics_title">Letras inmersivas</string>
     <string name="setcat_import_backup_subtitle">Busca o elige entre copias de seguridad recientes. Los datos seleccionados reemplazarán los datos actuales.</string>
@@ -284,7 +286,7 @@
     <string name="toast_regenerated_palettes_partial">Regeneradas %1$d de %2$d paletas de carátula</string>
     <string name="toast_stats_regeneration_started">Regeneración de estadísticas iniciada</string>
     <string name="working_ellipsis">Trabajando…</string>
-    <string name="setcat_about_pixelplayer_title">Acerca de PixelPlayerOSS</string>
+    <string name="setcat_about_pixelplayer_title">Acerca de Pied Piper</string>
     <string name="updates_title">Actualizaciones</string>
     <string name="updates_settings_subtitle">Comprobación de versiones y canal de lanzamiento</string>
     <string name="updates_check_row_title">Buscar actualizaciones</string>

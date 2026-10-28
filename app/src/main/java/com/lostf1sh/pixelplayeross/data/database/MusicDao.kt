@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.lostf1sh.pixelplayeross.utils.AudioMeta
+import com.lostf1sh.pixelplayeross.utils.SearchNormalizer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
@@ -1018,23 +1019,48 @@ interface MusicDao {
         applyDirectoryFilter: Boolean,
         limit: Int
     ): Flow<List<SongEntity>> {
+        val cleanQuery = query.trim()
+        val normQuery = SearchNormalizer.normalize(cleanQuery)
         val ftsFlow = searchSongsLimitedMatch(
-            matchQuery = buildSongSearchMatchQuery(query),
+            matchQuery = buildSongSearchMatchQuery(cleanQuery),
             allowedParentDirs = allowedParentDirs,
             applyDirectoryFilter = applyDirectoryFilter,
             limit = limit
         )
         val likeFlow = searchSongsLimitedLike(
-            query = query.trim(),
+            query = cleanQuery,
             allowedParentDirs = allowedParentDirs,
             applyDirectoryFilter = applyDirectoryFilter,
             limit = limit
         )
-        return ftsFlow.combine(likeFlow) { ftsResults, likeResults ->
-            val seen = LinkedHashMap<Long, SongEntity>(ftsResults.size + likeResults.size)
-            ftsResults.forEach { seen.putIfAbsent(it.id, it) }
-            likeResults.forEach { seen.putIfAbsent(it.id, it) }
-            seen.values.toList().take(limit)
+        return if (normQuery.isNotBlank() && normQuery != cleanQuery.lowercase()) {
+            val ftsNormFlow = searchSongsLimitedMatch(
+                matchQuery = buildSongSearchMatchQuery(normQuery),
+                allowedParentDirs = allowedParentDirs,
+                applyDirectoryFilter = applyDirectoryFilter,
+                limit = limit
+            )
+            val likeNormFlow = searchSongsLimitedLike(
+                query = normQuery,
+                allowedParentDirs = allowedParentDirs,
+                applyDirectoryFilter = applyDirectoryFilter,
+                limit = limit
+            )
+            combine(ftsFlow, likeFlow, ftsNormFlow, likeNormFlow) { fts1, like1, fts2, like2 ->
+                val seen = LinkedHashMap<Long, SongEntity>(fts1.size + like1.size + fts2.size + like2.size)
+                fts1.forEach { seen.putIfAbsent(it.id, it) }
+                like1.forEach { seen.putIfAbsent(it.id, it) }
+                fts2.forEach { seen.putIfAbsent(it.id, it) }
+                like2.forEach { seen.putIfAbsent(it.id, it) }
+                seen.values.toList().take(limit)
+            }
+        } else {
+            ftsFlow.combine(likeFlow) { ftsResults, likeResults ->
+                val seen = LinkedHashMap<Long, SongEntity>(ftsResults.size + likeResults.size)
+                ftsResults.forEach { seen.putIfAbsent(it.id, it) }
+                likeResults.forEach { seen.putIfAbsent(it.id, it) }
+                seen.values.toList().take(limit)
+            }
         }
     }
 

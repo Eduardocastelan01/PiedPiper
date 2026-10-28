@@ -1449,12 +1449,14 @@ private fun PlaylistFormContent(
                             )
 
                             val suggestions = listOf(
+                                "🔥 Gym & Entrenamiento",
                                 "🌙 Late Night Chill",
-                                "⚡ Workout Hype",
+                                "🎉 Fiesta & Reggaetón",
+                                "🚗 Viaje en carretera / Road Trip",
+                                "🌧️ Melancolía & Sad Songs",
+                                "☕ Para Estudiar / Concentración",
                                 "🎸 90s & 2000s Rock",
-                                "🚗 Road Trip Energy",
-                                "☕ Acoustic Focus",
-                                "🎧 Synthwave & Beats"
+                                "🏖️ Verano & Buena Vibra"
                             )
 
                             FlowRow(
@@ -1462,7 +1464,7 @@ private fun PlaylistFormContent(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 suggestions.forEach { suggestion ->
-                                    val queryText = suggestion.drop(2).trim()
+                                    val queryText = suggestion.dropWhile { !it.isLetterOrDigit() }.trim()
                                     FilterChip(
                                         selected = aiPromptText.contains(queryText, ignoreCase = true),
                                         onClick = { onAiPromptChange(queryText) },

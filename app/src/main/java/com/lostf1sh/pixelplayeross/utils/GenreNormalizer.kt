@@ -151,9 +151,42 @@ object GenreNormalizer {
         "eurodance" to "Electronic",
         "disco" to "Electronic",
 
-        // Latin
+        // Latin & Spanish
         "latin" to "Latin",
         "latino" to "Latin",
+        "latina" to "Latin",
+        "spanish" to "Latin",
+        "español" to "Latin",
+        "espanol" to "Latin",
+        "musica en español" to "Latin",
+        "música en español" to "Latin",
+        "musica en espanol" to "Latin",
+        "pop en español" to "Latin",
+        "pop en espanol" to "Latin",
+        "spanish pop" to "Latin",
+        "rock en español" to "Rock",
+        "rock en espanol" to "Rock",
+        "spanish rock" to "Rock",
+        "latin rock" to "Rock",
+        "musica latina" to "Latin",
+        "música latina" to "Latin",
+        "cancion española" to "Latin",
+        "canción española" to "Latin",
+        "regional mexicano" to "Latin",
+        "regional mexican" to "Latin",
+        "musica mexicana" to "Latin",
+        "música mexicana" to "Latin",
+        "mexican" to "Latin",
+        "tejano" to "Latin",
+        "norteño" to "Latin",
+        "norteno" to "Latin",
+        "sierreño" to "Latin",
+        "sierreno" to "Latin",
+        "corridos" to "Latin",
+        "vallenato" to "Latin",
+        "bolero" to "Latin",
+        "trova" to "Latin",
+        "baladas en español" to "Latin",
         "reggaeton" to "Latin",
         "reggae ton" to "Latin",
         "salsa" to "Latin",
@@ -170,6 +203,8 @@ object GenreNormalizer {
         "ranchera" to "Latin",
         "flamenco" to "Latin",
         "bossa nova" to "Latin",
+        "tango" to "Latin",
+        "samba" to "Latin",
 
         // Classical
         "classical" to "Classical",
@@ -269,9 +304,23 @@ object GenreNormalizer {
         "bad bunny" to CATEGORY_LATIN, "j balvin" to CATEGORY_LATIN, "daddy yankee" to CATEGORY_LATIN,
         "rauw alejandro" to CATEGORY_LATIN, "maluma" to CATEGORY_LATIN, "karol g" to CATEGORY_LATIN,
         "ozuna" to CATEGORY_LATIN, "anuel aa" to CATEGORY_LATIN, "shakira" to CATEGORY_LATIN,
-        "rosalia" to CATEGORY_LATIN, "peso pluma" to CATEGORY_LATIN, "feid" to CATEGORY_LATIN,
+        "rosalia" to CATEGORY_LATIN, "rosalía" to CATEGORY_LATIN, "peso pluma" to CATEGORY_LATIN, "feid" to CATEGORY_LATIN,
         "don omar" to CATEGORY_LATIN, "luis fonsi" to CATEGORY_LATIN, "enrique iglesias" to CATEGORY_LATIN,
         "romeo santos" to CATEGORY_LATIN, "marc anthony" to CATEGORY_LATIN, "natanael cano" to CATEGORY_LATIN,
+        "camilo" to CATEGORY_LATIN, "sebastian yatra" to CATEGORY_LATIN, "sebastián yatra" to CATEGORY_LATIN,
+        "christian nodal" to CATEGORY_LATIN, "carin leon" to CATEGORY_LATIN, "carín león" to CATEGORY_LATIN,
+        "grupo frontera" to CATEGORY_LATIN, "junior h" to CATEGORY_LATIN, "fuerza regida" to CATEGORY_LATIN,
+        "julion alvarez" to CATEGORY_LATIN, "alejandro fernandez" to CATEGORY_LATIN, "vicente fernandez" to CATEGORY_LATIN,
+        "juan gabriel" to CATEGORY_LATIN, "luis miguel" to CATEGORY_LATIN, "chayanne" to CATEGORY_LATIN,
+        "ricky martin" to CATEGORY_LATIN, "enrique bunbury" to CATEGORY_ROCK, "heroes del silencio" to CATEGORY_ROCK,
+        "soda stereo" to CATEGORY_ROCK, "gustavo cerati" to CATEGORY_ROCK, "mana" to CATEGORY_ROCK, "maná" to CATEGORY_ROCK,
+        "molotov" to CATEGORY_ROCK, "cafe tacvba" to CATEGORY_ROCK, "caifanes" to CATEGORY_ROCK,
+        "los enanitos verdes" to CATEGORY_ROCK, "calle 13" to CATEGORY_LATIN, "residente" to CATEGORY_LATIN,
+        "c. tangana" to CATEGORY_LATIN, "c tangana" to CATEGORY_LATIN, "aitana" to CATEGORY_LATIN,
+        "morat" to CATEGORY_LATIN, "reik" to CATEGORY_LATIN, "sin bandera" to CATEGORY_LATIN,
+        "camila" to CATEGORY_LATIN, "jesse & joy" to CATEGORY_LATIN, "ha*ash" to CATEGORY_LATIN,
+        "mon laferte" to CATEGORY_LATIN, "natalia lafourcade" to CATEGORY_LATIN,
+        "los angeles azules" to CATEGORY_LATIN, "los fabulosos cadillacs" to CATEGORY_LATIN,
 
         // Electronic
         "daft punk" to CATEGORY_ELECTRONIC, "avicii" to CATEGORY_ELECTRONIC, "calvin harris" to CATEGORY_ELECTRONIC,
@@ -294,12 +343,25 @@ object GenreNormalizer {
         "koji kondo" to CATEGORY_SOUNDTRACK, "ramin djawadi" to CATEGORY_SOUNDTRACK
     )
 
+    private val IGNORED_GENRES = setOf(
+        "other", "unknown", "<unknown>", "audio", "track", "sound", "general",
+        "misc", "miscellaneous", "various", "all", "none", "music", "sample",
+        "podcast", "speech", "dialogue", "noise", "sound clip", "pranks", "humour",
+        "unclassifiable", "unknown genre", "sin genero", "sin género"
+    )
+
     /**
      * Normalizes a raw genre string into a major umbrella category.
      */
     fun toMacroCategory(rawGenre: String): String {
         val trimmed = rawGenre.trim()
         if (trimmed.isEmpty()) return ""
+
+        val lower = trimmed.lowercase(Locale.ROOT)
+            .replace(Regex("""^\((.+)\)$"""), "$1")
+            .trim()
+
+        if (lower in IGNORED_GENRES || lower.isBlank()) return ""
 
         // Check for numeric ID3v1 codes
         val numericMatch = NUMERIC_GENRE_REGEX.matchEntire(trimmed)
@@ -309,10 +371,6 @@ object GenreNormalizer {
                 return toMacroCategory(ID3V1_GENRES[code])
             }
         }
-
-        val lower = trimmed.lowercase(Locale.ROOT)
-            .replace(Regex("""^\((.+)\)$"""), "$1")
-            .trim()
 
         CANONICAL_MAP[lower]?.let { canonical ->
             return when (canonical) {
@@ -325,22 +383,35 @@ object GenreNormalizer {
 
         // Pattern-based heuristic fallbacks
         return when {
-            lower.contains("pop") -> CATEGORY_POP
+            lower.contains("spanish") || lower.contains("español") || lower.contains("espanol") ||
+                lower.contains("latin") || lower.contains("reggaeton") || lower.contains("salsa") ||
+                lower.contains("bachata") || lower.contains("cumbia") || lower.contains("corrido") ||
+                lower.contains("banda") || lower.contains("mariachi") || lower.contains("ranchera") ||
+                lower.contains("norteñ") || lower.contains("sierreñ") || lower.contains("tejano") ||
+                lower.contains("vallenato") || lower.contains("flamenco") || lower.contains("tango") ||
+                lower.contains("samba") || lower.contains("bossa") || lower.contains("merengue") ||
+                lower.contains("urbano") || lower.contains("mexic") -> CATEGORY_LATIN
             lower.contains("metal") || lower.contains("deathcore") -> CATEGORY_METAL
             lower.contains("rock") || lower.contains("punk") || lower.contains("grunge") -> CATEGORY_ROCK
             lower.contains("rap") || lower.contains("hip-hop") || lower.contains("hiphop") || lower.contains("trap") -> CATEGORY_HIP_HOP
             lower.contains("electro") || lower.contains("house") || lower.contains("techno") ||
                 lower.contains("trance") || lower.contains("dubstep") || lower.contains("edm") ||
                 lower.contains("synth") || lower.contains("ambient") || lower.contains("lo-fi") -> CATEGORY_ELECTRONIC
-            lower.contains("reggaeton") || lower.contains("salsa") || lower.contains("bachata") ||
-                lower.contains("cumbia") || lower.contains("latin") || lower.contains("corrido") -> CATEGORY_LATIN
+            lower.contains("pop") -> CATEGORY_POP
             lower.contains("r&b") || lower.contains("rnb") || lower.contains("soul") || lower.contains("funk") -> CATEGORY_RNB_SOUL
             lower.contains("classic") || lower.contains("orchestr") || lower.contains("symphon") -> CATEGORY_CLASSICAL
             lower.contains("soundtrack") || lower.contains("ost") || lower.contains("score") -> CATEGORY_SOUNDTRACK
             lower.contains("jazz") || lower.contains("blues") -> CATEGORY_JAZZ_BLUES
             lower.contains("country") || lower.contains("folk") || lower.contains("acoustic") -> CATEGORY_COUNTRY_FOLK
             lower.contains("reggae") || lower.contains("ska") || lower.contains("dancehall") -> CATEGORY_REGGAE
-            else -> toTitleCase(trimmed)
+            else -> {
+                val titleCased = toTitleCase(trimmed)
+                if (titleCased.equals("Spanish", ignoreCase = true) || titleCased.equals("Espanol", ignoreCase = true)) {
+                    CATEGORY_LATIN
+                } else {
+                    titleCased
+                }
+            }
         }
     }
 
@@ -379,8 +450,7 @@ object GenreNormalizer {
             val category = toMacroCategory(item)
             val lowerCat = category.lowercase(Locale.ROOT)
             if (category.isNotBlank() &&
-                lowerCat != "unknown" &&
-                lowerCat != "<unknown>" &&
+                lowerCat !in IGNORED_GENRES &&
                 seen.add(lowerCat)
             ) {
                 result.add(category)

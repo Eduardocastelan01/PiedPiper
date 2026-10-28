@@ -145,6 +145,9 @@ import java.util.Locale
 import kotlin.math.roundToLong
 import com.lostf1sh.pixelplayeross.presentation.components.WavySliderExpressive
 import com.lostf1sh.pixelplayeross.presentation.components.ToggleSegmentButton
+import com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlaylistViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
@@ -237,6 +240,7 @@ fun FullPlayerContent(
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     var showLyricsSheet by remember { mutableStateOf(false) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
+    var showAddToPlaylistSheet by rememberSaveable { mutableStateOf(false) }
     var showSaveBookmarkDialog by rememberSaveable { mutableStateOf(false) }
     var showAudioOutputSheet by rememberSaveable { mutableStateOf(false) }
     val bookmarksViewModel: AudioBookmarksViewModel = hiltViewModel()
@@ -576,7 +580,8 @@ fun FullPlayerContent(
             isFavoriteProvider = isFavoriteProvider,
             onShuffleToggle = onShuffleToggle,
             onRepeatToggle = onRepeatToggle,
-            onFavoriteToggle = onFavoriteToggle
+            onFavoriteToggle = onFavoriteToggle,
+            onAddToPlaylistClick = { showAddToPlaylistSheet = true }
         )
     }
 
@@ -916,6 +921,19 @@ fun FullPlayerContent(
             onDismiss = { showAudioOutputSheet = false }
         )
     }
+
+    if (showAddToPlaylistSheet) {
+        val playlistViewModel: PlaylistViewModel = hiltViewModel()
+        val playlistUiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
+        PlaylistBottomSheet(
+            playlistUiState = playlistUiState,
+            songs = persistentListOf(song),
+            onDismiss = { showAddToPlaylistSheet = false },
+            bottomBarHeight = 0.dp,
+            playerViewModel = playerViewModel,
+            playlistViewModel = playlistViewModel
+        )
+    }
 }
 
 
@@ -1041,7 +1059,8 @@ private fun FullPlayerControlsSection(
     isFavoriteProvider: () -> Boolean,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onAddToPlaylistClick: () -> Unit
 ) {
     val stableControlAnimationSpec = remember {
         tween<Float>(durationMillis = 240, easing = FastOutSlowInEasing)
@@ -1105,7 +1124,8 @@ private fun FullPlayerControlsSection(
                 isFavoriteProvider = isFavoriteProvider,
                 onShuffleToggle = onShuffleToggle,
                 onRepeatToggle = onRepeatToggle,
-                onFavoriteToggle = onFavoriteToggle
+                onFavoriteToggle = onFavoriteToggle,
+                onAddToPlaylistClick = onAddToPlaylistClick
             )
         }
     }
@@ -2432,7 +2452,8 @@ private fun BottomToggleRow(
     isFavoriteProvider: () -> Boolean,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onAddToPlaylistClick: () -> Unit
 ) {
     val isFavorite = isFavoriteProvider()
     val rowCorners = 60.dp
@@ -2519,6 +2540,18 @@ private fun BottomToggleRow(
                 onClick = onFavoriteToggle,
                 iconId = if (isFavorite) R.drawable.round_favorite_24 else R.drawable.rounded_favorite_24,
                 contentDesc = stringResource(R.string.cd_favorite)
+            )
+            ToggleSegmentButton(
+                modifier = commonModifier,
+                active = false,
+                activeColor = LocalMaterialTheme.current.secondaryFixed,
+                activeCornerRadius = rowCorners,
+                activeContentColor = LocalMaterialTheme.current.onSecondaryFixed,
+                inactiveColor = inactiveBg,
+                inactiveContentColor = inactiveContentColor,
+                onClick = onAddToPlaylistClick,
+                iconId = R.drawable.rounded_playlist_add_24,
+                contentDesc = stringResource(R.string.cd_add_to_playlist)
             )
         }
     }

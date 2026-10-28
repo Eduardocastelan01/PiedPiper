@@ -1,6 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
 
 import android.widget.Toast
+import com.lostf1sh.pixelplayeross.presentation.components.PlaylistRecommendationsSection
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafelyReplacing
 
@@ -171,6 +172,7 @@ fun PlaylistDetailScreen(
 ) {
     val uiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
     val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val allLibrarySongs by playerViewModel.allSongsFlow.collectAsStateWithLifecycle()
     val hasCurrentSong by remember {
         derivedStateOf { playerStableState.currentSong != null }
     }
@@ -823,6 +825,31 @@ fun PlaylistDetailScreen(
                                                 )
                                             }
                                         }
+                                    )
+                                }
+                            }
+
+                            if (isEditablePlaylist && localReorderableSongs.isNotEmpty()) {
+                                item(
+                                    key = "playlist_recommendations_section",
+                                    contentType = "playlist_recommendations"
+                                ) {
+                                    PlaylistRecommendationsSection(
+                                        playlistSongs = localReorderableSongs,
+                                        allSongs = allLibrarySongs,
+                                        onAddSong = { song ->
+                                            currentPlaylist?.let { pl ->
+                                                playlistViewModel.addSongsToPlaylist(pl.id, listOf(song.id))
+                                                playerViewModel.sendToast(context.getString(R.string.playlist_songs_added_toast))
+                                            }
+                                        },
+                                        onPlaySong = { song ->
+                                            playerViewModel.showAndPlaySongFromLibrary(
+                                                song,
+                                                queueName = currentPlaylist?.name ?: "Recomendaciones"
+                                            )
+                                        },
+                                        modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
                                     )
                                 }
                             }

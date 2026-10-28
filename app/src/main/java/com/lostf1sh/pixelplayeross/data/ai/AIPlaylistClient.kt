@@ -350,29 +350,51 @@ class AIPlaylistClient @Inject constructor(
         }
     }
 
+    private fun sampleCatalog(availableSongs: List<Song>, maxTracks: Int = 350): List<Song> {
+        if (availableSongs.size <= maxTracks) return availableSongs
+        val byArtist = availableSongs.groupBy { it.artist.lowercase() }.values.toList().shuffled()
+        val sampled = ArrayList<Song>(maxTracks)
+        var round = 0
+        while (sampled.size < maxTracks) {
+            var addedAny = false
+            for (artistSongs in byArtist) {
+                if (round < artistSongs.size && sampled.size < maxTracks) {
+                    sampled.add(artistSongs[round])
+                    addedAny = true
+                }
+            }
+            if (!addedAny) break
+            round++
+        }
+        return sampled
+    }
+
     private fun buildStructuredPrompt(request: PlaylistGenerationRequest): String {
-        // Sample library tracks to fit token budgets (up to 300 tracks)
-        val sampled = request.availableSongs.take(300)
+        val sampled = sampleCatalog(request.availableSongs, maxTracks = 350)
         val catalog = sampled.joinToString("\n") { s ->
             "${s.id}|${s.title}|${s.artist}|${s.genre.orEmpty()}"
         }
 
         return """
             You are an expert music curator and DJ for the player app Pied Piper.
-            Create a cohesive playlist of up to ${request.count} songs from the catalog matching this request:
+            Create a cohesive, well-curated playlist of up to ${request.count} songs from the catalog matching this user prompt:
             "${request.prompt}"
+
+            CURATION GUIDELINES:
+            1. Multilingual & Mixed-language Understanding: Comprehend requests in Spanish, English, or mixed ("Spanglish") seamlessly.
+            2. Mood & Vibe: If the user requests a mood (e.g. sad, happy, melancholic, alegre, eufórico, chill, nostálgico, enojado, relajado, motivado), select songs whose lyrics, musical energy, and tempo reflect that vibe.
+            3. Activity & Environment: If the user asks for music for an activity or setting (e.g. gym, workout, entrenar, estudiar, fiesta, party, viaje, manejar, road trip, lluvia, noche, playa, café), pick songs appropriate for that situation.
+            4. Creative Naming: Name the playlist creatively in the primary language used in the prompt.
+            5. ONLY pick songs that exist in the catalog below. Use their exact IDs.
+            6. Return ONLY a valid JSON object matching the JSON schema below, without markdown backticks or extra commentary.
 
             Catalog format (ID|Title|Artist|Genre):
             $catalog
 
-            Rules:
-            1. ONLY pick songs that exist in the catalog above. Use their exact IDs.
-            2. Return ONLY a valid JSON object with no markdown formatting.
-            
             JSON Schema:
             {
-              "playlist_name": "A creative title for this playlist",
-              "reason": "Brief 1-sentence curation rationale",
+              "playlist_name": "Creative title for this playlist",
+              "reason": "1-sentence curation rationale",
               "song_ids": ["id1", "id2", "id3"]
             }
         """.trimIndent()
@@ -416,12 +438,18 @@ class AIPlaylistClient @Inject constructor(
 
     /**
      * Smart local heuristic playlist generation when AI or network is unavailable.
-     * Matches keywords from the user prompt against track titles, artists, and genres.
+     * Matches keywords, moods, activities, and genres from the user prompt against track titles, artists, and genres.
      */
     fun generateOfflineHeuristicPlaylist(request: PlaylistGenerationRequest): AIPlaylistResult {
         val keywords = request.prompt.lowercase()
             .split(Regex("""[\s,;.-]+"""))
             .filter { it.length > 2 && it !in STOP_WORDS }
+
+        // Expand keywords using mood/activity dictionary
+        val expandedGenres = mutableSetOf<String>()
+        keywords.forEach { kw ->
+            MOOD_ACTIVITY_GENRE_MAP[kw]?.let { expandedGenres.addAll(it) }
+        }
 
         val scored = request.availableSongs.map { song ->
             var score = 0
@@ -430,10 +458,16 @@ class AIPlaylistClient @Inject constructor(
             val genreLower = song.genre?.lowercase().orEmpty()
 
             for (kw in keywords) {
-                if (genreLower.contains(kw)) score += 5
-                if (artistLower.contains(kw)) score += 4
-                if (titleLower.contains(kw)) score += 3
+                if (genreLower.contains(kw)) score += 6
+                if (artistLower.contains(kw)) score += 5
+                if (titleLower.contains(kw)) score += 4
             }
+
+            for (affGenre in expandedGenres) {
+                if (genreLower.contains(affGenre)) score += 5
+                if (titleLower.contains(affGenre)) score += 3
+            }
+
             song to score
         }
 
@@ -450,10 +484,20 @@ class AIPlaylistClient @Inject constructor(
         }
 
         val cleanTitle = request.prompt.replaceFirstChar { it.titlecase() }
+        val isSpanish = request.prompt.contains(
+            Regex("""\b(para|de|con|en|música|musica|canciones|lista|por|sin|triste|fiesta|entrenar|lluvia|viaje|dormir)\b""", RegexOption.IGNORE_CASE)
+        )
+        val playlistName = if (isSpanish) "Mix: $cleanTitle" else "$cleanTitle Mix"
+        val rationale = if (isSpanish) {
+            "Generada con coincidencia inteligente local para: \"${request.prompt}\""
+        } else {
+            "Generated with local smart matching for: \"${request.prompt}\""
+        }
+
         return AIPlaylistResult(
-            playlistName = "$cleanTitle Mix",
+            playlistName = playlistName,
             songs = finalSongs,
-            rationale = "Generated with local smart matching for: \"${request.prompt}\"",
+            rationale = rationale,
             isOfflineFallback = true
         )
     }
@@ -468,7 +512,69 @@ class AIPlaylistClient @Inject constructor(
         private val STOP_WORDS = setOf(
             "the", "and", "for", "with", "music", "songs", "playlist",
             "mix", "track", "tracks", "play", "make", "create", "some",
-            "give", "want", "like", "vibes", "vibe", "una", "para", "de", "con"
+            "give", "want", "like", "vibes", "vibe", "una", "un", "para", "de", "con", "en", "por",
+            "canciones", "musica", "música", "hazme", "crea"
+        )
+
+        private val MOOD_ACTIVITY_GENRE_MAP = mapOf(
+            // Workout / Gym / High Energy
+            "gym" to listOf("rock", "metal", "hip-hop", "electronic", "trap", "rap"),
+            "entrenar" to listOf("rock", "metal", "hip-hop", "electronic", "trap", "reggaeton"),
+            "workout" to listOf("electronic", "rock", "hip-hop", "pop"),
+            "correr" to listOf("electronic", "rock", "pop", "hip-hop"),
+            "running" to listOf("electronic", "rock", "pop", "hip-hop"),
+            "energia" to listOf("electronic", "rock", "metal", "pop", "reggaeton"),
+            "energy" to listOf("electronic", "rock", "metal", "pop"),
+            "motivacion" to listOf("rock", "hip-hop", "electronic", "pop"),
+            "motivation" to listOf("rock", "hip-hop", "electronic", "pop"),
+
+            // Chill / Relax / Study / Sleep
+            "chill" to listOf("electronic", "ambient", "lo-fi", "jazz", "acoustic", "classical"),
+            "relax" to listOf("ambient", "lo-fi", "jazz", "classical", "acoustic"),
+            "relajar" to listOf("ambient", "lo-fi", "jazz", "classical", "acoustic"),
+            "relajante" to listOf("ambient", "lo-fi", "jazz", "classical", "acoustic"),
+            "estudiar" to listOf("ambient", "lo-fi", "classical", "soundtrack", "electronic"),
+            "estudio" to listOf("ambient", "lo-fi", "classical", "soundtrack", "electronic"),
+            "study" to listOf("ambient", "lo-fi", "classical", "soundtrack", "electronic"),
+            "concentracion" to listOf("ambient", "lo-fi", "classical", "soundtrack"),
+            "focus" to listOf("ambient", "lo-fi", "classical", "soundtrack"),
+            "dormir" to listOf("ambient", "classical", "acoustic", "lo-fi"),
+            "sleep" to listOf("ambient", "classical", "acoustic", "lo-fi"),
+            "meditar" to listOf("ambient", "classical", "acoustic"),
+
+            // Party / Fiesta / Dance
+            "fiesta" to listOf("latin", "reggaeton", "pop", "electronic", "salsa", "cumbia"),
+            "party" to listOf("electronic", "dance", "pop", "hip-hop", "latin", "reggaeton"),
+            "bailar" to listOf("latin", "reggaeton", "salsa", "cumbia", "electronic", "pop"),
+            "dance" to listOf("electronic", "dance", "pop", "disco"),
+            "antro" to listOf("electronic", "reggaeton", "latin", "pop"),
+
+            // Sad / Melancholy / Heartbreak
+            "sad" to listOf("indie", "acoustic", "pop", "r&b", "rock", "country"),
+            "triste" to listOf("acoustic", "ballad", "pop", "r&b", "rock", "balada"),
+            "depre" to listOf("acoustic", "indie", "r&b", "rock"),
+            "desamor" to listOf("latin", "pop", "ranchera", "ballad", "acoustic", "r&b"),
+            "llanto" to listOf("acoustic", "ballad", "pop"),
+            "lluvia" to listOf("jazz", "acoustic", "indie", "lo-fi", "ambient"),
+            "rain" to listOf("jazz", "acoustic", "indie", "lo-fi", "ambient"),
+            "nostalgia" to listOf("classic rock", "oldies", "pop", "rock", "acoustic"),
+            "nostalgico" to listOf("classic rock", "oldies", "pop", "rock", "acoustic"),
+
+            // Travel / Driving
+            "viaje" to listOf("rock", "indie", "pop", "country", "electronic"),
+            "viajar" to listOf("rock", "indie", "pop", "country", "electronic"),
+            "roadtrip" to listOf("rock", "indie", "pop", "country", "classic rock"),
+            "carretera" to listOf("rock", "pop", "latin", "country"),
+            "manejar" to listOf("rock", "electronic", "hip-hop", "pop", "latin"),
+            "drive" to listOf("rock", "electronic", "synthwave", "pop"),
+            "driving" to listOf("rock", "electronic", "synthwave", "pop"),
+
+            // Romance / Love
+            "amor" to listOf("pop", "r&b", "latin", "acoustic", "ballad"),
+            "love" to listOf("pop", "r&b", "acoustic", "indie"),
+            "romance" to listOf("pop", "r&b", "latin", "acoustic"),
+            "romantico" to listOf("pop", "r&b", "latin", "acoustic", "balada"),
+            "romantica" to listOf("pop", "r&b", "latin", "acoustic", "balada")
         )
     }
 }
