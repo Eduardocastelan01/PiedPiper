@@ -172,7 +172,7 @@ fun PlaylistDetailScreen(
 ) {
     val uiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
     val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
-    val allLibrarySongs by playerViewModel.allSongsFlow.collectAsStateWithLifecycle()
+    val allLibrarySongs by playlistViewModel.allLibrarySongs.collectAsStateWithLifecycle()
     val hasCurrentSong by remember {
         derivedStateOf { playerStableState.currentSong != null }
     }

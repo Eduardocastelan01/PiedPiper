@@ -14,7 +14,7 @@ import java.util.Locale
  */
 object DuplicateFinder {
 
-    const val DEFAULT_DURATION_TOLERANCE_MS = 8_000L
+    const val DEFAULT_DURATION_TOLERANCE_MS = 3_500L
 
     data class DuplicateGroup(
         val title: String,
@@ -28,25 +28,26 @@ object DuplicateFinder {
     private val whitespace = Regex("""\s+""")
     private val trackNumberPrefix = Regex("""^\d{1,3}[\s.\-_]+""")
     private val extensionSuffix = Regex("""\.(mp3|flac|m4a|wav|ogg|opus|aac|wma)$""", RegexOption.IGNORE_CASE)
-    private val parenthesizedTags = Regex("""\s*[\[\(](feat\.?|ft\.?|remaster(ed)?|live|explicit|official|deluxe|version|audio|video|radio edit|bonus|mix).*?[\]\)]""", RegexOption.IGNORE_CASE)
-    private val artistCollaborationRegex = Regex("""(?i)\s+(feat\.?|ft\.?|vs\.?|with|x|&)\s+|[;,/]""")
-    private val punctuationRegex = Regex("""[’'`"“”.,\-–—!¡?¿()\[\]{}]""")
+    // Only strip pure remaster or audio tags that represent the exact same recording.
+    // NEVER strip Live, Remix, Version, Acoustic, Mix, Bonus, etc. which are different recordings.
+    private val remasterTags = Regex("""\s*[\[\(](remaster(ed)?(\s*\d{4})?|official audio|audio)[\]\)]""", RegexOption.IGNORE_CASE)
+    private val punctuationRegex = Regex("""[’'`"“”.,\-–—!¡?¿]""")
 
     fun cleanTitle(title: String): String {
         var t = title.trim()
         t = extensionSuffix.replace(t, "")
         t = trackNumberPrefix.replace(t, "")
-        t = parenthesizedTags.replace(t, "")
+        t = remasterTags.replace(t, "")
         t = punctuationRegex.replace(t, " ")
         t = whitespace.replace(t, " ").trim()
         return SearchNormalizer.normalize(t)
     }
 
     fun cleanArtist(artist: String): String {
-        val primary = artist.split(artistCollaborationRegex).firstOrNull()?.trim() ?: artist.trim()
-        val withoutPunct = punctuationRegex.replace(primary, " ")
-        val collapsed = whitespace.replace(withoutPunct, " ").trim()
-        return SearchNormalizer.normalize(collapsed)
+        var a = artist.trim()
+        a = punctuationRegex.replace(a, " ")
+        a = whitespace.replace(a, " ").trim()
+        return SearchNormalizer.normalize(a)
     }
 
     /**
