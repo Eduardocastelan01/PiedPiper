@@ -660,7 +660,7 @@ object LyricsUtils {
         RegexOption.IGNORE_CASE
     )
     private val LRC_NAMED_SINGER_PREFIX_REGEX = Regex(
-        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[([^\\]]+)\\]|([A-Za-z0-9_ÁÉÍÓÚáéíóúñÑäëïöüÄËÏÖÜ\s&'.-]{2,32}))\\s*:\\s*"
+        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[([^\\]]+)\\]|([A-Za-z0-9_ÁÉÍÓÚáéíóúñÑäëïöüÄËÏÖÜ\\s&'.-]{2,32}))\\s*:\\s*"
     )
     private val LRC_INLINE_BACKGROUND_REGEX = Regex(
         "^(.*?)[ \\t]*\\(([^\\)]+)\\)[ \\t]*$"
