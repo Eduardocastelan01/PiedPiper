@@ -175,9 +175,7 @@
     <string name="presentation_batch_g_beta_sheet_title_example_1">Ecualizador: El indicador se desplaza al cambiar de pestaña de preajustes</string>
     <string name="presentation_batch_g_beta_sheet_title_example_2">Búsqueda: La lista de historial no aparece con una consulta vacía</string>
     <string name="presentation_batch_g_beta_sheet_title_example_3">Función: Añadir opción de ordenación de lista \"Añadido recientemente\"</string>
-    <string name="presentation_batch_g_beta_sheet_title_examples_title">Buenos títulos de problemas</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_body">Estás usando una versión beta que puede contener errores, fallos o funciones experimentales. Ayúdanos a mejorar informando de los problemas.</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_body_stable">Estás usando la versión estable. Consulta el registro de cambios para ver las novedades e informa de cualquier cosa que no funcione bien.</string>
+    <string name="presentation_batch_g_title_examples_title">Buenos títulos de problemas</string>
     <string name="presentation_batch_g_brick_cd_close">Cerrar</string>
     <string name="presentation_batch_g_brick_drag_paddle">Arrastra para mover la paleta</string>
     <string name="presentation_batch_g_brick_game_over">FIN DE LA PARTIDA</string>
