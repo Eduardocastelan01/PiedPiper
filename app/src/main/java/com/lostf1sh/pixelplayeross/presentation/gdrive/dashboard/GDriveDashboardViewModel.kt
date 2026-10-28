@@ -105,13 +105,26 @@ class GDriveDashboardViewModel @Inject constructor(
     }
 
     fun saveConfig() {
-        val apiKey = _apiKeyInput.value.trim()
-        val oauthToken = _oauthTokenInput.value.trim()
+        var apiKey = _apiKeyInput.value.trim()
+        var oauthToken = _oauthTokenInput.value.trim()
         val folderId = _folderIdInput.value.trim()
         val folderName = _folderNameInput.value.trim().ifEmpty { "Drive Music" }
 
+        // Auto-detect and swap if user pasted OAuth token into API key field or vice versa
+        if (apiKey.startsWith("ya29.") && oauthToken.isBlank()) {
+            oauthToken = apiKey
+            apiKey = ""
+            _oauthTokenInput.value = oauthToken
+            _apiKeyInput.value = ""
+        } else if (oauthToken.startsWith("AIza") && apiKey.isBlank()) {
+            apiKey = oauthToken
+            oauthToken = ""
+            _apiKeyInput.value = apiKey
+            _oauthTokenInput.value = ""
+        }
+
         if (apiKey.isEmpty() && oauthToken.isEmpty()) {
-            _errorMessage.value = "Please provide an API Key or OAuth Access Token"
+            _errorMessage.value = "Ingresa una Clave de API de Google Cloud o un Token OAuth Bearer"
             return
         }
 
@@ -121,7 +134,7 @@ class GDriveDashboardViewModel @Inject constructor(
             folderId = folderId,
             folderName = folderName
         )
-        _statusMessage.value = "Settings saved successfully"
+        _statusMessage.value = "Configuración guardada correctamente"
         _errorMessage.value = null
     }
 

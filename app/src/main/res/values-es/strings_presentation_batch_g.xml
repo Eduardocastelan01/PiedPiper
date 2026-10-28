@@ -368,9 +368,11 @@
 "Extraer artistas del título" detecta patrones como (feat. Artista) en los títulos de las canciones.
 
 La barra invertida (\) se puede usar para escapar los delimitadores de caracteres.</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_title">Bienvenido a PixelPlayerOSS %1$s</string>
-    <string name="presentation_batch_g_beta_sheet_before_2">Actualiza a la última versión de PixelPlayerOSS y confirma que el problema sigue ocurriendo.</string>
-    <string name="presentation_batch_g_beta_sheet_env_version">Versión de PixelPlayerOSS:</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Bienvenido a Pied Piper %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body">Estás utilizando una versión de Pied Piper con IA local y streaming en la nube.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body_stable">Estás utilizando la versión de Pied Piper. Disfruta de tu música local, listas generadas con IA y streaming desde la nube.</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">Actualiza a la última versión de Pied Piper y confirma que el problema sigue ocurriendo.</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">Versión de Pied Piper:</string>
     <string-array name="presentation_batch_g_changelog_060_whats_new">
         <item>Reproducidas recientemente y la restauración de la cola persistente mantienen lista tu sesión de escucha.</item>
         <item>Ahora se incluyen Copia de seguridad y restauración v3 y herramientas de gestión de cuentas.</item>

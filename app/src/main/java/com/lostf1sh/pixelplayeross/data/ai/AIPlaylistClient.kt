@@ -97,9 +97,15 @@ class AIPlaylistClient @Inject constructor(
         }
     }
 
+    private val geminiCandidateModels = listOf(
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash"
+    )
+
     private fun callGemini(apiKey: String, prompt: String): String {
         val cleanKey = apiKey.trim()
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$cleanKey"
         val bodyJson = JsonObject().apply {
             val contentsArray = com.google.gson.JsonArray().apply {
                 add(JsonObject().apply {
@@ -114,20 +120,42 @@ class AIPlaylistClient @Inject constructor(
             })
         }
 
-        val httpRequest = Request.Builder()
-            .url(url)
-            .header("x-goog-api-key", cleanKey)
-            .post(bodyJson.toString().toRequestBody(jsonMediaType))
-            .build()
+        var lastException: Exception? = null
 
-        return executeRequest(httpRequest, AIProvider.GEMINI) { responseBody ->
-            val root = gson.fromJson(responseBody, JsonObject::class.java)
-            val candidates = root.getAsJsonArray("candidates")
-            val firstCandidate = candidates?.firstOrNull()?.asJsonObject
-            val content = firstCandidate?.getAsJsonObject("content")
-            val parts = content?.getAsJsonArray("parts")
-            parts?.firstOrNull()?.asJsonObject?.get("text")?.asString ?: responseBody
+        for (model in geminiCandidateModels) {
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$cleanKey"
+            val httpRequest = Request.Builder()
+                .url(url)
+                .header("x-goog-api-key", cleanKey)
+                .post(bodyJson.toString().toRequestBody(jsonMediaType))
+                .build()
+
+            try {
+                return executeRequest(httpRequest, AIProvider.GEMINI) { responseBody ->
+                    val root = gson.fromJson(responseBody, JsonObject::class.java)
+                    val candidates = root.getAsJsonArray("candidates")
+                    val firstCandidate = candidates?.firstOrNull()?.asJsonObject
+                    val content = firstCandidate?.getAsJsonObject("content")
+                    val parts = content?.getAsJsonArray("parts")
+                    parts?.firstOrNull()?.asJsonObject?.get("text")?.asString ?: responseBody
+                }
+            } catch (e: AIException.ApiError) {
+                if (e.errorDetails.contains("not found", ignoreCase = true) ||
+                    e.errorDetails.contains("not supported", ignoreCase = true)
+                ) {
+                    lastException = e
+                    continue
+                }
+                throw e
+            } catch (e: Exception) {
+                lastException = e
+                if (e is AIException.InvalidKey || e is AIException.RateLimited) {
+                    throw e
+                }
+            }
         }
+
+        throw lastException ?: AIException.ApiError(AIProvider.GEMINI, "Failed to connect with any supported Gemini model")
     }
 
     private fun callOpenAI(apiKey: String, prompt: String, maxTokens: Int = 1500): String {

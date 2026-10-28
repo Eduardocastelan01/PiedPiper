@@ -672,14 +672,18 @@ class MusicRepositoryImpl @Inject constructor(
                             candidates.filter { GenreParser.split(it.genre).isEmpty() }
                         }
                     } else {
-                        // A song stored as "Alternative; Indie Rock" belongs to both genres, so
-                        // the LIKE query only narrows the rows and the split genres decide.
-                        musicDao.getSongsWithGenreLike(
-                            pattern = GenreParser.likePattern(genreName),
+                        musicDao.getAllSongs(
                             allowedParentDirs = allowedParentDirs,
                             applyDirectoryFilter = applyDirectoryFilter
                         ).map { candidates ->
-                            candidates.filter { GenreParser.matches(it.genre, genreName) }
+                            candidates.filter { entity ->
+                                GenreNormalizer.matchesCategory(
+                                    rawGenre = entity.genre,
+                                    artist = entity.artistName,
+                                    title = entity.title,
+                                    targetCategory = genreName
+                                )
+                            }
                         }
                     }
                 )
@@ -879,11 +883,7 @@ class MusicRepositoryImpl @Inject constructor(
             buildGenre(name).copy(songCount = songCount)
         }.sortedBy { it.name.lowercase(Locale.ROOT) }
 
-        return if (unknownSongCount > 0) {
-            knownGenres + buildGenre(UNKNOWN_GENRE_NAME).copy(songCount = unknownSongCount)
-        } else {
-            knownGenres
-        }
+        return knownGenres
     }
 
     private fun buildGenre(genreName: String): Genre {

@@ -3876,6 +3876,31 @@ class PlayerViewModel @Inject constructor(
                 kotlinx.coroutines.delay(150)
             }
 
+            // Attempt direct file deletion first (succeeds with MANAGE_EXTERNAL_STORAGE or file write access)
+            val directDeleteSuccess = withContext(dispatchers.io) {
+                try {
+                    val file = java.io.File(song.path)
+                    if (!file.exists()) {
+                        true
+                    } else if (file.delete()) {
+                        true
+                    } else {
+                        songRemovalStateHolder.deleteSongFile(song)
+                    }
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            if (directDeleteSuccess) {
+                _toastEvents.emit(context.getString(R.string.player_file_deleted))
+                removeFromMediaControllerQueue(song.id)
+                removeSong(song)
+                onResult(true)
+                return@launch
+            }
+
+            // Only if direct deletion was prevented by Scoped Storage, fall back to MediaStore intent
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
                 val intentSender = withContext(dispatchers.io) {
                     com.lostf1sh.pixelplayeross.utils.MediaStorePermissionHelper
@@ -3897,16 +3922,8 @@ class PlayerViewModel @Inject constructor(
                 }
             }
 
-            val success = songRemovalStateHolder.deleteSongFile(song)
-            if (success) {
-                _toastEvents.emit(context.getString(R.string.player_file_deleted))
-                removeFromMediaControllerQueue(song.id)
-                removeSong(song)
-                onResult(true)
-            } else {
-                _toastEvents.emit(context.getString(R.string.player_delete_file_not_found))
-                onResult(false)
-            }
+            _toastEvents.emit(context.getString(R.string.player_delete_file_not_found))
+            onResult(false)
         }
     }
 

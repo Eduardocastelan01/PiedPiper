@@ -256,9 +256,9 @@ Backslash (\) can be used to escape character delimiters.</string>
     <string name="presentation_batch_g_presets_cd_pin">Pin</string>
     <string name="presentation_batch_g_presets_cd_rename">Rename</string>
     <string name="presentation_batch_g_presets_cd_delete">Delete</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_title">Welcome to PixelPlayerOSS %1$s</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_body">You\'re using a beta build that may contain bugs, crashes, or experimental features. Help us improve by reporting issues.</string>
-    <string name="presentation_batch_g_beta_sheet_welcome_body_stable">You\'re running the stable release build. Check the changelog to see what\'s new, and report anything that misbehaves.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">Welcome to Pied Piper %1$s</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body">You\'re using a build of Pied Piper with AI playlist generation and cloud streaming.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body_stable">You\'re running Pied Piper. Enjoy your local music, AI-powered playlists, and cloud streaming.</string>
     <string name="presentation_batch_g_beta_sheet_expect_title">What to expect</string>
     <string name="presentation_batch_g_beta_sheet_expect_1">Bugs, crashes, or incomplete features may occur unexpectedly.</string>
     <string name="presentation_batch_g_beta_sheet_expect_2">Some features may change or be removed without notice.</string>

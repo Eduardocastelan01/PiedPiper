@@ -91,7 +91,15 @@ fun GenreCategoriesGrid(
     contentPadding: PaddingValues? = null,
     gridState: LazyGridState = rememberLazyGridState()
 ) {
-    if (genres.isEmpty()) {
+    val visibleGenres = remember(genres) {
+        genres.filterNot {
+            it.id.equals("unknown", ignoreCase = true) ||
+            it.name.equals("Unknown", ignoreCase = true) ||
+            it.name.equals("<unknown>", ignoreCase = true)
+        }.toImmutableList()
+    }
+
+    if (visibleGenres.isEmpty()) {
         Box(
             modifier = modifier.fillMaxSize().padding(16.dp),
             contentAlignment = Alignment.Center
@@ -166,7 +174,7 @@ fun GenreCategoriesGrid(
                 }
             }
         }
-        items(genres, key = { it.id }) { genre ->
+        items(visibleGenres, key = { it.id }) { genre ->
             GenreCard(
                 genre = genre,
                 customIcons = customGenreIcons,

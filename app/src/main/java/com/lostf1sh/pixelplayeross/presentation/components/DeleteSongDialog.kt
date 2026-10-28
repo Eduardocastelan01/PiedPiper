@@ -89,7 +89,7 @@ fun DeleteSongDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         SmartImage(
-                            model = song.contentUriString ?: song.path,
+                            model = song.albumArtUriString ?: song.contentUriString ?: song.path,
                             contentDescription = song.title,
                             modifier = Modifier
                                 .size(56.dp)

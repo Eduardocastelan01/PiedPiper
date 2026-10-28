@@ -286,11 +286,34 @@ fun GDriveDashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "Connection Credentials",
+                        text = "Credenciales de Conexión",
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = RoundedSans,
                         fontWeight = FontWeight.Bold
                     )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Para tu Google Drive privado, Google requiere un Token OAuth (ya29...). Para una API Key de Google Cloud (AIza...), debes habilitar 'Google Drive API' en Google Cloud Console y compartir la carpeta con enlace.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
 
                     OutlinedTextField(
                         value = apiKeyInput,

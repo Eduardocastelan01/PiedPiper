@@ -139,9 +139,19 @@ class GoogleDriveRepository @Inject constructor(
                 if (!response.isSuccessful) {
                     val body = response.body.string()
                     val errorMsg = runCatching {
-                        JSONObject(body).getJSONObject("error").getString("message")
+                        val errObj = JSONObject(body).getJSONObject("error")
+                        val code = errObj.optInt("code", response.code)
+                        val message = errObj.optString("message", "HTTP $code")
+                        when {
+                            code == 401 || message.contains("authentication credential", ignoreCase = true) || message.contains("invalid_token", ignoreCase = true) ->
+                                "Google Drive requiere un Token de Acceso OAuth válido o una carpeta pública para acceder."
+                            code == 403 && (message.contains("API keys are not supported", ignoreCase = true) || message.contains("has not been used", ignoreCase = true)) ->
+                                "La API de Google Drive no está habilitada en este proyecto o requiere OAuth en vez de API Key."
+                            code == 404 -> "Carpeta de Google Drive no encontrada. Revisa el ID de la carpeta."
+                            else -> message
+                        }
                     }.getOrDefault("HTTP ${response.code}")
-                    return@withContext Result.failure(IOException("Failed to list files: $errorMsg"))
+                    return@withContext Result.failure(IOException(errorMsg))
                 }
 
                 val jsonStr = response.body.string()

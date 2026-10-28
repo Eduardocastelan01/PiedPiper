@@ -4,7 +4,7 @@ package com.lostf1sh.pixelplayeross.data.ai
  * Supported AI Providers in Pied Piper
  */
 enum class AIProvider(val displayName: String, val defaultModel: String) {
-    GEMINI("Google Gemini", "gemini-1.5-flash"),
+    GEMINI("Google Gemini", "gemini-2.5-flash"),
     OPENAI("OpenAI", "gpt-4o-mini"),
     GROQ("Groq", "llama-3.3-70b-versatile")
 }
