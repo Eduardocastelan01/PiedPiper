@@ -96,12 +96,12 @@ jobs:
             cp "$apk" "release-apks/PiedPiper-${{ steps.version.outputs.name }}-$abi.apk"
           done
 
-      - name: Create GitHub prerelease
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create "${{ steps.version.outputs.tag }}"
-          --prerelease
+          --latest
           --generate-notes
           --title "Pied Piper ${{ steps.version.outputs.name }}"
           release-apks/*.apk
