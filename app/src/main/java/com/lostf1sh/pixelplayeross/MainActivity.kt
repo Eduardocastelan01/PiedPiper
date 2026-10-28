@@ -877,7 +877,8 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             navItems = MainNavItems,
                             currentRoute = currentRoute,
-                            onSearchIconDoubleTap = onSearchIconDoubleTap
+                            onSearchIconDoubleTap = onSearchIconDoubleTap,
+                            onReselectTab = { route -> playerViewModel.requestScrollToTop(route) }
                         )
                     }
                 }
@@ -984,6 +985,7 @@ class MainActivity : ComponentActivity() {
                                     compactMode = navBarCompactMode,
                                     bottomBarPadding = bottomBarPadding,
                                     onSearchIconDoubleTap = onSearchIconDoubleTap,
+                                    onReselectTab = { route -> playerViewModel.requestScrollToTop(route) },
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }

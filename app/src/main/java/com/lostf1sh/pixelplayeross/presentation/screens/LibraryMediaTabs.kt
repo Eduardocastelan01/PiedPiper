@@ -5,6 +5,7 @@
 )
 
 package com.lostf1sh.pixelplayeross.presentation.screens
+import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,6 +107,20 @@ fun LibraryAlbumsTab(
 ) {
     val gridState = rememberRestoredLazyGridState(albums)
     val listState = rememberRestoredLazyListState(albums)
+
+    LaunchedEffect(playerViewModel, isListView) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (isListView) {
+                    if (listState.firstVisibleItemIndex > 20) listState.scrollToItem(10)
+                    listState.animateScrollToItem(0)
+                } else {
+                    if (gridState.firstVisibleItemIndex > 20) gridState.scrollToItem(10)
+                    gridState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
     val dummyListState = rememberLazyListState()
     val dummyGridState = rememberLazyGridState()
     val context = LocalContext.current
@@ -475,6 +490,17 @@ fun LibraryArtistsTab(
     storageFilter: StorageFilter = StorageFilter.ALL
 ) {
     val listState = rememberRestoredLazyListState(artists)
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
     val dummyListState = rememberLazyListState()
     val artistFastScrollLabelProvider = remember(artists, currentArtistSortOption) {
         { index: Int ->

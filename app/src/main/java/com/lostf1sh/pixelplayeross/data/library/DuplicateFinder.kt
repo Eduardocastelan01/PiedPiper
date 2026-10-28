@@ -1,19 +1,20 @@
 package com.lostf1sh.pixelplayeross.data.library
 
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.utils.SearchNormalizer
 import java.util.Locale
 
 /**
  * Pure, side-effect-free duplicate-track detection and quality ranking.
  *
- * Two tracks are considered duplicates when their normalized title and artist match
- * AND their durations fall within [DEFAULT_DURATION_TOLERANCE_MS] of each other.
+ * Uses diacritic folding, metadata stripping (remastered tags, feat., track numbers),
+ * and primary artist extraction to detect duplicates that standard strict matching misses.
  * Quality scoring prioritizes lossless codecs (FLAC, WAV, ALAC), higher bitrates,
  * and higher sample rates so that lower quality duplicates can be pruned safely.
  */
 object DuplicateFinder {
 
-    const val DEFAULT_DURATION_TOLERANCE_MS = 3_000L
+    const val DEFAULT_DURATION_TOLERANCE_MS = 8_000L
 
     data class DuplicateGroup(
         val title: String,
@@ -24,10 +25,29 @@ object DuplicateFinder {
         val duplicatesToRemove: List<Song> get() = songs.filter { it.id != bestSong.id }
     }
 
-    private val whitespace = Regex("\\s+")
+    private val whitespace = Regex("""\s+""")
+    private val trackNumberPrefix = Regex("""^\d{1,3}[\s.\-_]+""")
+    private val extensionSuffix = Regex("""\.(mp3|flac|m4a|wav|ogg|opus|aac|wma)$""", RegexOption.IGNORE_CASE)
+    private val parenthesizedTags = Regex("""\s*[\[\(](feat\.?|ft\.?|remaster(ed)?|live|explicit|official|deluxe|version|audio|video|radio edit|bonus|mix).*?[\]\)]""", RegexOption.IGNORE_CASE)
+    private val artistCollaborationRegex = Regex("""(?i)\s+(feat\.?|ft\.?|vs\.?|with|x|&)\s+|[;,/]""")
+    private val punctuationRegex = Regex("""[’'`"“”.,\-–—!¡?¿()\[\]{}]""")
 
-    private fun normalize(value: String): String =
-        value.trim().lowercase(Locale.ROOT).replace(whitespace, " ")
+    fun cleanTitle(title: String): String {
+        var t = title.trim()
+        t = extensionSuffix.replace(t, "")
+        t = trackNumberPrefix.replace(t, "")
+        t = parenthesizedTags.replace(t, "")
+        t = punctuationRegex.replace(t, " ")
+        t = whitespace.replace(t, " ").trim()
+        return SearchNormalizer.normalize(t)
+    }
+
+    fun cleanArtist(artist: String): String {
+        val primary = artist.split(artistCollaborationRegex).firstOrNull()?.trim() ?: artist.trim()
+        val withoutPunct = punctuationRegex.replace(primary, " ")
+        val collapsed = whitespace.replace(withoutPunct, " ").trim()
+        return SearchNormalizer.normalize(collapsed)
+    }
 
     /**
      * Scores a song by audio quality to determine the best track to keep.
@@ -77,9 +97,10 @@ object DuplicateFinder {
         val result = mutableListOf<DuplicateGroup>()
 
         songs
-            .groupBy { normalize(it.title) to normalize(it.artist) }
-            .forEach { (_, sameNamed) ->
-                if (sameNamed.size < 2) return@forEach
+            .groupBy { cleanTitle(it.title) to cleanArtist(it.artist) }
+            .forEach { (key, sameNamed) ->
+                val (cTitle, cArtist) = key
+                if (cTitle.isBlank() || sameNamed.size < 2) return@forEach
 
                 val sorted = sameNamed.sortedBy { it.duration }
                 var cluster = mutableListOf(sorted.first())

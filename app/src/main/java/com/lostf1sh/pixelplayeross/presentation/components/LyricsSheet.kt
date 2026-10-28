@@ -1302,7 +1302,7 @@ fun SyncedLyricsList(
     // recomposes the list or its lines, only a line change or a new word being sung does.
     val sampledPlaybackPosition = playbackPositionFlow.collectAsStateWithLifecycle()
     val hasWordTimings = remember(lines) {
-        lines.any { !it.words.isNullOrEmpty() || !it.background?.words.isNullOrEmpty() }
+        lines.isNotEmpty()
     }
     val interpolatedPosition = rememberInterpolatedPlaybackPosition(
         sampledPosition = sampledPlaybackPosition,
@@ -1328,8 +1328,10 @@ fun SyncedLyricsList(
             resolveLitLines(lines = lines, lineEndTimesMs = lineEndTimesMs, position = positionProvider())
         }
     }
-    val linesHaveMultipleVoices = remember(lines) { hasMultipleVoices(lines) }
-    val useDuetLayout = duetLayoutEnabled && linesHaveMultipleVoices
+    val linesHaveMultipleVoices = remember(lines) {
+        hasMultipleVoices(lines) || lines.any { it.voice != null }
+    }
+    val useDuetLayout = duetLayoutEnabled && (linesHaveMultipleVoices || lines.any { it.background != null })
     // Reduced motion keeps the highlight a plain per-syllable switch.
     val effectiveHighlightStyle = if (ValueAnimator.areAnimatorsEnabled()) {
         wordHighlightStyle
@@ -1468,7 +1470,7 @@ fun SyncedLyricsList(
                             animatedLyricsBlurStrength = animatedLyricsBlurStrength,
                             immersiveMode = immersiveMode,
                             lyricsAlignment = resolveLineAlignment(
-                                voice = line.voice,
+                                voice = line.voice ?: if (line.background != null && (linesHaveMultipleVoices || useDuetLayout)) 2 else null,
                                 userAlignment = lyricsAlignment,
                                 duetLayout = useDuetLayout
                             ),
@@ -1531,10 +1533,24 @@ fun LyricLineRow(
     onClick: () -> Unit
 ) {
     val sanitizedLine = remember(line.line) { sanitizeLyricLineText(line.line) }
-    val wordClusters = remember(line.words) { buildLyricClusters(line.words) }
+    val wordClusters = remember(line.words, sanitizedLine, lineEndTimeMs) {
+        buildLyricClusters(line.words)
+            ?: if (sanitizedLine.isNotBlank()) {
+                buildSyntheticWords(line, lineEndTimeMs, sanitizedLine)?.let(::buildLyricClusters)
+            } else {
+                null
+            }
+    }
     val background = line.background?.takeIf { showBackgroundVocals }
-    val backgroundClusters = remember(background) { buildLyricClusters(background?.words) }
     val backgroundText = remember(background) { background?.text?.let(::sanitizeLyricLineText).orEmpty() }
+    val backgroundClusters = remember(background, backgroundText, lineEndTimeMs) {
+        buildLyricClusters(background?.words)
+            ?: if (backgroundText.isNotBlank()) {
+                buildSyntheticWords(line, lineEndTimeMs, backgroundText)?.let(::buildLyricClusters)
+            } else {
+                null
+            }
+    }
     val lineStartTime = line.time.toLong()
     val isCurrentLine by remember(lineStartTime, lineEndTimeMs, positionProvider) {
         derivedStateOf { positionProvider() in lineStartTime..<lineEndTimeMs }
@@ -1926,6 +1942,31 @@ internal data class SyncedWordCluster(
     val startIndex: Int,
     val words: List<SyncedWord>
 )
+
+internal fun buildSyntheticWords(line: SyncedLine, lineEndTimeMs: Long, sanitizedText: String): List<SyncedWord>? {
+    val text = sanitizedText.trim()
+    if (text.isEmpty()) return null
+    val tokens = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (tokens.isEmpty()) return null
+    val startMs = line.time.toLong()
+    val endMs = if (lineEndTimeMs > startMs) lineEndTimeMs else (startMs + 3_000L)
+    val totalDuration = (endMs - startMs).coerceAtLeast(600L)
+    val totalChars = tokens.sumOf { maxOf(1, it.length) }
+    var currentMs = startMs
+    return tokens.mapIndexed { index, token ->
+        val weight = maxOf(1, token.length).toFloat() / totalChars
+        val duration = (totalDuration * weight).toLong().coerceAtLeast(80L)
+        val wordEnd = if (index == tokens.lastIndex) endMs else minOf(endMs, currentMs + duration)
+        val word = SyncedWord(
+            time = currentMs.toInt(),
+            word = token,
+            startsNewWord = true,
+            endTime = wordEnd.toInt()
+        )
+        currentMs = wordEnd
+        word
+    }
+}
 
 internal fun clusterSyncedWords(words: List<SyncedWord>): List<SyncedWordCluster> {
     if (words.isEmpty()) return emptyList()

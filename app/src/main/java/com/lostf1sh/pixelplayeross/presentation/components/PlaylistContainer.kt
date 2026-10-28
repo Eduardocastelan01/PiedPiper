@@ -277,6 +277,17 @@ fun PlaylistItems(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
     val listState = rememberLazyListState()
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
     val playlistFastScrollLabelProvider = remember(filteredPlaylists, currentSortOption) {
         { index: Int ->
             playlistFastScrollLabel(
@@ -383,6 +394,17 @@ private fun PlaylistGridItems(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
     val gridState = rememberLazyGridState()
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (gridState.firstVisibleItemIndex > 20) {
+                    gridState.scrollToItem(10)
+                }
+                gridState.animateScrollToItem(0)
+            }
+        }
+    }
     var lastHandledPlaylistSortKey by remember { mutableStateOf(currentSortOption?.storageKey) }
 
     LaunchedEffect(currentSortOption, filteredPlaylists) {

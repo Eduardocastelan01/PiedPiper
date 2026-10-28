@@ -654,10 +654,16 @@ object LyricsUtils {
     // Translation of the line above, read only for a line with no main text: [tr: (Uh uh)]
     private val LRC_TRANSLATION_LINE_REGEX = Regex("^\\[tr:(.*)]$", RegexOption.IGNORE_CASE)
 
-    // Enhanced-LRC singer prefix, before or right after the first word tag: "v1: Hi", "<00:01.00>v2:Hi".
+    // Enhanced-LRC singer prefix, before or right after the first word tag: "v1: Hi", "[v1]: Hi", "[Bad Bunny]: Hi", "Bad Bunny: Hi".
     private val LRC_VOICE_PREFIX_REGEX = Regex(
-        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*v(\\d{1,4})\\s*:\\s*",
+        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[?\\s*v(\\d{1,4})\\s*\\]?)\\s*:\\s*",
         RegexOption.IGNORE_CASE
+    )
+    private val LRC_NAMED_SINGER_PREFIX_REGEX = Regex(
+        "^(<\\d{2}:\\d{2}[.:]\\d{2,3}>)?\\s*(?:\\[([^\\]\\d][^\\]*)\\]|([A-Za-z0-9_ÁÉÍÓÚáéíóúñÑ -]{2,24}))\\s*:\\s*"
+    )
+    private val LRC_INLINE_BACKGROUND_REGEX = Regex(
+        "^(.*?)[ \\t]*\\(([^\\)]+)\\)[ \\t]*$"
     )
 
     private val KUGOU_LINE_REGEX = Pattern.compile("^\\[(\\d+),(\\d+)](.*)$")
@@ -693,6 +699,9 @@ object LyricsUtils {
         var isSynced = false
         // True while the only synced line is the empty one made for backing vocals before any line.
         var holdsOpeningBackground = false
+        val singerVoiceMap = mutableMapOf<String, Int>()
+        var nextDynamicVoice = 1
+        val groupKeywords = setOf("both", "ambos", "juntos", "todos", "all", "together", "coro", "chorus")
 
         normalizedInput.lines().forEach { rawLine ->
             val line = sanitizeLrcLine(rawLine)
@@ -749,22 +758,55 @@ object LyricsUtils {
                 val seconds = lineMatcher.group(2)?.toLong() ?: 0
                 val fraction = lineMatcher.group(3)?.toLong() ?: 0
                 val textWithTags = stripFormatCharacters(lineMatcher.group(4)?.trim() ?: "")
-                val (voice, text) = splitVoicePrefix(stripLrcTimestamps(textWithTags))
+                val (voice, text) = splitVoicePrefix(
+                    stripLrcTimestamps(textWithTags),
+                    singerVoiceMap = singerVoiceMap,
+                    nextVoiceProvider = { nextDynamicVoice++ },
+                    groupKeywords = groupKeywords
+                )
 
                 val millis = if (lineMatcher.group(3)?.length == 2) fraction * 10 else fraction
                 val lineTimestamp = minutes * 60 * 1000 + seconds * 1000 + millis
 
-                val syncedLine = if (text.contains(LRC_WORD_TAG_REGEX)) {
-                    val words = parseTimedWords(text, lineTimestamp)
-                    val displayText = LRC_WORD_TAG_REGEX.replace(text, "")
+                var lineBody = text.trim()
+                var inlineBackground: BackgroundVocals? = null
+                var finalVoice = voice
+
+                val parenMatch = LRC_INLINE_BACKGROUND_REGEX.matchEntire(lineBody)
+                if (parenMatch != null) {
+                    val mainPart = parenMatch.groupValues[1].trim()
+                    val bgPart = parenMatch.groupValues[2].trim()
+                    if (bgPart.isNotEmpty()) {
+                        if (mainPart.isNotEmpty()) {
+                            lineBody = mainPart
+                            inlineBackground = BackgroundVocals(text = "($bgPart)")
+                        } else {
+                            lineBody = "($bgPart)"
+                            inlineBackground = BackgroundVocals(text = "($bgPart)")
+                            if (finalVoice == null && singerVoiceMap.isNotEmpty()) {
+                                finalVoice = 2
+                            }
+                        }
+                    }
+                }
+
+                val syncedLine = if (lineBody.contains(LRC_WORD_TAG_REGEX)) {
+                    val words = parseTimedWords(lineBody, lineTimestamp)
+                    val displayText = LRC_WORD_TAG_REGEX.replace(lineBody, "")
                     SyncedLine(
                         time = lineTimestamp.toInt(),
                         line = displayText,
                         words = words.takeIf { it.isNotEmpty() },
-                        voice = voice
+                        voice = finalVoice,
+                        background = inlineBackground
                     )
                 } else {
-                    SyncedLine(time = lineTimestamp.toInt(), line = text, voice = voice)
+                    SyncedLine(
+                        time = lineTimestamp.toInt(),
+                        line = lineBody,
+                        voice = finalVoice,
+                        background = inlineBackground
+                    )
                 }
                 // Backing vocals written just before a line at that line's own time are sung with
                 // it, unless a `[tr: …]` line already gave them a translation of their own.
@@ -815,11 +857,37 @@ object LyricsUtils {
         }
     }
 
-    /** Splits a leading `vN:` singer prefix off a line body, keeping a word tag that came before it. */
-    private fun splitVoicePrefix(text: String): Pair<Int?, String> {
-        val match = LRC_VOICE_PREFIX_REGEX.find(text) ?: return null to text
-        val voice = match.groupValues[2].toIntOrNull() ?: return null to text
-        return voice to match.groupValues[1] + text.substring(match.range.last + 1)
+    /** Splits a leading singer prefix off a line body, keeping a word tag that came before it. */
+    private fun splitVoicePrefix(
+        text: String,
+        singerVoiceMap: MutableMap<String, Int> = mutableMapOf(),
+        nextVoiceProvider: () -> Int = { 1 },
+        groupKeywords: Set<String> = emptySet()
+    ): Pair<Int?, String> {
+        val voiceMatch = LRC_VOICE_PREFIX_REGEX.find(text)
+        if (voiceMatch != null) {
+            val v = voiceMatch.groupValues[2].toIntOrNull()
+            if (v != null) {
+                return v to voiceMatch.groupValues[1] + text.substring(voiceMatch.range.last + 1)
+            }
+        }
+
+        val nameMatch = LRC_NAMED_SINGER_PREFIX_REGEX.find(text)
+        if (nameMatch != null) {
+            val rawName = (nameMatch.groupValues[2].ifEmpty { nameMatch.groupValues[3] }).trim()
+            val lower = rawName.lowercase()
+            val isStandardTag = lower in setOf("ti", "ar", "al", "by", "offset", "length", "re", "ve", "id")
+            if (!isStandardTag && rawName.isNotEmpty()) {
+                val assignedVoice = if (lower in groupKeywords) {
+                    1_000
+                } else {
+                    singerVoiceMap.getOrPut(lower) { nextVoiceProvider() }
+                }
+                return assignedVoice to nameMatch.groupValues[1] + text.substring(nameMatch.range.last + 1)
+            }
+        }
+
+        return null to text
     }
 
     /**

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -270,6 +271,18 @@ fun SearchScreen(
     var showSongInfoBottomSheet by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchInputFocusRequester = remember { FocusRequester() }
+    val searchGenreGridState = rememberLazyGridState()
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Search.route) {
+                if (searchGenreGridState.firstVisibleItemIndex > 16) {
+                    searchGenreGridState.scrollToItem(8)
+                }
+                searchGenreGridState.animateScrollToItem(0)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         AdvancedPerformanceDiagnostics.recordEventIfEnabled(
@@ -491,6 +504,7 @@ fun SearchScreen(
                         Box(modifier = Modifier.fillMaxSize()) {
                             GenreCategoriesGrid(
                                 genres = genres,
+                                gridState = searchGenreGridState,
                                 onGenreClick = { genre ->
                                     Timber.tag("SearchScreen")
                                         .d("Genre clicked: ${genre.name} (ID: ${genre.id})")
@@ -1187,6 +1201,17 @@ fun SearchResultsList(
     val sectionTypes = remember(groupedResults) { groupedResults.keys }
     val listState = rememberSaveable(selectedFilter, sectionTypes, saver = LazyListState.Saver) {
         LazyListState()
+    }
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Search.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
     }
     val songResultsQueue = remember(groupedResults) {
         buildList {

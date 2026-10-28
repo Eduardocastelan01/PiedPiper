@@ -59,7 +59,7 @@ fun PlaylistRecommendationsSection(
     onPlaySong: (Song) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (playlistSongs.isEmpty() || allSongs.isEmpty()) return
+    if (allSongs.isEmpty()) return
 
     val haptic = LocalHapticFeedback.current
     var refreshSeed by remember { mutableIntStateOf(0) }
@@ -70,6 +70,11 @@ fun PlaylistRecommendationsSection(
             val existingIds = playlistSongs.map { it.id }.toSet()
             val candidatePool = allSongs.filterNot { it.id in existingIds }
             if (candidatePool.isEmpty()) return@derivedStateOf emptyList()
+
+            if (playlistSongs.isEmpty()) {
+                // If playlist is currently empty, recommend diverse tracks from the library
+                return@derivedStateOf candidatePool.shuffled()
+            }
 
             // Frequency maps for playlist artists and genres
             val artistFrequencies = mutableMapOf<String, Int>()
@@ -107,27 +112,29 @@ fun PlaylistRecommendationsSection(
                 candidate to score
             }
 
-            val topScored = scored.filter { it.second > 0 }
-                .sortedByDescending { it.second }
-                .map { it.first }
-
-            if (topScored.isNotEmpty()) topScored else candidatePool.shuffled()
+            // Return candidates sorted by relevance, with fallback to diverse library sampling
+            val (matched, unmatched) = scored.partition { it.second > 0 }
+            val prioritized = matched.sortedByDescending { it.second }.map { it.first }
+            if (prioritized.size >= 12) {
+                prioritized
+            } else {
+                prioritized + unmatched.shuffled().map { it.first }
+            }
         }
     }
 
-    // Pick a window of 5 recommendations based on refreshSeed
     val displayedRecommendations by remember(recommendedCandidates, refreshSeed) {
         derivedStateOf {
             if (recommendedCandidates.isEmpty()) emptyList()
             else {
-                val chunkSize = 5
-                val total = recommendedCandidates.size
-                val offset = (refreshSeed * chunkSize) % total
-                val result = mutableListOf<Song>()
-                for (i in 0 until minOf(chunkSize, total)) {
-                    result.add(recommendedCandidates[(offset + i) % total])
+                val chunkSize = 6
+                val offset = (refreshSeed * chunkSize) % maxOf(1, recommendedCandidates.size)
+                val window = recommendedCandidates.drop(offset).take(chunkSize)
+                if (window.size < chunkSize && recommendedCandidates.size > chunkSize) {
+                    window + recommendedCandidates.take(chunkSize - window.size)
+                } else {
+                    window.ifEmpty { recommendedCandidates.take(chunkSize) }
                 }
-                result
             }
         }
     }
@@ -137,24 +144,24 @@ fun PlaylistRecommendationsSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Section Header
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Canciones recomendadas",
+                    text = if (playlistSongs.isEmpty()) "Canciones para tu lista" else "Canciones recomendadas",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Basadas en la música de esta lista",
+                    text = if (playlistSongs.isEmpty()) "Agrega pistas para comenzar a armar tu lista" else "Basadas en las canciones de esta lista de reproducción",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -291,4 +298,3 @@ private fun RecommendedSongRow(
         }
     }
 }
-

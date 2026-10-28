@@ -539,6 +539,7 @@ class MusicRepositoryImpl @Inject constructor(
 
     override fun searchSongs(query: String): Flow<List<Song>> {
         if (query.isBlank()) return flowOf(emptyList())
+        val cleanQuery = query.trim()
         return combine(
             userPreferencesRepository.allowedDirectoriesFlow,
             userPreferencesRepository.blockedDirectoriesFlow
@@ -549,16 +550,30 @@ class MusicRepositoryImpl @Inject constructor(
                 val (allowedParentDirs, applyDirectoryFilter) =
                     computeAllowedDirs(allowedDirs, blockedDirs)
                 emit(
-                    musicDao.searchSongsLimited(
-                        query = query,
+                    musicDao.getAllSongs(
                         allowedParentDirs = allowedParentDirs,
-                        applyDirectoryFilter = applyDirectoryFilter,
-                        limit = SEARCH_RESULTS_LIMIT
+                        applyDirectoryFilter = applyDirectoryFilter
                     )
                 )
             }.flatMapLatest { it }
         }.map { entities ->
-            entities.map { it.toSong() }
+            val songs = entities.map { it.toSong() }
+            songs.mapNotNull { song ->
+                val titleScore = SearchNormalizer.matchScore(song.title, cleanQuery)
+                val artistScore = SearchNormalizer.matchScore(song.artist, cleanQuery)
+                val albumScore = SearchNormalizer.matchScore(song.album, cleanQuery)
+                val maxScore = maxOf(titleScore, artistScore, albumScore)
+                val matchesNormalized = SearchNormalizer.containsNormalized(song.title, cleanQuery) ||
+                    SearchNormalizer.containsNormalized(song.artist, cleanQuery) ||
+                    SearchNormalizer.containsNormalized(song.album, cleanQuery)
+
+                if (maxScore >= 0.58f || matchesNormalized) {
+                    val finalScore = if (matchesNormalized) maxOf(maxScore, 0.85f) else maxScore
+                    song to finalScore
+                } else null
+            }.sortedByDescending { it.second }
+                .map { it.first }
+                .take(SEARCH_RESULTS_LIMIT)
         }.flowOn(Dispatchers.IO)
     }
 
@@ -566,26 +581,20 @@ class MusicRepositoryImpl @Inject constructor(
     override fun searchAlbums(query: String, minTracks: Int): Flow<List<Album>> {
         if (query.isBlank()) return flowOf(emptyList())
         val cleanQuery = query.trim()
-        val dbResultsFlow = musicDao.searchAlbums(cleanQuery, emptyList(), false, minTracks).map { entities ->
-            entities.map { it.toAlbum() }
-        }
-        val normQuery = SearchNormalizer.normalize(cleanQuery)
-        val normFlow = if (normQuery.isNotBlank() && normQuery != cleanQuery.lowercase()) {
-            musicDao.searchAlbums(normQuery, emptyList(), false, minTracks).map { entities ->
-                entities.map { it.toAlbum() }
-            }
-        } else null
-
-        return if (normFlow != null) {
-            dbResultsFlow.combine(normFlow) { r1, r2 ->
-                val seen = LinkedHashMap<Long, Album>(r1.size + r2.size)
-                r1.forEach { seen.putIfAbsent(it.id, it) }
-                r2.forEach { seen.putIfAbsent(it.id, it) }
-                seen.values.toList()
-            }.flowOn(Dispatchers.IO)
-        } else {
-            dbResultsFlow.flowOn(Dispatchers.IO)
-        }
+        return getAlbums(minTracks).map { allAlbums ->
+            allAlbums.mapNotNull { album ->
+                val nameScore = SearchNormalizer.matchScore(album.name, cleanQuery)
+                val artistScore = SearchNormalizer.matchScore(album.artist, cleanQuery)
+                val maxScore = maxOf(nameScore, artistScore)
+                val matchesNormalized = SearchNormalizer.containsNormalized(album.name, cleanQuery) ||
+                    SearchNormalizer.containsNormalized(album.artist, cleanQuery)
+                if (maxScore >= 0.55f || matchesNormalized) {
+                    val finalScore = if (matchesNormalized) maxOf(maxScore, 0.85f) else maxScore
+                    album to finalScore
+                } else null
+            }.sortedByDescending { it.second }
+                .map { it.first }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun searchArtists(query: String): Flow<List<Artist>> {
@@ -906,10 +915,12 @@ class MusicRepositoryImpl @Inject constructor(
             }
         }
 
-        val knownGenres = songCounts.map { (key, songCount) ->
+        val knownGenres = songCounts.mapNotNull { (key, songCount) ->
+            if (songCount <= 0) return@mapNotNull null
             val name = spellings.getValue(key).maxBy { it.value }.key
             buildGenre(name).copy(songCount = songCount)
-        }.sortedBy { it.name.lowercase(Locale.ROOT) }
+        }.filter { it.songCount > 0 }
+            .sortedBy { it.name.lowercase(Locale.ROOT) }
 
         return knownGenres
     }

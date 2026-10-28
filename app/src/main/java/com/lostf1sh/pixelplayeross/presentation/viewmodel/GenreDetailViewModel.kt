@@ -245,6 +245,31 @@ class GenreDetailViewModel @Inject constructor(
         }
     }
 
+    private fun resolveArtistImageUrl(
+        artistName: String,
+        artistMap: Map<String, String?>,
+        fallbackArtUri: String?
+    ): String? {
+        val trimmed = artistName.trim().lowercase(java.util.Locale.ROOT)
+        artistMap[trimmed]?.let { if (!it.isNullOrBlank()) return it }
+
+        val primaryArtist = artistName
+            .split(Regex("(?i)\\s+(feat\\.?|ft\\.?|vs\\.?|with|x|&)\\s+|[;,/]"))
+            .firstOrNull()?.trim()?.lowercase(java.util.Locale.ROOT)
+
+        if (!primaryArtist.isNullOrBlank()) {
+            artistMap[primaryArtist]?.let { if (!it.isNullOrBlank()) return it }
+        }
+
+        for ((knownArtist, img) in artistMap) {
+            if (!img.isNullOrBlank() && (trimmed.startsWith(knownArtist) || knownArtist.startsWith(trimmed))) {
+                return img
+            }
+        }
+
+        return fallbackArtUri
+    }
+
     private fun flattenSections(sections: List<SectionData>, artistMap: Map<String, String?> = emptyMap()): List<GenreDetailListItem> {
         val items = mutableListOf<GenreDetailListItem>()
         sections.forEach { section ->
@@ -253,7 +278,7 @@ class GenreDetailViewModel @Inject constructor(
                     items.add(GenreDetailListItem.ArtistHeader(
                         key = "header_${section.id}", 
                         artistName = section.artistName,
-                        artistImageUrl = artistMap[section.artistName.trim().lowercase()]
+                        artistImageUrl = resolveArtistImageUrl(section.artistName, artistMap, section.albums.firstOrNull()?.artUri)
                     ))
                     section.albums.forEachIndexed { albumIndex, album ->
                         if (albumIndex > 0) {

@@ -96,7 +96,7 @@ fun GenreCategoriesGrid(
             it.id.equals("unknown", ignoreCase = true) ||
             it.name.equals("Unknown", ignoreCase = true) ||
             it.name.equals("<unknown>", ignoreCase = true)
-        }
+        }.filter { it.songCount > 0 }
     }
 
     if (visibleGenres.isEmpty()) {

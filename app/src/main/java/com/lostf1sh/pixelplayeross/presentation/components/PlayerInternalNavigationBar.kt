@@ -95,7 +95,8 @@ private fun PlayerInternalNavigationItemsRow(
     navBarStyle: String,
     compactMode: Boolean,
     bottomBarPadding: Dp,
-    onSearchIconDoubleTap: () -> Unit
+    onSearchIconDoubleTap: () -> Unit,
+    onReselectTab: (String) -> Unit = {}
 ) {
     val navBarInsetPadding = sanitizeNavigationBarBottomInset(
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -103,6 +104,7 @@ private fun PlayerInternalNavigationItemsRow(
     val innerRowPadding = (navBarInsetPadding - bottomBarPadding).coerceAtLeast(0.dp)
     val latestCurrentRoute by rememberUpdatedState(currentRoute)
     val latestOnSearchIconDoubleTap by rememberUpdatedState(onSearchIconDoubleTap)
+    val latestOnReselectTab by rememberUpdatedState(onReselectTab)
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
 
     val rowModifier = if (navBarStyle == NavBarStyle.FULL_WIDTH) {
@@ -178,6 +180,8 @@ private fun PlayerInternalNavigationItemsRow(
                                 lastSearchTapTimestamp = 0L
                                 return@click
                             }
+                        } else if (!isDoubleTap) {
+                            latestOnReselectTab(itemRoute)
                         }
 
                         if (isDoubleTap) {
@@ -196,6 +200,7 @@ private fun PlayerInternalNavigationItemsRow(
                         navController.navigateToTopLevelSafely(itemRoute)
                     } else {
                         lastSearchTapTimestamp = 0L
+                        latestOnReselectTab(itemRoute)
                     }
                 }
             }
@@ -229,7 +234,8 @@ fun PlayerInternalNavigationBar(
     navBarStyle: String,
     compactMode: Boolean,
     bottomBarPadding: Dp = 0.dp,
-    onSearchIconDoubleTap: () -> Unit = {}
+    onSearchIconDoubleTap: () -> Unit = {},
+    onReselectTab: (String) -> Unit = {}
 ) {
     PlayerInternalNavigationItemsRow(
         navController = navController,
@@ -239,6 +245,7 @@ fun PlayerInternalNavigationBar(
         compactMode = compactMode,
         bottomBarPadding = bottomBarPadding,
         onSearchIconDoubleTap = onSearchIconDoubleTap,
+        onReselectTab = onReselectTab,
         modifier = modifier
     )
 }

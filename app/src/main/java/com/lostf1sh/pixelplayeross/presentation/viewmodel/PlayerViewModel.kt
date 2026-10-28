@@ -594,6 +594,12 @@ class PlayerViewModel @Inject constructor(
     val artistNavigationRequests = _artistNavigationRequests.asSharedFlow()
     private val _searchNavDoubleTapEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val searchNavDoubleTapEvents = _searchNavDoubleTapEvents.asSharedFlow()
+
+    val scrollToTopEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    fun requestScrollToTop(route: String) {
+        scrollToTopEvents.tryEmit(route)
+    }
     
     private val _scrollToIndexEvent = MutableSharedFlow<LocateScrollRequest>(extraBufferCapacity = 1)
     val scrollToIndexEvent = _scrollToIndexEvent.asSharedFlow()

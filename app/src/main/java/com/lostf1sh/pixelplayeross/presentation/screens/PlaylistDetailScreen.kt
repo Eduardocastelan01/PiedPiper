@@ -691,19 +691,56 @@ fun PlaylistDetailScreen(
                 }
 
                 if (localReorderableSongs.isEmpty()) {
-                    Box(Modifier
-                        .fillMaxSize()
-                        .weight(1f), Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Filled.MusicOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(8.dp))
-                            Text(playlistEmptyTitle, style = MaterialTheme.typography.titleMedium)
-                            val emptyMessage = when {
-                                isFolderPlaylist -> playlistEmptyFolder
-                                isSmartPlaylist -> stringResource(R.string.presentation_batch_b_playlist_empty_smart_body)
-                                else -> playlistEmptyAddHint
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(
+                            bottom = if (hasCurrentSong) MiniPlayerHeight + 110.dp else 110.dp
+                        ),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                    ) {
+                        item(key = "empty_playlist_header") {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 36.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Filled.MusicOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(8.dp))
+                                Text(playlistEmptyTitle, style = MaterialTheme.typography.titleMedium)
+                                val emptyMessage = when {
+                                    isFolderPlaylist -> playlistEmptyFolder
+                                    isSmartPlaylist -> stringResource(R.string.presentation_batch_b_playlist_empty_smart_body)
+                                    else -> playlistEmptyAddHint
+                                }
+                                Text(emptyMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(emptyMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (!isFolderPlaylist) {
+                            item(
+                                key = "playlist_recommendations_section_empty",
+                                contentType = "playlist_recommendations"
+                            ) {
+                                PlaylistRecommendationsSection(
+                                    playlistSongs = emptyList(),
+                                    allSongs = allLibrarySongs,
+                                    onAddSong = { song ->
+                                        currentPlaylist?.let { pl ->
+                                            playlistViewModel.addSongsToPlaylist(pl.id, listOf(song.id))
+                                            playerViewModel.sendToast(context.getString(R.string.playlist_songs_added_toast))
+                                        }
+                                    },
+                                    onPlaySong = { song ->
+                                        playerViewModel.showAndPlaySongFromLibrary(
+                                            song,
+                                            queueName = currentPlaylist?.name ?: "Recomendaciones"
+                                        )
+                                    },
+                                    modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+                                )
+                            }
                         }
                     }
                 } else {
@@ -714,6 +751,9 @@ fun PlaylistDetailScreen(
                     ) {
                         LazyColumn(
                             state = listState,
+                            contentPadding = PaddingValues(
+                                bottom = if (hasCurrentSong) MiniPlayerHeight + 110.dp else 110.dp
+                            ),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(
@@ -829,7 +869,7 @@ fun PlaylistDetailScreen(
                                 }
                             }
 
-                            if (isEditablePlaylist && localReorderableSongs.isNotEmpty()) {
+                            if (!isFolderPlaylist) {
                                 item(
                                     key = "playlist_recommendations_section",
                                     contentType = "playlist_recommendations"

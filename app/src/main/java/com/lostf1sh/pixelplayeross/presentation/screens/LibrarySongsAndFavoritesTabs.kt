@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package com.lostf1sh.pixelplayeross.presentation.screens
+import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -97,6 +98,17 @@ fun LibraryFavoritesTab(
     hasCurrentSong: Boolean = false
 ) {
     val listState = rememberRestoredLazyListState(favoriteSongs)
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val visibilityCallback by rememberUpdatedState(onLocateCurrentSongVisibilityChanged)
     val registerActionCallback by rememberUpdatedState(onRegisterLocateCurrentSongAction)

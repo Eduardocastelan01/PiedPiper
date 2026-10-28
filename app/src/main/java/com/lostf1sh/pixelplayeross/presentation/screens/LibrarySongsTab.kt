@@ -1,4 +1,5 @@
 package com.lostf1sh.pixelplayeross.presentation.screens
+import com.lostf1sh.pixelplayeross.presentation.navigation.Screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,6 +89,17 @@ fun LibrarySongsTab(
     hasCurrentSong: Boolean = false
 ) {
     val listState = rememberRestoredLazyListState(songs)
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Library.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
     val dummyListState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val coroutineScope = rememberCoroutineScope()

@@ -276,7 +276,19 @@ fun HomeScreen(
     val homeStatsOverviewState by statsViewModel.homeOverviewState.collectAsStateWithLifecycle()
     val recapHomeCard by recapEntryViewModel.homeCard.collectAsStateWithLifecycle()
 
+    
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+
+    LaunchedEffect(playerViewModel) {
+        playerViewModel.scrollToTopEvents.collect { route ->
+            if (route == Screen.Home.route) {
+                if (listState.firstVisibleItemIndex > 20) {
+                    listState.scrollToItem(10)
+                }
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
     val density = LocalDensity.current
     val scrollThresholdPx = remember(density) { with(density) { 180.dp.toPx() } }
     val isScrolledPastThreshold = remember {
