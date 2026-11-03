@@ -17,6 +17,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.Arrays
 
 @OptIn(UnstableApi::class)
@@ -31,11 +32,22 @@ class CoilBitmapLoader(private val context: Context, private val scope: Coroutin
 
     private val bitmapCache = LruCache<String, Bitmap>(BITMAP_CACHE_SIZE)
 
+    var onArtworkLoaded: ((Uri, Bitmap) -> Unit)? = null
+
     private fun getCacheKey(data: Any): String {
         return when (data) {
             is Uri -> data.toString()
             is ByteArray -> "bytes_" + Arrays.hashCode(data)
             else -> data.toString()
+        }
+    }
+
+    fun getCachedBitmap(uri: Uri?): Bitmap? {
+        if (uri == null) return null
+        val cacheKey = getCacheKey(uri)
+        return synchronized(bitmapCache) {
+            val cached = bitmapCache.get(cacheKey)
+            if (cached != null && !cached.isRecycled) cached else null
         }
     }
 
@@ -81,14 +93,23 @@ class CoilBitmapLoader(private val context: Context, private val scope: Coroutin
 
                 if (drawable != null) {
                     val bitmap = drawable.toBitmap()
-                    synchronized(bitmapCache) {
-                        bitmapCache.put(cacheKey, bitmap)
+                    val scaled = if (bitmap.width > MAX_MEDIA_SESSION_ARTWORK_SIZE_PX || bitmap.height > MAX_MEDIA_SESSION_ARTWORK_SIZE_PX) {
+                        Bitmap.createScaledBitmap(bitmap, MAX_MEDIA_SESSION_ARTWORK_SIZE_PX, MAX_MEDIA_SESSION_ARTWORK_SIZE_PX, true)
+                    } else {
+                        bitmap
                     }
-                    future.set(bitmap)
+                    synchronized(bitmapCache) {
+                        bitmapCache.put(cacheKey, scaled)
+                    }
+                    future.set(scaled)
+                    (data as? Uri)?.let { uri ->
+                        onArtworkLoaded?.invoke(uri, scaled)
+                    }
                 } else {
                     future.setException(IllegalStateException("Coil returned null drawable for data: $data"))
                 }
             } catch (e: Exception) {
+                Timber.tag("CoilBitmapLoader").w(e, "Failed to load artwork bitmap for data: %s", data)
                 future.setException(e)
             }
         }

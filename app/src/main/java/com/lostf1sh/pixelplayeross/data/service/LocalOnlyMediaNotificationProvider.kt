@@ -11,7 +11,7 @@ import androidx.media3.session.MediaSession
 import com.google.common.collect.ImmutableList
 
 /**
- * Wraps Media3's default provider and marks playback notifications as local-only.
+ * Wraps Media3's default provider and ensures playback notifications bridge to wearable devices.
  */
 @androidx.annotation.OptIn(UnstableApi::class)
 class LocalOnlyMediaNotificationProvider(
@@ -36,14 +36,16 @@ class LocalOnlyMediaNotificationProvider(
             actionFactory,
             callback
         )
-        val localOnlyNotification = runCatching {
+        // Allow wearable and companion devices (e.g., Samsung Galaxy Watch 7, Wear OS)
+        // to receive and bridge the playback notification for workout & lockscreen media controls.
+        val bridgedNotification = runCatching {
             Notification.Builder.recoverBuilder(context, notification.notification)
-                .setLocalOnly(true)
+                .setLocalOnly(false)
                 .build()
         }.getOrElse {
             notification.notification
         }
-        return MediaNotification(notification.notificationId, localOnlyNotification)
+        return MediaNotification(notification.notificationId, bridgedNotification)
     }
 
     override fun handleCustomCommand(

@@ -375,6 +375,17 @@ class MusicService : MediaSessionService() {
         syncLocalListeningStatsFromPlayer(player)
         requestWidgetFullUpdate(force = true)
         refreshMediaSessionUi(session)
+        player.currentMediaItem?.let { currentItem ->
+            val cachedBitmap = currentItem.mediaMetadata.artworkUri?.let { uri ->
+                coilBitmapLoader?.getCachedBitmap(uri)
+            }
+            androidx.media3.session.LegacySessionBridge.syncMetadata(
+                session = session,
+                context = this,
+                mediaItem = currentItem,
+                artworkBitmap = cachedBitmap
+            )
+        }
     }
 
     private fun syncLocalListeningStatsFromPlayer(
@@ -766,10 +777,26 @@ class MusicService : MediaSessionService() {
             }
         }
 
+        val loader = CoilBitmapLoader(this, serviceScope).also { loader ->
+            coilBitmapLoader = loader
+            loader.onArtworkLoaded = { uri, bitmap ->
+                val currentSession = mediaSession
+                val currentItem = currentSession?.player?.currentMediaItem
+                if (currentSession != null && currentItem?.mediaMetadata?.artworkUri == uri) {
+                    androidx.media3.session.LegacySessionBridge.syncMetadata(
+                        session = currentSession,
+                        context = this@MusicService,
+                        mediaItem = currentItem,
+                        artworkBitmap = bitmap
+                    )
+                }
+            }
+        }
+
         mediaSession = MediaSession.Builder(this, wrapSessionPlayer(engine.masterPlayer))
             .setCallback(callback)
             .setSessionActivity(getOpenAppPendingIntent())
-            .setBitmapLoader(CoilBitmapLoader(this, serviceScope).also { coilBitmapLoader = it })
+            .setBitmapLoader(loader)
             .build()
 
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {
@@ -787,7 +814,20 @@ class MusicService : MediaSessionService() {
         }
         serviceScope.launch {
             restorePlaybackQueueSnapshotIfNeeded()
-            mediaSession?.let { refreshMediaSessionUi(it) }
+            mediaSession?.let { session ->
+                refreshMediaSessionUi(session)
+                session.player.currentMediaItem?.let { currentItem ->
+                    val cachedBitmap = currentItem.mediaMetadata.artworkUri?.let { uri ->
+                        coilBitmapLoader?.getCachedBitmap(uri)
+                    }
+                    androidx.media3.session.LegacySessionBridge.syncMetadata(
+                        session = session,
+                        context = this@MusicService,
+                        mediaItem = currentItem,
+                        artworkBitmap = cachedBitmap
+                    )
+                }
+            }
             requestWidgetFullUpdate(force = true)
         }
 
@@ -1246,6 +1286,17 @@ class MusicService : MediaSessionService() {
             ) {
                 mapOf("reason" to reason.toString())
             }
+            mediaSession?.let { session ->
+                val cachedBitmap = mediaItem?.mediaMetadata?.artworkUri?.let { uri ->
+                    coilBitmapLoader?.getCachedBitmap(uri)
+                }
+                androidx.media3.session.LegacySessionBridge.syncMetadata(
+                    session = session,
+                    context = this@MusicService,
+                    mediaItem = mediaItem,
+                    artworkBitmap = cachedBitmap
+                )
+            }
             mediaItem?.let(::grantArtworkUriPermissionsToConnectedControllers)
             mediaItem?.let { shuffleHistoryManager.onTrackStarted(it) }
             syncLocalListeningStatsFromPlayer(mediaSession?.player ?: engine.masterPlayer, forceNewSession = true)
@@ -1278,7 +1329,19 @@ class MusicService : MediaSessionService() {
 
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
             requestWidgetFullUpdate(force = true)
-            mediaSession?.let { refreshMediaSessionUiWithFollowUp(it) }
+            mediaSession?.let { session ->
+                val currentItem = session.player.currentMediaItem
+                val cachedBitmap = currentItem?.mediaMetadata?.artworkUri?.let { uri ->
+                    coilBitmapLoader?.getCachedBitmap(uri)
+                }
+                androidx.media3.session.LegacySessionBridge.syncMetadata(
+                    session = session,
+                    context = this@MusicService,
+                    mediaItem = currentItem,
+                    artworkBitmap = cachedBitmap
+                )
+                refreshMediaSessionUiWithFollowUp(session)
+            }
             val activePlayer = mediaSession?.player ?: engine.masterPlayer
             replayGainProcessor.onMediaMetadataChanged(activePlayer.currentMediaItem)
         }
