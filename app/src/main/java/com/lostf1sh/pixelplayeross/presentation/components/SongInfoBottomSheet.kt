@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.BookmarkAdd
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDownload
@@ -132,6 +133,7 @@ fun SongInfoBottomSheet(
         customMetadataChanges: CustomMetadataChanges
     ) -> Unit,
     removeFromListTrigger: () -> Unit,
+    onSaveBookmark: (() -> Unit)? = null,
     songInfoViewModel: SongInfoBottomSheetViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -542,6 +544,16 @@ fun SongInfoBottomSheet(
                                                     title = stringResource(R.string.shortcut_playlist_short),
                                                     onClick = onAddToPlayList
                                                 )
+                                                if (onSaveBookmark != null) {
+                                                    SongMenuRowItem(
+                                                        icon = Icons.Rounded.BookmarkAdd,
+                                                        title = stringResource(R.string.add_bookmark_title),
+                                                        onClick = {
+                                                            onSaveBookmark()
+                                                            onDismiss()
+                                                        }
+                                                    )
+                                                }
                                                 if (!isCloudSong) {
                                                     SongMenuRowPainterItem(
                                                         painter = painterResource(R.drawable.rounded_notifications_active_24),

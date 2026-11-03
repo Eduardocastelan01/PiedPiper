@@ -57,7 +57,8 @@ class PlaybackStateHolderTest {
         dualPlayerEngine = dualPlayerEngine,
         userPreferencesRepository = userPreferencesRepository,
         queueStateHolder = queueStateHolder,
-        appContext = appContext
+        appContext = appContext,
+        shuffleHistoryManager = mockk(relaxed = true)
     )
 
     private fun snapshot(

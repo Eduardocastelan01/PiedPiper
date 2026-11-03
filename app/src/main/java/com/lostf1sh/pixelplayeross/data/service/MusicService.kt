@@ -230,6 +230,7 @@ class MusicService : MediaSessionService() {
 
     private var favoriteSongIds = emptySet<String>()
     private var mediaSession: MediaSession? = null
+    private var coilBitmapLoader: CoilBitmapLoader? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var keepPlayingInBackground = true
     private var isManualShuffleEnabled = false
@@ -768,7 +769,7 @@ class MusicService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, wrapSessionPlayer(engine.masterPlayer))
             .setCallback(callback)
             .setSessionActivity(getOpenAppPendingIntent())
-            .setBitmapLoader(CoilBitmapLoader(this, serviceScope))
+            .setBitmapLoader(CoilBitmapLoader(this, serviceScope).also { coilBitmapLoader = it })
             .build()
 
         val localOnlyProvider = LocalOnlyMediaNotificationProvider(this).also {
@@ -1190,7 +1191,13 @@ class MusicService : MediaSessionService() {
             val player = engine.masterPlayer
             val nextIndex = player.nextMediaItemIndex
             if (nextIndex != androidx.media3.common.C.INDEX_UNSET) {
-                runCatching { replayGainProcessor.prefetch(player.getMediaItemAt(nextIndex)) }
+                runCatching {
+                    val nextItem = player.getMediaItemAt(nextIndex)
+                    replayGainProcessor.prefetch(nextItem)
+                    nextItem.mediaMetadata.artworkUri?.let { artworkUri ->
+                        coilBitmapLoader?.prefetch(artworkUri)
+                    }
+                }
             }
         }
 
@@ -1256,7 +1263,13 @@ class MusicService : MediaSessionService() {
             val player = engine.masterPlayer
             val nextIndex = player.nextMediaItemIndex
             if (nextIndex != androidx.media3.common.C.INDEX_UNSET) {
-                runCatching { replayGainProcessor.prefetch(player.getMediaItemAt(nextIndex)) }
+                runCatching {
+                    val nextItem = player.getMediaItemAt(nextIndex)
+                    replayGainProcessor.prefetch(nextItem)
+                    nextItem.mediaMetadata.artworkUri?.let { artworkUri ->
+                        coilBitmapLoader?.prefetch(artworkUri)
+                    }
+                }
             }
             requestWidgetFullUpdate(force = false)
             mediaSession?.let { refreshMediaSessionUi(it) }

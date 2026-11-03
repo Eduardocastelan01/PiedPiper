@@ -23,6 +23,12 @@ class PreviousButtonPlayer(
     private val shuffleHistoryManager: ShuffleHistoryManager? = null,
 ) : ForwardingPlayer(innerPlayer) {
 
+    constructor(
+        innerPlayer: Player,
+        behaviorProvider: () -> PreviousButtonBehavior
+    ) : this(innerPlayer, behaviorProvider, null)
+
+
     override fun seekToPrevious() {
         if (behaviorProvider() == PreviousButtonBehavior.PREVIOUS_TRACK) {
             if (shuffleHistoryManager?.canGoBack == true && (innerPlayer.shuffleModeEnabled || !hasPreviousMediaItem())) {

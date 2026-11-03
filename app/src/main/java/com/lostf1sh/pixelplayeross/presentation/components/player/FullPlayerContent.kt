@@ -102,7 +102,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
+import android.widget.Toast
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.MoreVert
+import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
+import kotlinx.coroutines.flow.map
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Speaker
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -387,6 +391,90 @@ fun FullPlayerContent(
         }
     }
 
+    if (showSongInfoBottomSheet) {
+        val liveSongState by remember(playerViewModel, song.id) {
+            playerViewModel.observeSong(song.id).map { it ?: song }
+        }.collectAsStateWithLifecycle(initialValue = song)
+        val liveSong = liveSongState
+
+        MaterialTheme(
+            colorScheme = LocalMaterialTheme.current,
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes
+        ) {
+            SongInfoBottomSheet(
+                song = liveSong,
+                isFavorite = isFavoriteProvider(),
+                onToggleFavorite = onFavoriteToggle,
+                onDismiss = { showSongInfoBottomSheet = false },
+                onPlaySong = { showSongInfoBottomSheet = false },
+                onAddToQueue = {
+                    playerViewModel.addSongToQueue(liveSong)
+                    showSongInfoBottomSheet = false
+                    Toast.makeText(context, context.getString(R.string.toast_added_to_queue), Toast.LENGTH_SHORT).show()
+                },
+                onAddNextToQueue = {
+                    playerViewModel.addSongNextToQueue(liveSong)
+                    showSongInfoBottomSheet = false
+                    Toast.makeText(context, context.getString(R.string.toast_playing_next), Toast.LENGTH_SHORT).show()
+                },
+                onAddToPlayList = {
+                    showSongInfoBottomSheet = false
+                    showAddToPlaylistSheet = true
+                },
+                onDeleteFromDevice = { activity, songToDelete, onResult ->
+                    playerViewModel.deleteFromDevice(activity, songToDelete, onResult)
+                    showSongInfoBottomSheet = false
+                },
+                onNavigateToAlbum = {
+                    showSongInfoBottomSheet = false
+                    if (liveSong.albumId != -1L) {
+                        playerViewModel.triggerAlbumNavigationFromPlayer(liveSong.albumId)
+                    }
+                },
+                onNavigateToArtist = {
+                    showSongInfoBottomSheet = false
+                    val resolvedArtistId = currentSongArtists.firstOrNull { it.id != 0L && it.id != -1L }?.id ?: liveSong.artistId
+                    if (currentSongArtists.size > 1) {
+                        showArtistPicker = true
+                    } else {
+                        playerViewModel.triggerArtistNavigationFromPlayer(resolvedArtistId)
+                    }
+                },
+                onNavigateToGenre = {
+                    showSongInfoBottomSheet = false
+                },
+                onEditSong = { title, artist, album, albumArtist, composer, genre, lyrics, trackNumber, discNumber, replayGainTrackGainDb, replayGainAlbumGainDb, coverArtUpdate, customMetadataChanges ->
+                    playerViewModel.editSongMetadata(
+                        liveSong,
+                        title,
+                        artist,
+                        album,
+                        albumArtist,
+                        composer,
+                        genre,
+                        lyrics,
+                        trackNumber,
+                        discNumber,
+                        replayGainTrackGainDb,
+                        replayGainAlbumGainDb,
+                        coverArtUpdate,
+                        customMetadataChanges
+                    )
+                    showSongInfoBottomSheet = false
+                },
+                removeFromListTrigger = {
+                    playerViewModel.removeSongFromQueue(liveSong.id)
+                    showSongInfoBottomSheet = false
+                },
+                onSaveBookmark = {
+                    showSongInfoBottomSheet = false
+                    showSaveBookmarkDialog = true
+                }
+            )
+        }
+    }
+
     LaunchedEffect(lyricsSearchUiState) {
         when (val state = lyricsSearchUiState) {
             is LyricsSearchUiState.Success -> {
@@ -412,7 +500,6 @@ fun FullPlayerContent(
     }
 
     val onSongMetadataQueueClick = {
-        showSongInfoBottomSheet = true
         onShowQueueClicked()
     }
 
@@ -789,12 +876,12 @@ fun FullPlayerContent(
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(playerOnAccentColor.copy(alpha = 0.7f))
-                                    .clickable { showSaveBookmarkDialog = true },
+                                    .clickable { showSongInfoBottomSheet = true },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Bookmark,
-                                    contentDescription = stringResource(R.string.audio_bookmarks_cd_add),
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = stringResource(R.string.presentation_batch_g_list_cd_more_for_title, song.title),
                                     tint = playerAccentColor
                                 )
                             }
@@ -804,7 +891,6 @@ fun FullPlayerContent(
                                     .clip(CircleShape)
                                     .background(playerOnAccentColor.copy(alpha = 0.7f))
                                     .clickable {
-                                        showSongInfoBottomSheet = true
                                         onShowQueueClicked()
                                     },
                                 contentAlignment = Alignment.Center
